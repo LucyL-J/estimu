@@ -34,17 +34,17 @@ end
 # Probability density and cumulative distribution functions
 
 # Poisson (fit_m=0), Luria-Dellbrueck (fit_m=1) or Mandelbrot-Koch else
-function p_mudi(k::Int, N, mu, fit_m=1.)
+function p_mudi(K::Int, N, mu, fit_m=1.)
     if fit_m == 0.
-        f = factorials(k)
-        p = mudi_0(mu*N, k, f)
+        f = factorials(K)
+        p = mudi_0(mu*N, K, f)
     else
         if fit_m == 1.
-            q = reduced_fs(k)
+            q = reduced_fs(K)
         else 
-            q = factorials(k-1) ./ gammas(k, 1/fit_m)
+            q = factorials(K-1) ./ gammas(K, 1/fit_m)
         end
-        p = mudi(mu*N, k, q)
+        p = mudi(mu*N, K, q)
     end
     return p
 end
@@ -52,32 +52,32 @@ pdf_mudi(k::Int, N, mu, fit_m=1.) = p_mudi(k, N, mu, fit_m)[k+1]
 cdf_mudi(k::Int, N, mu, fit_m=1.) = sum(p_mudi(k, N, mu, fit_m))
 
 # With a subpopulation of on-cells
-function ps_mudi(k::Int, N, mu_off, mu_on, f_on, rel_div_on, fit_m=1.)
+function ps_mudi(K::Int, N, mu_off, mu_on, f_on, rel_div_on, fit_m=1.)
     if rel_div_on == 0.
         # on-cells have zero division rate
-        f = factorials(k)
-        p_on = mudi_0(mu_on*N*f_on/(1-f_on), k, f)
+        f = factorials(K)
+        p_on = mudi_0(mu_on*N*f_on/(1-f_on), K, f)
         if fit_m == 1.
-            rf = reduced_fs(k)
-            p_off = mudi(mu_off*N, k, rf)
+            rf = reduced_fs(K)
+            p_off = mudi(mu_off*N, K, rf)
         else
-            g = gammas(k, 1/fit_m)
-            p_off = mudi(mu_off*N, k, f[1:end-1]./g)
+            g = gammas(K, 1/fit_m)
+            p_off = mudi(mu_off*N, K, f[1:end-1]./g)
         end
     else
-        f = factorials(k-1)
+        f = factorials(K-1)
         # Re-scale the effective population size (because on-cells now also contribute to growth)
         N *= scale_f(f_on, rel_div_on)
         # Calculate differential fitness of on-cells (compared to total population growth)
         ifit = inverse_fit_on(f_on, rel_div_on)/fit_m
-        g_on = gammas(k, ifit)
-        p_on = mudi(mu_on*N*f_on/(1-f_on), k, f./g_on)
+        g_on = gammas(K, ifit)
+        p_on = mudi(mu_on*N*f_on/(1-f_on), K, f./g_on)
         if fit_m == 1.
-            rf = reduced_fs(k)
-            p_off = mudi(mu_off*N, k, rf)
+            rf = reduced_fs(K)
+            p_off = mudi(mu_off*N, K, rf)
         else
-            g_off = gammas(k, 1/fit_m)
-            p_off = mudi(mu_off*N, k, f./g_off)
+            g_off = gammas(K, 1/fit_m)
+            p_off = mudi(mu_off*N, K, f./g_off)
         end
     end
     return p_off, p_on
