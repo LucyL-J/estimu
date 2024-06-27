@@ -29,9 +29,10 @@ function mudi(m, K::Int, q)
     return p
 end
 
-# Probability density and cumulative distribution SpecialFunctions
+# Probability density and cumulative distribution functions
 
-function pdf_mudi(k::Int, mu, N, fit_m=1.)
+# Poisson (fit_m=0), Luria-Dellbrueck (fit_m=1) or Mandelbrot-Koch else
+function pdf_mudi(k::Int, N, mu, fit_m=1.)
     if fit_m == 0.
         f = factorials(k)
         p = mudi_0(mu*N, k, f)
@@ -44,4 +45,18 @@ function pdf_mudi(k::Int, mu, N, fit_m=1.)
         p = mudi(mu*N, k, q)
     end
     return p[k+1]
+end
+function cdf_mudi(k::Int, N, mu, fit_m=1.)
+    if fit_m == 0.
+        f = factorials(k)
+        p = mudi_0(mu*N, k, f)
+    else
+        if fit_m == 1.
+            q = reduced_fs(k)
+        else 
+            q = factorials(k-1) ./ gammas(k, 1/fit_m)
+        end
+        p = mudi(mu*N, k, q)
+    end
+    return sum(p)
 end
