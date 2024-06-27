@@ -34,7 +34,7 @@ end
 # Probability density and cumulative distribution functions
 
 # Poisson (fit_m=0), Luria-Dellbrueck (fit_m=1) or Mandelbrot-Koch else
-function pdf_mudi(k::Int, N, mu, fit_m=1.)
+function p_mudi(k::Int, N, mu, fit_m=1.)
     if fit_m == 0.
         f = factorials(k)
         p = mudi_0(mu*N, k, f)
@@ -46,25 +46,13 @@ function pdf_mudi(k::Int, N, mu, fit_m=1.)
         end
         p = mudi(mu*N, k, q)
     end
-    return p[k+1]
+    return p
 end
-function cdf_mudi(k::Int, N, mu, fit_m=1.)
-    if fit_m == 0.
-        f = factorials(k)
-        p = mudi_0(mu*N, k, f)
-    else
-        if fit_m == 1.
-            q = reduced_fs(k)
-        else 
-            q = factorials(k-1) ./ gammas(k, 1/fit_m)
-        end
-        p = mudi(mu*N, k, q)
-    end
-    return sum(p)
-end
+pdf_mudi(k::Int, N, mu, fit_m=1.) = p_mudi(k, N, mu, fit_m)[k+1]
+cdf_mudi(k::Int, N, mu, fit_m=1.) = sum(p_mudi(k, N, mu, fit_m))
 
 # With a subpopulation of on-cells
-function pdf_mudi(k::Int, N, mu_off, mu_on, f_on, rel_div_on, fit_m=1.)
+function ps_mudi(k::Int, N, mu_off, mu_on, f_on, rel_div_on, fit_m=1.)
     if rel_div_on == 0.
         # on-cells have zero division rate
         f = factorials(k)
@@ -92,32 +80,13 @@ function pdf_mudi(k::Int, N, mu_off, mu_on, f_on, rel_div_on, fit_m=1.)
             p_off = mudi(mu_off*N, k, f./g_off)
         end
     end
+    return p_off, p_on
+end
+function pdf_mudi(k::Int, N, mu_off, mu_on, f_on, rel_div_on, fit_m=1.)
+    p_off, p_on = ps_mudi(k, N, mu_off, mu_on, f_on, rel_div_on, fit_m)
     return sum(p_off .* reverse(p_on))    # Total mutant count = sum of contributions from on-cells and the rest of the population
 end
 function cdf_mudi(k::Int, N, mu_off, mu_on, f_on, rel_div_on, fit_m=1.)
-    if rel_div_on == 0.
-        f = factorials(k)
-        p_on = mudi_0(mu_on*N*f_on/(1-f_on), k, f)
-        if fit_m == 1.
-            rf = reduced_fs(k)
-            p_off = mudi(mu_off*N, k, rf)
-        else
-            g = gammas(k, 1/fit_m)
-            p_off = mudi(mu_off*N, k, f[1:end-1]./g)
-        end
-    else
-        f = factorials(k-1)
-        N *= scale_f(f_on, rel_div_on)
-        ifit = inverse_fit_on(f_on, rel_div_on)/fit_m
-        g_on = gammas(k, ifit)
-        p_on = mudi(mu_on*N*f_on/(1-f_on), k, f./g_on)
-        if fit_m == 1.
-            rf = reduced_fs(k)
-            p_off = mudi(mu_off*N, k, rf)
-        else
-            g_off = gammas(k, 1/fit_m)
-            p_off = mudi(mu_off*N, k, f./g_off)
-        end
-    end
+    p_off, p_on = ps_mudi(k, N, mu_off, mu_on, f_on, rel_div_on, fit_m)
     return sum([sum(p_off[1:i] .* reverse(p_on[1:i])) for i = 1:k+1])
 end
