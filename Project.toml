@@ -1,2 +1,3 @@
 [deps]
+BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
 SpecialFunctions = "276daf66-3868-5448-9aa4-cd146d93841b"
