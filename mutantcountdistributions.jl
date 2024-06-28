@@ -1,9 +1,15 @@
 using SpecialFunctions
 
 # Pre-calculations independent of the inference parameter m
-factorials(K::Int) = Float64.([factorial(big(k)) for k in 0:K])
-reduced_fs(K::Int) = 1 ./ [k*(k+1) for k in 1:K]
-gammas(K::Int, inv_fit_m) = [gamma(1+inv_fit_m + k) for k in 1:K] ./ gamma(1+inv_fit_m) ./ inv_fit_m
+q(K::Int) = 1 ./ [k*(k+1) for k in 1:K]
+function q(K::Int, inv_fit_m)
+    q = zeros(Float64, K)
+    q[1] = inv_fit_m/(inv_fit_m+1)
+    for k = 2:K
+        @inbounds q[k] = (k-1)/(k+inv_fit_m) * q[k-1]
+    end
+    return q
+end   
 scale_f(f_on, rel_div_on) = (1-f_on)/(1-f_on*(1-rel_div_on))
 inverse_fit_on(f_on, rel_div_on) = (1-f_on*(1-rel_div_on))/rel_div_on
 
@@ -17,9 +23,9 @@ mudi_0(m, K::Int, f) = [m^k for k = 0:K] ./ f .* exp(-m)
 
 # When mutants have non-zero differential mutant fitness
 # q = rf for differential fitness = 1 and q = f/g else
-function mudi(m, K::Int, q)
+function mudi(m, K::Int, q0, q)
     p = zeros(Float64, K+1)
-    p[1] = exp(-m)
+    p[1] = exp(-m*q0)
     # Recursive calculation of probabilities
     for k = 1:K
         @views S = sum((1:k) .* q[1:k] .* reverse(p[1:k]))
@@ -47,7 +53,7 @@ function p_mudi(K::Int, N, mu, fit_m=1.)
     end
     return p
 end
-pdf_mudi(k::Int, N, mu, fit_m=1.) = p_mudi(k, N, mu, fit_m)[k+1]
+pmf_mudi(k::Int, N, mu, fit_m=1.) = p_mudi(k, N, mu, fit_m)[k+1]
 cdf_mudi(k::Int, N, mu, fit_m=1.) = sum(p_mudi(k, N, mu, fit_m))
 
 # With a subpopulation of on-cells
@@ -81,7 +87,7 @@ function ps_mudi(K::Int, N, mu_off, mu_on, f_on, rel_div_on, fit_m=1.)
     end
     return p_off, p_on
 end
-function pdf_mudi(k::Int, N, mu_off, mu_on, f_on, rel_div_on, fit_m=1.)
+function pmf_mudi(k::Int, N, mu_off, mu_on, f_on, rel_div_on, fit_m=1.)
     p_off, p_on = ps_mudi(k, N, mu_off, mu_on, f_on, rel_div_on, fit_m)
     return sum(p_off .* reverse(p_on))    # Total mutant count = sum of contributions from on-cells and the rest of the population
 end
