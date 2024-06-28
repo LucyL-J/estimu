@@ -21,11 +21,10 @@ function mudi(m, K::Int, q)
     p = zeros(Float64, K+1)
     p[1] = exp(-m)
     # Recursive calculation of probabilities
-    q .*= m
     for k = 1:K
-        @views S = sum(reverse(1:k) .* reverse(q[1:k]) .* p[1:k])
+        @views S = sum((1:k) .* q[1:k] .* reverse(p[1:k]))
         if S > 0.
-            @inbounds p[k+1] = S/k
+            @inbounds p[k+1] = m*S/k
         end
     end
     return p
