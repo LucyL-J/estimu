@@ -1,4 +1,4 @@
-using SpecialFunctions
+using Distributions
 
 # Pre-calculations independent of the inference parameter m
 q(K::Int) = 1 ./ [k*(k+1) for k in 1:K]
@@ -14,27 +14,18 @@ scale_f(f_on, rel_div_on) = (1-f_on)/(1-f_on*(1-rel_div_on))
 inverse_fit_on(f_on, rel_div_on) = (1-f_on*(1-rel_div_on))/rel_div_on
 
 # Mutant count distributions (probabilities to obverse 0:K mutant colonies)
-
-# When mutants have zero differential mutant fitness -> Poisson distribution
-mudi_0(m, K::Int, f) = [m^k for k = 0:K] ./ f .* exp(-m)
-
-# The following recursive formulas for the pdf of the mutant count distribution are based on 
-# Keller, P., & Antal, T. (2015). Mutant number distribution in an exponentially growing population. Journal of Statistical Mechanics: Theory and Experiment, 2015(1), P01011. https://doi.org/10.1088/1742-5468/2015/01/P01011
-
-# When mutants have non-zero differential mutant fitness
-# q = rf for differential fitness = 1 and q = f/g else
 function mudi(m, K::Int, q0, q)
     p = zeros(Float64, K+1)
-    p[1] = exp(-m*q0)
+    p[1] = exp(m*q0)
     # Recursive calculation of probabilities
     for k = 1:K
         @views S = sum((1:k) .* q[1:k] .* reverse(p[1:k]))
-        if S > 0.
-            @inbounds p[k+1] = m*S/k
-        end
+        @inbounds p[k+1] = m*S/k
     end
     return p
 end
+mudi(m, K::Int) = pdf(Poisson(m), 0:K)
+mudi(m, K::Int, eff) = pdf(Poisson(m*eff), 0:K)
 
 # Probability density and cumulative distribution functions
 
