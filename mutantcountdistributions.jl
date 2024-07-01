@@ -1,4 +1,4 @@
-using Distributions
+using Distributions, HypergeometricFunctions
 
 # Pre-calculations independent of the inference parameter m
 q(K::Int) = 1 ./ [k*(k+1) for k in 1:K]
@@ -10,6 +10,41 @@ function q(K::Int, inv_fit_m)
     end
     return q
 end   
+# Partial plating with efficiency < 1
+q0(inv_fit_m, eff) = -1 + inv_fit_m*(1-eff)/(inv_fit_m+1) * pFq((1,1), (inv_fit_m+2,), 1-eff)
+function beta_f(K::Int, inv_fit_m)
+    B = zeros(Float64, K)
+    B[1] = inv_fit_m/(inv_fit_m+1)
+    for k = 2:K
+        @inbounds B[k] = (k-1)/(k+inv_fit_m) * B[k-1]
+    end
+    return B
+end
+# For efficiency > 0.5, calculate hypergeometric functions reversely from K:1
+function q(K::Int, inv_fit_m, eff, se::Bool)
+    F = zeros(Float64, K)
+    F[K] = pFq((inv_fit_m, inv_fit_m+1), (inv_fit_m+1+K, ), 1 - eff)
+    F[K-1] = pFq((inv_fit_m, inv_fit_m+1), (inv_fit_m+K, ), 1 - eff)
+    for k = K-1:-1:2
+        f = inv_fit_m + k
+        @inbounds F[k-1] = k*(k+1)*(1-eff)/(eff*f*(f+1)) * F[k+1] + (f - 2*k*(1-eff))/(eff*f) * F[k]
+    end
+    B = beta_f(K, inv_fit_m)
+    return @. eff^inv_fit_m * B * F
+end
+# For efficiency < 0.5, calculate hypergeometric functions 1:K
+function q(K::Int, inv_fit_m, eff, se::Int)
+    F = zeros(Float64, K)
+    F[1] = pFq((inv_fit_m, inv_fit_m+1), (inv_fit_m+2, ), 1 - eff)
+    F[2] = pFq((inv_fit_m, inv_fit_m+1), (inv_fit_m+3, ), 1 - eff)
+    for k = 2:K-1
+        f = inv_fit_m + k
+        @inbounds F[k+1] = (f+1)/(k*(k+1)*(1-eff)) * (eff*f*F[k-1] - (f-2*k*(1-eff))*F[k]) 
+    end
+    B = beta_f(K, inv_fit_m)
+    return @. eff^inv_fit_m * B * F
+end
+
 scale_f(f_on, rel_div_on) = (1-f_on)/(1-f_on*(1-rel_div_on))
 inverse_fit_on(f_on, rel_div_on) = (1-f_on*(1-rel_div_on))/rel_div_on
 
@@ -27,7 +62,7 @@ end
 mudi(m, K::Int) = pdf(Poisson(m), 0:K)
 mudi(m, K::Int, eff) = pdf(Poisson(m*eff), 0:K)
 
-# Probability density and cumulative distribution functions
+# Probability mass and cumulative distribution functions
 
 # Poisson (fit_m=0), Luria-Dellbrueck (fit_m=1) or Mandelbrot-Koch else
 function p_mudi(K::Int, N, mu, fit_m=1.)
