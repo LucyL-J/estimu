@@ -1,7 +1,10 @@
 using Distributions, HypergeometricFunctions
 
 # Pre-calculations independent of the inference parameter m
+
+# Plating efficiency = 1 without differential mutant fitness (= 1)
 q_coeffs(K::Int) = 1 ./ [k*(k+1) for k in 1:K]
+# Plating efficiency = 1 with differential mutant fitness
 function q_coeffs(K::Int, inv_fit_m)
     q = zeros(Float64, K)
     q[1] = inv_fit_m/(inv_fit_m+1)
@@ -45,7 +48,9 @@ function q_coeffs(K::Int, inv_fit_m, eff, small_eff::Bool)
     return @. eff^inv_fit_m * B * F
 end
 
+# Factor to rescale effective population size (due to subpopulation of on-cells contributing to population growth)
 scale_f(f_on, rel_div_on) = (1-f_on)/(1-f_on*(1-rel_div_on))
+# Fitness of on-cells compared to population growth
 inverse_fit_on(f_on, rel_div_on) = (1-f_on*(1-rel_div_on))/rel_div_on
 
 # Mutant count distributions (probabilities to obverse 0:K mutant colonies)
