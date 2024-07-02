@@ -87,12 +87,12 @@ end
 # Input
 # mc_UT: Mutant counts untreated
 # Nf_UT: Average final population size untreated
-# mc_S: Mutant counts under stressful cond.
-# Nf_S: Average final population size under stressful cond.
+# mc_S:  Mutant counts under stressful cond.
+# Nf_S:  Average final population size under stressful cond.
+# eff:   Plating efficiency 
 # Optional
 # fit_m: Mutant fitness
-#        By default fit_m=1 but can be set to different value(s) if known from separate experiment(s)
-#        If only one value is given (instead of a vector), mutant fitness is constrained to be equal under permissive/stressful cond.
+#        By default fit_m=1 for untreated and stressful cond. but can be set to different value(s) if known from separate experiment(s)
 # cond_S: Condition, by default = "S" for stressful 
 
 # Mutant fitness fixed in the inference
@@ -138,4 +138,61 @@ function estimu_0(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vecto
         msel_res.BIC = [Inf]
     end
     return est_res, msel_res
+end
+
+# Mutation rate estimation from pair of fluctuation assays under permissive/stressful cond. using the homogeneous-response model
+# Input
+# mc_UT: Mutant counts untreated
+# Nf_UT: Average final population size untreated
+# mc_S:  Mutant counts under stressful cond.
+# Nf_S:  Average final population size under stressful cond.
+# eff:   Plating efficiency 
+# Optional
+# fit_m: Mutant fitness
+#        By default fit_m=1 for untreated and stressful cond. but can be set to different value(s) if known from separate experiment(s)
+#        Unless set as a joint inference parameter via fitm=false, inference under permissive/stressful cond(s). is independent
+# cond_S: Condition, by default = "S" for stressful 
+
+# Mutant fitness under permissive/stressful cond(s). independent (either fixed in the inference, or inferred separately)
+function estimu_hom(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, fit_m; cond_s="S")
+    if typeof(fit_m) == Vector{Float64} 
+        if fit_m[1] == fit_m[2] == 1.                                         
+            m = "Homogeneous"
+        elseif fit_m[1] == fit_m[2]
+            m = "Homogeneous (constr. fitness)"
+        else
+            m = "Homogeneous (unconstr. mutant fitness)"
+        end
+    else
+        m = "Homogeneous (unconstr. mutant fitness)"
+    end
+    # Estimation for permissive cond.
+	est_res_p, msel_res_p = estimu(mc_UT, Nf_UT, eff[1], fit_m[1])
+    if msel_res_p.LL[1] != -Inf
+        parameter = est_res_p.parameter
+        condition = est_res_p.condition
+        status = est_res_p.status
+        # Estimation for stressful cond.
+        est_res_s, msel_res_s = estimu(mc_S, Nf_S, fit_m[2], cond=cond_s)
+        if msel_res_s.LL[1] != -Inf
+            est_res_p = vcat(est_res_p, est_res_s)
+            if typeof(fit_m_s[n]) ==  Bool
+                s = "calc. from 2&4"
+            else
+                s = "set to input"
+            end
+            push!(est_res_p, ["Ratio mutant fitness", cond_s*"/UT", s, est_res_s.MLE[2]/est_res_p.MLE[2]])
+            push!(est_res_p, ["Fold change mutation rate", cond_s*"/UT", "calc. from 1&$(n*4-1)", est_res_s.MLE[1]/est_res_p.MLE[1]])
+            msel_res_p.LL += msel_res_s.LL
+            msel_res_p.AIC += msel_res_s.AIC
+        else
+            push!(est_res_p, ["Mutation rate", cond_s, "failed", 0.])
+            push!(est_res_p, ["Mutant fitness", cond_s, "failed", -1.])
+            msel_res_p.LL = [-Inf]
+            msel_res_p.AIC = [Inf]
+        end
+    end
+    msel_res_p.BIC = [sum((typeof(fit_m[1])==Bool)+(sum(typeof(fit_m[2])==Bool))) * log(length(mc_UT)+length(mc_S)) - 2*msel_res_p.LL[1]]
+    msel_res_p.model = [m]      
+    return est_res_p, msel_res_p
 end
