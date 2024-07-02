@@ -31,21 +31,7 @@ function estimu(mc::Vector{Int}, Nf, eff, fit_m::Float64=1.; cond="UT")
     # Pre-inference calculations
     mc_max = maximum(mc)
     mc_counts = counts(mc, 0:mc_max)
-    if eff == 1.
-        q0 = -1
-        if fit_m == 1.
-            q = q_coeffs(mc_max)
-        else
-            q = q_coeffs(mc_max, 1/fit_m)
-        end
-    else
-        q0 = q0_coeff(1/fit_m, eff)
-        if eff < 0.5
-            q = q_coeffs(mc_max, 1/fit_m, eff, true)
-        else
-            q = q_coeffs(mc_max, 1/fit_m, eff)
-        end
-    end
+    q0, q = coeffs(mc_max, 1/fit_m, eff)
     # 1 inference parameter: Number of mutations 
     LL(para) = -log_likelihood_m(mc_counts, mc_max, para, q0, q)
     res = Optim.optimize(LL, 0., mc_max)
@@ -97,45 +83,59 @@ function estimu(mc::Vector{Int}, Nf, eff, fit_m::Bool; cond="UT")
 	return est_res, msel_res                                                
 end 
 
-# Probability generating function method used to set initial values of the maximum likelihood estimation, based on
-# Gillet-Markowska, A., Louvel, G., & Fischer, G. (2015). bz-rates: A web tool to estimate mutation rates from fluctuation analysis. G3: Genes, Genomes, Genetics, 5(11), 2323–2327. https://doi.org/10.1534/g3.115.019836
-function empirical_pgf(z, x) # Empirical probability generating function calculated from observed data
-    g = 0
-    for i in x
-        g += z^i
+# Mutation rate estimation from pair of fluctuation assays under permissive/stressful cond. without change in mutation rate
+# Input
+# mc_UT: Mutant counts untreated
+# Nf_UT: Average final population size untreated
+# mc_S: Mutant counts under stressful cond.
+# Nf_S: Average final population size under stressful cond.
+# Optional
+# fit_m: Mutant fitness
+#        By default fit_m=1 but can be set to different value(s) if known from separate experiment(s)
+#        If only one value is given (instead of a vector), mutant fitness is constrained to be equal under permissive/stressful cond.
+# cond_S: Condition, by default = "S" for stressful 
+
+# Mutant fitness fixed in the inference
+function estimu_0(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vector{Float64}, fit_m::Vector{Float64}=[1., 1.]; cond_S="S") 
+    if fit_m[1] ==  fit_m[2] == 1.                                         
+        m = "No SIM"
+    else                              
+        m = "No SIM (diff. mutant fitness)"
     end
-    g /= length(x)
-    return g
-end
-function initial_m(z, mc)                     # Estimate number of mutations for given z        
-    if z == 0.
-        return log(empirical_pgf(z, mc)) 
+    cond_m = "UT+"*cond_S
+    N_ratio = Nf_S/Nf_UT
+    est_res = DataFrame(parameter=["Mutation rate", "Mutant fitness", "Mutant fitness"], condition=[cond_m, "UT", cond_S], status=["jointly inferred", "set to input", "set to input"])       
+    msel_res = DataFrame(model=[m], status=["-"])   
+    mc_max_UT = maximum(mc_UT)
+    mc_counts_UT = counts(mc_UT, 0:mc_max_UT)
+    mc_max_S = maximum(mc_S)
+    mc_counts_S = counts(mc_S, 0:mc_max_S)
+    mc_max = max(mc_max_UT, mc_max_S)
+    if eff[1] == eff[2] && fit_m[1] == fit_m[2]
+        q0, q = coeffs(mc_max, 1/fit_m[1], eff[1])
+        q0_UT = q0
+        q0_S = q0
+        q_UT = q[1:mc_max_UT]
+        q_S = q[1:mc_max_S]
     else
-        return z/((1-z)*log(1-z)) * log(empirical_pgf(z, mc))
+        q0_UT, q_UT = coeffs(mc_max_UT, 1/fit_m[1], eff[1])
+        q0_S, q_S = coeffs(mc_max_S, 1/fit_m[2], eff[2])
     end
-end
-function initial_m(mc, z_values::Int)         # Estimate number of mutations by averaging over a number of z values
-    m = 0.
-    for i = 0:z_values-1
-        m += initial_m(i/z_values, mc)
-    end
-    return max(m/z_values, 0.)
-end
-function initial_mu_sup(z, mc, m)             # Estimate the mutation-supply ratio for given z   
-    if z == 0.
-        return -log(empirical_pgf(z, mc))/m - 1
+    # 1 inference parameter: Number of mutations under untreated+stressful cond.                                            
+    LL(para) = -log_likelihood_joint_m(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, para, q0_UT, q_UT, q0_S, q_S)
+    # Maximum mutant count observed overall, used as an upper bound for the inference parameter
+    res = Optim.optimize(LL, 0., mc_max)                                      
+    if Optim.converged(res) == true
+        est_res.MLE = [Optim.minimizer(res)/Nf_UT, fit_m[1], fit_m[2]]           
+        msel_res.LL = [-Optim.minimum(res)]
+        msel_res.AIC = [2 + 2*Optim.minimum(res)]
+        # Number of data points = total number of parallel cultures
+        msel_res.BIC = [1*log(length(mc_UT)+length(mc_S)) + 2*Optim.minimum(res)] 
     else
-        return -log(empirical_pgf(z, mc))/(m*(1-z)) + log(1-z)/z
+        est_res.status = fill("failed", length(est_res.parameter))
+        msel_res.LL = [-Inf]
+        msel_res.AIC = [Inf]
+        msel_res.BIC = [Inf]
     end
-end
-function initial_mu_sup(mc, m, z_values::Int) # Estimate the mutation-supply ratio by averaging over a number of z values 
-    mu_sup = 0.
-    for i = 0:z_values-1
-        mu_sup += initial_mu_sup(i/z_values, mc, m)
-    end
-    if mu_sup == Inf || mu_sup < 0.
-        return 0.
-    else
-        return mu_sup/z_values
-    end
+    return est_res, msel_res
 end

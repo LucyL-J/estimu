@@ -48,6 +48,25 @@ function q_coeffs(K::Int, inv_fit_m, eff, small_eff::Bool)
     return @. eff^inv_fit_m * B * F
 end
 
+function coeffs(K::Int, inv_fit_m, eff)
+    if eff == 1.
+        q0 = -1
+        if inv_fit_m == 1.
+            q = q_coeffs(K)
+        else
+            q = q_coeffs(K, inv_fit_m)
+        end
+    else
+        q0 = q0_coeff(inv_fit_m, eff)
+        if eff < 0.5
+            q = q_coeffs(K, inv_fit_m, eff, true)
+        else
+            q = q_coeffs(K, inv_fit_m, eff)
+        end
+    end
+    return q0, q
+end
+
 # Factor to rescale effective population size (due to subpopulation of on-cells contributing to population growth)
 scale_f(f_on, rel_div_on) = (1-f_on)/(1-f_on*(1-rel_div_on))
 # Fitness of on-cells compared to population growth
