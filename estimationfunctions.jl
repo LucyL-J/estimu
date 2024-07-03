@@ -153,7 +153,7 @@ end
 # cond_S: Condition, by default = "S" for stressful 
 
 # Mutant fitness under permissive/stressful cond(s). independent (either fixed in the inference, or inferred separately)
-function estimu_hom(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vector{<:Number}, fit_m=[1., 1.]; cond_s="S")
+function estimu_hom(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vector{<:Number}, fit_m::Vector{Float64}=[1., 1.]; cond_s="S")
     if typeof(fit_m) == Vector{Float64} 
         if fit_m[1] == fit_m[2] == 1.                                         
             m = "Homogeneous"
@@ -249,4 +249,66 @@ function estimu_hom(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
         msel_res.BIC = [Inf]
 	end
 	return est_res, msel_res
+end
+
+# Input
+# mc_UT: Mutant counts untreated
+# Nf_UT: Average final population size untreated
+# mc_S:  Mutant counts under stressful cond.
+# Nf_S:  Average final population size under stressful cond.
+# eff:   Plating efficiency 
+# Optional
+# f_on: Fraction of on-cells
+#       Either inferred or set to different value(s) if known from a separate experiment
+# rel_div_on: Relative division rate of on-cells compared to off-cells
+#             By default set to rel_div_on=0., inferred if rel_div_on=false
+#             For rel_div_on=0., the fraction of on-cells cannot be inferred
+# cond_S: Condition, by default = "S" for stressful 
+
+# Fraction and relative division rate of on-cells given and fixed in the inference
+function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vector{<:Number}, f_on::Float64, rel_div_on::Float64=0., fit_m::Vector{Float64}=[1., 1.]; cond_s="S")
+    est_res = DataFrame(parameter=["Mutation rate off-cells", "Mutant fitness", "Mutant fitness", "Mutation-supply ratio", "Mutation rate on-cells", "Fraction on-cells", "Rel. division rate on-cells", "Rel. mutation rate on-cells", "Fold change mean mutation rate"])
+	est_res.condition = [["UT+"*cond_s, "UT", "S"]; fill(cond_s, 5); cond_s*"/UT"]
+    est_res.status = ["jointly inferred", "set to input", "set to input", "inferred", "calc. from 1,2&4", "set to input", "set to input", "calc. from 2&4", "calc. from 2&4"] 
+    if rel_div_on == 0.
+        msel_res = DataFrame(model=["Heterogeneous (zero division rate on-cells)"])                                                                              
+	else
+        msel_res = DataFrame(model=["Heterogeneous"])
+	end
+    msel_res.status = ["-"] 
+    mc_max_UT = maximum(mc_UT)
+    mc_counts_UT = counts(mc_UT, 0:mc_max_UT)
+    mc_max_S = maximum(mc_S)
+    mc_counts_S = counts(mc_S, 0:mc_max_S)
+    N_ratio = Nf_S/Nf_UT
+    # Calculate initial values
+    m_off = initial_m(mc_UT, 1000)
+    S = initial_mu_sup(mc_S, m_off*N_ratio, 1000)
+    q0_UT, q_UT = coeffs(mc_max_UT, 1/fit_m[1], eff[1])
+    q0_S_off, q_S_off = coeffs(mc_max_S, 1/fit_m[2], eff[2])
+    if rel_div_on == 0.
+        q0_S_on = -eff[2]
+        q_S_on = [eff[2]; zeros(Float64, mc_max_S-1)]
+    else
+        sf = scale_f(f_on, rel_div_on)
+        N_ratio *= sf
+        ifit = inverse_fit_on(f_on, rel_div_on)/fit_m[2]
+        q0_S_on, q_S_on = coeffs(mc_max_S, ifit, eff[2])
+    end
+    # 2 inference parameters: Number of mutations in off-cells under permissive cond., mutation-supply ratio
+    LL(para) = -log_likelihood_joint_m_S(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, para[1], para[2], q0_UT, q_UT, q0_S_off, q_S_off, q0_S_on, q_S_on)
+    res = Optim.optimize(LL, [m_off, S])                                                 
+    if Optim.converged(res) == true
+        p = Optim.minimizer(res)                                                               
+        est_res.MLE = [p[1]/Nf_UT, fit_m[1], fit_m[2], p[2], p[2]*p[1]*(1-f_on)/(f_on*Nf_UT), f_on, rel_div_on, p[2]*(1-f_on)/f_on, (1-f_on)*(1+p[2])]
+        msel_res.LL = [-Optim.minimum(res)]
+        msel_res.AIC = [4 + 2*Optim.minimum(res)]         
+        msel_res.BIC = [2*log(length(mc_UT)+length(mc_S)) + 2*Optim.minimum(res)]   
+    else
+        est_res.status = fill("failed", length(est_res.parameter))
+        msel_res.LL = [-Inf]
+        msel_res.AIC = [Inf]
+        msel_res.BIC = [Inf]
+    end   
+    return est_res, msel_res
 end
