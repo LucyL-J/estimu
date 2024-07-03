@@ -96,7 +96,7 @@ end
 # cond_S: Condition, by default = "S" for stressful 
 
 # Mutant fitness fixed in the inference
-function estimu_0(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vector{Float64}, fit_m::Vector{Float64}=[1., 1.]; cond_S="S") 
+function estimu_0(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vector{<:Number}, fit_m::Vector{Float64}=[1., 1.]; cond_S="S") 
     if fit_m[1] ==  fit_m[2] == 1.                                         
         m = "No SIM"
     else                              
@@ -154,7 +154,7 @@ end
 # cond_S: Condition, by default = "S" for stressful 
 
 # Mutant fitness under permissive/stressful cond(s). independent (either fixed in the inference, or inferred separately)
-function estimu_hom(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, fit_m; cond_s="S")
+function estimu_hom(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vector{<:Number}, fit_m=[1., 1.]; cond_s="S")
     if typeof(fit_m) == Vector{Float64} 
         if fit_m[1] == fit_m[2] == 1.                                         
             m = "Homogeneous"
@@ -169,20 +169,17 @@ function estimu_hom(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, fit_m; c
     # Estimation for permissive cond.
 	est_res_p, msel_res_p = estimu(mc_UT, Nf_UT, eff[1], fit_m[1])
     if msel_res_p.LL[1] != -Inf
-        parameter = est_res_p.parameter
-        condition = est_res_p.condition
-        status = est_res_p.status
         # Estimation for stressful cond.
-        est_res_s, msel_res_s = estimu(mc_S, Nf_S, fit_m[2], cond=cond_s)
+        est_res_s, msel_res_s = estimu(mc_S, Nf_S, eff[2], fit_m[2], cond=cond_s)
         if msel_res_s.LL[1] != -Inf
             est_res_p = vcat(est_res_p, est_res_s)
-            if typeof(fit_m_s[n]) ==  Bool
+            if typeof(fit_m[2]) ==  Bool
                 s = "calc. from 2&4"
             else
                 s = "set to input"
             end
             push!(est_res_p, ["Ratio mutant fitness", cond_s*"/UT", s, est_res_s.MLE[2]/est_res_p.MLE[2]])
-            push!(est_res_p, ["Fold change mutation rate", cond_s*"/UT", "calc. from 1&$(n*4-1)", est_res_s.MLE[1]/est_res_p.MLE[1]])
+            push!(est_res_p, ["Fold change mutation rate", cond_s*"/UT", "calc. from 1&3", est_res_s.MLE[1]/est_res_p.MLE[1]])
             msel_res_p.LL += msel_res_s.LL
             msel_res_p.AIC += msel_res_s.AIC
         else
