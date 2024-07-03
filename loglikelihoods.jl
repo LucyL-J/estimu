@@ -205,6 +205,60 @@ function log_likelihood_joint_m_S(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S
         end
     end
 end
+function log_likelihood_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, m_off, S, f_on, rel_div_on, q0_UT, q_UT, q0_S_off, q_S_off, inv_fit_m)
+    if m_off <= 0. || S < 0. || rel_div_on <= 0. || f_on < 0. || f_on >= 1. 
+        return -Inf
+    else
+        p_UT = mudi(mc_max_UT, m_off, q0_UT, q_UT)
+        N_ratio *= scale_f(f_on, rel_div_on)
+        ifit = inverse_fit_on(f_on, rel_div_on)*inv_fit_m
+        q0_S_on = -1
+        q_S_on = q_coeffs(mc_max_S, ifit)
+        p_S = mudi(mc_max_S, m_off*N_ratio, q0_S_off, q_S_off, S*m_off*N_ratio, q0_S_on, q_S_on)
+        ll  = sum(mc_counts_UT .* log.(p_UT)) + sum(mc_counts_S .* log.(p_S))
+        if !isnan(ll) && ll < 1.
+            return ll
+        else
+            return -Inf
+        end
+    end
+end
+function log_likelihood_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, m_off, S, f_on, rel_div_on, q0_UT, q_UT, q0_S_off, q_S_off, inv_fit_m, eff)
+    if m_off <= 0. || S < 0. || rel_div_on <= 0. || f_on < 0. || f_on >= 1. 
+        return -Inf
+    else
+        p_UT = mudi(mc_max_UT, m_off, q0_UT, q_UT)
+        N_ratio *= scale_f(f_on, rel_div_on)
+        ifit = inverse_fit_on(f_on, rel_div_on)*inv_fit_m
+        q0_S_on = q0_coeff(ifit, eff)
+        q_S_on = q_coeffs(mc_max_S, ifit, eff)
+        p_S = mudi(mc_max_S, m_off*N_ratio, q0_S_off, q_S_off, S*m_off*N_ratio, q0_S_on, q_S_on)
+        ll  = sum(mc_counts_UT .* log.(p_UT)) + sum(mc_counts_S .* log.(p_S))
+        if !isnan(ll) && ll < 1.
+            return ll
+        else
+            return -Inf
+        end
+    end
+end
+function log_likelihood_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, m_off, S, f_on, rel_div_on, q0_UT, q_UT, q0_S_off, q_S_off, inv_fit_m, eff, small_eff::Bool)
+    if m_off <= 0. || S < 0. || rel_div_on <= 0. || f_on < 0. || f_on >= 1. 
+        return -Inf
+    else
+        p_UT = mudi(mc_max_UT, m_off, q0_UT, q_UT)
+        N_ratio *= scale_f(f_on, rel_div_on)
+        ifit = inverse_fit_on(f_on, rel_div_on)*inv_fit_m
+        q0_S_on = q0_coeff(ifit, eff)
+        q_S_on = q_coeffs(mc_max_S, ifit, eff, true)
+        p_S = mudi(mc_max_S, m_off*N_ratio, q0_S_off, q_S_off, S*m_off*N_ratio, q0_S_on, q_S_on)
+        ll  = sum(mc_counts_UT .* log.(p_UT)) + sum(mc_counts_S .* log.(p_S))
+        if !isnan(ll) && ll < 1.
+            return ll
+        else
+            return -Inf
+        end
+    end
+end
 
 # Probability generating function method used to set initial values of the maximum likelihood estimation, based on
 # Gillet-Markowska, A., Louvel, G., & Fischer, G. (2015). bz-rates: A web tool to estimate mutation rates from fluctuation analysis. G3: Genes, Genomes, Genetics, 5(11), 2323–2327. https://doi.org/10.1534/g3.115.019836
@@ -230,21 +284,31 @@ function initial_m(mc, z_values::Int)         # Estimate number of mutations by 
     end
     return max(m/z_values, 0.)
 end
-function initial_mu_sup(z, mc, m)             # Estimate the mutation-supply ratio for given z   
+function initial_S(z, mc, m)             # Estimate the mutation-supply ratio for given z   
     if z == 0.
         return -log(empirical_pgf(z, mc))/m - 1
     else
         return -log(empirical_pgf(z, mc))/(m*(1-z)) + log(1-z)/z
     end
 end
-function initial_mu_sup(mc, m, z_values::Int) # Estimate the mutation-supply ratio by averaging over a number of z values 
-    mu_sup = 0.
+function initial_S(mc, m, z_values::Int) # Estimate the mutation-supply ratio by averaging over a number of z values 
+    S = 0.
     for i = 0:z_values-1
-        mu_sup += initial_mu_sup(i/z_values, mc, m)
+        S += initial_S(i/z_values, mc, m)
     end
-    if mu_sup == Inf || mu_sup < 0.
+    if S == Inf || S < 0.
         return 0.
     else
-        return mu_sup/z_values
+        return S/z_values
     end
+end
+function initial_f(mc, N_ratio, Nf_S, m, S, rel_div_on, z_values::Int)
+    mu_inc = initial_m(mc, z_values)/(m*N_ratio)
+    f_upper = 1 - mu_inc/(S+1)                                                          
+    if f_upper <= 0.
+        f_upper = 1/mu_inc
+    end
+    f_lower = - log(1-f_upper) / log(Nf_S)                                                                                                                                                                                                                                        
+    f_on = f_lower/(1 - rel_div_on)                                                                         
+    return minimum([maximum([f_lower, f_on]), f_upper])
 end
