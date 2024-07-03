@@ -102,9 +102,8 @@ function estimu_0(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vecto
     else                              
         m = "No SIM (diff. mutant fitness)"
     end
-    cond_m = "UT+"*cond_S
     N_ratio = Nf_S/Nf_UT
-    est_res = DataFrame(parameter=["Mutation rate", "Mutant fitness", "Mutant fitness"], condition=[cond_m, "UT", cond_S], status=["jointly inferred", "set to input", "set to input"])       
+    est_res = DataFrame(parameter=["Mutation rate", "Mutant fitness", "Mutant fitness"], condition=["UT+"*cond_S, "UT", cond_S], status=["jointly inferred", "set to input", "set to input"])       
     msel_res = DataFrame(model=[m], status=["-"])   
     mc_max_UT = maximum(mc_UT)
     mc_counts_UT = counts(mc_UT, 0:mc_max_UT)
@@ -192,4 +191,62 @@ function estimu_hom(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
     msel_res_p.BIC = [sum((typeof(fit_m[1])==Bool)+(sum(typeof(fit_m[2])==Bool))) * log(length(mc_UT)+length(mc_S)) - 2*msel_res_p.LL[1]]
     msel_res_p.model = [m]      
     return est_res_p, msel_res_p
+end
+
+# Mutant fitness jointly inferred (constrained to be equal under permissive/stressful cond(s).)
+function estimu_hom(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vector{<:Number}, fit_m::Bool; cond_s="S")
+    parameter=["Mutation rate", "Mutant fitness", "Mutation rate", "Mutant fitness", "Ratio mutant fitness", "Fold change mutation rate"]
+    condition = ["UT", "UT+"*cond_s, cond_s, "UT+"*cond_s, "", cond_s*"/UT"]
+    status = ["inferred", "jointly inferred", "inferred", "jointly inferred", "constr.", "calc. from 1&3"]
+    est_res = DataFrame(parameter=parameter, condition=condition, status=status)
+    msel_res = DataFrame(model=["Homogeneous (constr. mutant fitness)"], status=["-"])                              
+    # 3 inference parameters: Number of mutations under permissive/stressful cond., mutant fitness
+    mc_max_UT = maximum(mc_UT)
+    mc_counts_UT = counts(mc_UT, 0:mc_max_UT)
+    mc_max_S = maximum(mc_S)
+    mc_counts_S = counts(mc_S, 0:mc_max_S)
+    mc_max = max(mc_max_UT, mc_max_S)
+    if eff[1] == eff[2] == 1
+        LL_eff_1(para) = -log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, para[1], para[2], para[3])
+        res = Optim.optimize(LL_eff_1, [initial_m(mc_UT, 1000), initial_m(mc_S, 1000), 1.]) 
+    elseif eff[1] == eff[2]
+        if eff[1] < 0.5
+            LL_small_eff(para) = -log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, para[1], para[2], para[3], eff[1], true)
+            res = Optim.optimize(LL_small_eff, [initial_m(mc_UT, 1000), initial_m(mc_S, 1000), 1.]) 
+        else
+            LL(para) = -log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, para[1], para[2], para[3], eff[1])
+            res = Optim.optimize(LL, [initial_m(mc_UT, 1000), initial_m(mc_S, 1000), 1.]) 
+        end
+    else
+        if eff[1] < 0.5
+            if eff[2] < 0.5
+                LL_small_eff_12(para) = -log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, para[1], para[2], para[3], eff, true)
+                res = Optim.optimize(LL_small_eff_12, [initial_m(mc_UT, 1000), initial_m(mc_S, 1000), 1.]) 
+            else
+                LL_small_eff_1(para) = -log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, para[1], para[2], para[3], (eff[1], true, eff[2]))
+                res = Optim.optimize(LL_small_eff_1, [initial_m(mc_UT, 1000), initial_m(mc_S, 1000), 1.]) 
+            end
+        else
+            if eff[2] < 0.5
+                LL_small_eff_2(para) = -log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, para[1], para[2], para[3], (eff[1], eff[2], true))
+                res = Optim.optimize(LL_small_eff_2, [initial_m(mc_UT, 1000), initial_m(mc_S, 1000), 1.]) 
+            else
+                LL_12(para) = -log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, para[1], para[2], para[3], eff)
+                res = Optim.optimize(LL_12, [initial_m(mc_UT, 1000), initial_m(mc_S, 1000), 1.]) 
+            end
+        end     
+    end
+	if Optim.converged(res) == true
+		p = Optim.minimizer(res)
+        est_res.MLE = [p[1]/Nf_UT, p[3], p[2]/Nf_S, p[3], 1., p[2]/p[1] * Nf_UT/Nf_S]
+        msel_res.LL = [-Optim.minimum(res)]
+        msel_res.AIC = [2*(length(Nf_S)+2) + 2*Optim.minimum(res)]
+        msel_res.BIC = [log(length(mc_UT)+sum([length(mc) for mc in mc_S]))*(length(Nf_S)+2) + 2*Optim.minimum(res)] 
+	else
+		est_res.status = fill("failed", length(est_res.parameter))
+        msel_res.LL = [-Inf]
+        msel_res.AIC = [Inf]
+        msel_res.BIC = [Inf]
+	end
+	return est_res, msel_res
 end
