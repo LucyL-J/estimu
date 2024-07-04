@@ -153,7 +153,7 @@ end
 # cond_S: Condition, by default = "S" for stressful 
 
 # Mutant fitness under permissive/stressful cond(s). independent (either fixed in the inference, or inferred separately)
-function estimu_hom(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vector{<:Number}, fit_m::Vector{Float64}=[1., 1.]; cond_s="S")
+function estimu_hom(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vector{<:Number}, fit_m::Vector{Float64}=[1., 1.]; cond_S="S")
     if typeof(fit_m) == Vector{Float64} 
         if fit_m[1] == fit_m[2] == 1.                                         
             m = "Homogeneous"
@@ -169,7 +169,7 @@ function estimu_hom(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
 	est_res_p, msel_res_p = estimu(mc_UT, Nf_UT, eff[1], fit_m[1])
     if msel_res_p.LL[1] != -Inf
         # Estimation for stressful cond.
-        est_res_s, msel_res_s = estimu(mc_S, Nf_S, eff[2], fit_m[2], cond=cond_s)
+        est_res_s, msel_res_s = estimu(mc_S, Nf_S, eff[2], fit_m[2], cond=cond_S)
         if msel_res_s.LL[1] != -Inf
             est_res_p = vcat(est_res_p, est_res_s)
             if typeof(fit_m[2]) ==  Bool
@@ -177,13 +177,13 @@ function estimu_hom(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
             else
                 s = "set to input"
             end
-            push!(est_res_p, ["Ratio mutant fitness", cond_s*"/UT", s, est_res_s.MLE[2]/est_res_p.MLE[2]])
-            push!(est_res_p, ["Fold change mutation rate", cond_s*"/UT", "calc. from 1&3", est_res_s.MLE[1]/est_res_p.MLE[1]])
+            push!(est_res_p, ["Ratio mutant fitness", cond_S*"/UT", s, est_res_s.MLE[2]/est_res_p.MLE[2]])
+            push!(est_res_p, ["Fold change mutation rate", cond_S*"/UT", "calc. from 1&3", est_res_s.MLE[1]/est_res_p.MLE[1]])
             msel_res_p.LL += msel_res_s.LL
             msel_res_p.AIC += msel_res_s.AIC
         else
-            push!(est_res_p, ["Mutation rate", cond_s, "failed", 0.])
-            push!(est_res_p, ["Mutant fitness", cond_s, "failed", -1.])
+            push!(est_res_p, ["Mutation rate", cond_S, "failed", 0.])
+            push!(est_res_p, ["Mutant fitness", cond_S, "failed", -1.])
             msel_res_p.LL = [-Inf]
             msel_res_p.AIC = [Inf]
         end
@@ -194,9 +194,9 @@ function estimu_hom(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
 end
 
 # Mutant fitness jointly inferred (constrained to be equal under permissive/stressful cond(s).)
-function estimu_hom(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vector{<:Number}, fit_m::Bool; cond_s="S")
+function estimu_hom(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vector{<:Number}, fit_m::Bool; cond_S="S")
     parameter=["Mutation rate", "Mutant fitness", "Mutation rate", "Mutant fitness", "Ratio mutant fitness", "Fold change mutation rate"]
-    condition = ["UT", "UT+"*cond_s, cond_s, "UT+"*cond_s, "", cond_s*"/UT"]
+    condition = ["UT", "UT+"*cond_S, cond_S, "UT+"*cond_S, "", cond_S*"/UT"]
     status = ["inferred", "jointly inferred", "inferred", "jointly inferred", "constr.", "calc. from 1&3"]
     est_res = DataFrame(parameter=parameter, condition=condition, status=status)
     msel_res = DataFrame(model=["Homogeneous (constr. mutant fitness)"], status=["-"])                              
@@ -266,9 +266,9 @@ end
 # cond_S: Condition, by default = "S" for stressful 
 
 # Fraction and relative division rate of on-cells given and fixed in the inference
-function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vector{<:Number}, f_on::Float64, rel_div_on::Float64=0., fit_m::Vector{Float64}=[1., 1.]; cond_s="S")
+function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vector{<:Number}, f_on::Float64, rel_div_on::Float64=0., fit_m::Vector{Float64}=[1., 1.]; cond_S="S")
     est_res = DataFrame(parameter=["Mutation rate off-cells", "Mutant fitness", "Mutant fitness", "Mutation-supply ratio", "Mutation rate on-cells", "Fraction on-cells", "Rel. division rate on-cells", "Rel. mutation rate on-cells", "Fold change mean mutation rate"])
-	est_res.condition = [["UT+"*cond_s, "UT", "S"]; fill(cond_s, 5); cond_s*"/UT"]
+	est_res.condition = [["UT+"*cond_S, "UT"]; fill(cond_S, 6); cond_S*"/UT"]
     est_res.status = ["jointly inferred", "set to input", "set to input", "inferred", "calc. from 1,4&6", "set to input", "set to input", "calc. from 4&6", "calc. from 4&6"] 
     if rel_div_on == 0.
         msel_res = DataFrame(model=["Heterogeneous (zero division rate on-cells)"])                                                                              
@@ -313,9 +313,9 @@ function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
     return est_res, msel_res
 end
 # Fraction of on-cells given, rel. division rate of on-cells inferred
-function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vector{<:Number}, f_on::Float64, rel_div_on::Bool, fit_m::Vector{Float64}=[1., 1.]; cond_s="S")
+function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vector{<:Number}, f_on::Float64, rel_div_on::Bool, fit_m::Vector{Float64}=[1., 1.]; cond_S="S")
     est_res = DataFrame(parameter=["Mutation rate off-cells", "Mutant fitness", "Mutant fitness", "Mutation-supply ratio", "Mutation rate on-cells", "Fraction on-cells", "Rel. division rate on-cells", "Rel. mutation rate on-cells", "Fold change mean mutation rate"])
-	est_res.condition = [["UT+"*cond_s, "UT", "S"]; fill(cond_s, 5); cond_s*"/UT"]
+	est_res.condition = [["UT+"*cond_S, "UT"]; fill(cond_S, 6); cond_S*"/UT"]
     est_res.status = ["jointly inferred", "set to input", "set to input", "inferred", "calc. from 1,4&6", "set to input", "inferred", "calc. from 4&6", "calc. from 4&6"] 
     if rel_div_on == 0.
         msel_res = DataFrame(model=["Heterogeneous (zero division rate on-cells)"])                                                                              
@@ -358,9 +358,9 @@ function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
     return est_res, msel_res
 end
 # Fraction of on-cells not given; inferred if the rel. division rate of on-cells is non-zero
-function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vector{<:Number}, f_on::Bool, rel_div_on::Float64=0., fit_m::Vector{Float64}=[1., 1.]; cond_s="S")
+function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vector{<:Number}, f_on::Bool, rel_div_on::Float64=0., fit_m::Vector{Float64}=[1., 1.]; cond_S="S")
     parameter = ["Mutation rate off-cells", "Mutant fitness", "Mutant fitness"]
-    condition = ["UT+"*cond_s, "UT", cond_s]
+    condition = ["UT+"*cond_S, "UT", cond_S]
     status = ["jointly inferred", "set to input", "set to input"]
     mc_max_UT = maximum(mc_UT)
     mc_counts_UT = counts(mc_UT, 0:mc_max_UT)
@@ -374,7 +374,7 @@ function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
     # For zero rel. division rate on-cells -> Fraction of on-cells cannot be inferred
     if rel_div_on == 0.
         parameter = [parameter; ["Mutation-supply ratio", "Rel. division rate on-cells"]]
-        condition = [condition; [cond_s, cond_s]]
+        condition = [condition; [cond_S, cond_S]]
         status = [status; ["inferred", "set to input"]]
         est_res = DataFrame(parameter=parameter, condition=condition, status=status)
         msel_res = DataFrame(model=["Heterogeneous (zero division rate on-cells)"], status=["-"])
@@ -398,7 +398,7 @@ function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
     # For non-zero rel. division rate on-cells -> Fraction of on-cells inferred
     else
         parameter = [parameter; ["Mutation-supply ratio", "Mutation rate on-cells", "Fraction on-cells", "Rel. division rate on-cells", "Rel. mutation rate on-cells", "Fold change mean mutation rate"]]
-        condition = [condition; [fill(cond_s, 5); cond_s*"/UT"]]
+        condition = [condition; [fill(cond_S, 5); cond_S*"/UT"]]
         status = [status; ["inferred", "calc. from 1,4&6", "inferred", "set to input", "calc. from 4&6", "calc. from 4&6"]]
         # Calculate the initial value for optimisation
         f_on = initial_f(mc_S, N_ratio, Nf_S, m, S, rel_div_on, 1000)
@@ -429,4 +429,45 @@ function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
         end   
     end
     return est_res, msel_res 
+end
+# Relative division rate on-cells and fraction of on-cells not given -> both inferred
+function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vector{<:Number}, f_on::Bool, rel_div_on::Bool, fit_m::Vector{Float64}=[1., 1.]; cond_S="S")
+    est_res = DataFrame(parameter=["Mutation rate off-cells", "Mutant fitness", "Mutant fitness", "Mutation-supply ratio", "Mutation rate on-cells", "Fraction on-cells", "Rel. division rate on-cells", "Rel. mutation rate on-cells", "Fold change mean mutation rate"])
+	est_res.condition = [["UT+"*cond_S, "UT"]; fill(cond_S, 6); cond_S*"/UT"]
+    est_res.status = ["jointly inferred", "set to input", "set to input", "inferred", "calc. from 1,4&6", "inferred", "inferred", "calc. from 4&6", "calc. from 4&6"] 
+    msel_res = DataFrame(model=["Heterogeneous"], status=["-"])
+    mc_max_UT = maximum(mc_UT)
+    mc_counts_UT = counts(mc_UT, 0:mc_max_UT)
+    mc_max_S = maximum(mc_S)
+    mc_counts_S = counts(mc_S, 0:mc_max_S)
+    N_ratio = Nf_S/Nf_UT
+    m = initial_m(mc_UT, 1000)
+    S = initial_S(mc_S, m*N_ratio, 1000)
+    f_on = initial_f(mc_S, N_ratio, Nf_S, m, S, 0., 1000)
+    q0_UT, q_UT = coeffs(mc_max_UT, 1/fit_m[1], eff[1])
+    q0_S_off, q_S_off = coeffs(mc_max_S, 1/fit_m[2], eff[2])
+    # 4 inference parameters: Number of mutations in off-cells under permissive cond., mutation-supply ratio, relative division rate on-cells, fraction of on-cells
+    if eff[2] == 1
+        LL_eff_1(para) = -log_likelihood_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, para[1], para[2], para[3], para[4], q0_UT, q_UT, q0_S_off, q_S_off, fit_m[2])
+        res = Optim.optimize(LL_eff_1, [m, S, f_on, 1.]) 
+    elseif eff[2] < 0.5
+        LL_small_eff(para) = -log_likelihood_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, para[1], para[2], para[3], para[4], q0_UT, q_UT, q0_S_off, q_S_off, fit_m[2], eff[2], true)
+        res = Optim.optimize(LL_small_eff, [m, S, f_on, 1.]) 
+    else
+        LL(para) = -log_likelihood_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, para[1], para[2], para[3], para[4], q0_UT, q_UT, q0_S_off, q_S_off, fit_m[2], eff[2])
+        res = Optim.optimize(LL, [m, S, f_on, 1.]) 
+    end                                                             
+    if Optim.converged(res) == true
+        p = Optim.minimizer(res)
+        est_res.MLE = [p[1]/Nf_UT, fit_m[1], fit_m[2], p[2], p[2]*p[1]*(1-p[3])/(p[3]*Nf_UT), p[3], p[4], p[2]*(1-p[3])/p[3], (1-p[3])*(1+p[2])]                                                          
+        msel_res.LL = [-Optim.minimum(res)]
+        msel_res.AIC = [8 + 2*Optim.minimum(res)]         
+        msel_res.BIC = [4*log(length(mc_UT)+length(mc_S)) + 2*Optim.minimum(res)]  
+    else
+        est_res.status = fill("failed", length(est_res.parameter))
+        msel_res.LL = [-Inf]
+        msel_res.AIC = [Inf]
+        msel_res.BIC = [Inf]
+    end
+    return est_res, msel_res
 end
