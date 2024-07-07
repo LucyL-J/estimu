@@ -1,5 +1,6 @@
 include("mutantcountdistributions.jl")
 include("loglikelihoods.jl")
+include("confidenceintervals.jl")
 using StatsBase, DataFrames, Optim
 
 # Mutation rate estimation algorithms
@@ -37,11 +38,16 @@ function estimu(mc::Vector{Int}, Nf, eff, fit_m::Float64=1.; cond="UT")
     res = Optim.optimize(LL, 0., mc_max)
     if Optim.converged(res) == true
         est_res.status = ["inferred", "set to input"]
+        m = Optim.minimizer(res)
+        MLL = Optim.minimum(res)
         # Mutation rate is calculated from m and the final population size
-        est_res.MLE = [Optim.minimizer(res)/Nf, fit_m]     
-        msel_res.LL = [-Optim.minimum(res)]
-        msel_res.AIC = [2 + 2*Optim.minimum(res)]
-        msel_res.BIC = [log(length(mc)) + 2*Optim.minimum(res)]                         
+        est_res.MLE = [m/Nf, fit_m]     
+        b = CI_m(mc_counts, mc_max, m, q0, q, MLL)
+        est_res.lower_bound = [b[1]/Nf, fit_m]
+        est_res.upper_bound = [b[2]/Nf, fit_m]
+        msel_res.LL = [-MLL]
+        msel_res.AIC = [2 + 2*MLL]
+        msel_res.BIC = [log(length(mc)) + 2*MLL]                         
     else
         est_res.status = fill("failed", length(est_res.parameter))                                                      
         msel_res.LL = [-Inf]
