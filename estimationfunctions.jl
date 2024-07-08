@@ -63,23 +63,43 @@ function estimu(mc::Vector{Int}, Nf, eff, fit_m::Bool; cond="UT")
 	mc_max = maximum(mc)
     mc_counts = counts(mc, 0:mc_max)
     # 2 inference parameters: Number of mutations, mutant fitness
+    suc = false
     if eff == 1
         LL_eff_1(para) = -log_likelihood_m_fitm(mc_counts, mc_max, para[1], para[2])
         res = Optim.optimize(LL_eff_1, [initial_m(mc, 1000), 1.]) 
+        if Optim.converged(res) == true
+            suc = true
+            p = Optim.minimizer(res)
+            MLL = Optim.minimum(res)
+            b = CI_m_fitm(mc_counts, mc_max, p[1], p[2], MLL)
+        end
     elseif eff < 0.5
         LL_small_eff(para) = -log_likelihood_m_fitm(mc_counts, mc_max, para[1], para[2], eff, true)
         res = Optim.optimize(LL_small_eff, [initial_m(mc, 1000), 1.]) 
+        if Optim.converged(res) == true
+            suc = true
+            p = Optim.minimizer(res)
+            MLL = Optim.minimum(res)
+            b = CI_m_fitm(mc_counts, mc_max, p[1], p[2], MLL, eff, true)
+        end
     else
         LL(para) = -log_likelihood_m_fitm(mc_counts, mc_max, para[1], para[2], eff)
         res = Optim.optimize(LL, [initial_m(mc, 1000), 1.]) 
+        if Optim.converged(res) == true
+            suc = true
+            p = Optim.minimizer(res)
+            MLL = Optim.minimum(res)
+            b = CI_m_fitm(mc_counts, mc_max, p[1], p[2], MLL, eff)
+        end
     end
-	if Optim.converged(res) == true
-		p = Optim.minimizer(res)
+	if suc == true
 		est_res.status = ["inferred", "inferred"]
-		est_res.MLE = [p[1]/Nf, 1/p[2]]                         
-        msel_res.LL = [-Optim.minimum(res)]
-        msel_res.AIC = [4 + 2*Optim.minimum(res)]         
-        msel_res.BIC = [2*log(length(mc)) + 2*Optim.minimum(res)]                       
+		est_res.MLE = [p[1]/Nf, 1/p[2]]   
+        est_res.lower_bound = [b[1,1]/Nf, 1/b[2,2]]
+        est_res.upper_bound = [b[1,2]/Nf, 1/b[2,1]]
+        msel_res.LL = [-MLL]
+        msel_res.AIC = [4 + 2*MLL]         
+        msel_res.BIC = [2*log(length(mc)) + 2*MLL]                       
 	else
         est_res.status = fill("failed", length(est_res.parameter))
 		msel_res.LL = [-Inf]
@@ -109,7 +129,7 @@ function estimu_0(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vecto
         m = "No SIM (diff. mutant fitness)"
     end
     N_ratio = Nf_S/Nf_UT
-    est_res = DataFrame(parameter=["Mutation rate", "Mutant fitness", "Mutant fitness"], condition=["UT+"*cond_S, "UT", cond_S], status=["jointly inferred", "set to input", "set to input"])       
+    est_res = DataFrame(parameter=["Mutation rate", "Mutant fitness", "Mutant fitness"], condition=["UT+"*cond_S, "UT", cond_S])       
     msel_res = DataFrame(model=[m], status=["-"])   
     mc_max_UT = maximum(mc_UT)
     mc_counts_UT = counts(mc_UT, 0:mc_max_UT)
@@ -131,6 +151,7 @@ function estimu_0(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vecto
     # Maximum mutant count observed overall, used as an upper bound for the inference parameter
     res = Optim.optimize(LL, 0., mc_max)                                      
     if Optim.converged(res) == true
+        est_res.status = ["jointly inferred", "set to input", "set to input"]
         est_res.MLE = [Optim.minimizer(res)/Nf_UT, fit_m[1], fit_m[2]]           
         msel_res.LL = [-Optim.minimum(res)]
         msel_res.AIC = [2 + 2*Optim.minimum(res)]
@@ -159,7 +180,7 @@ end
 # cond_S: Condition, by default = "S" for stressful 
 
 # Mutant fitness under permissive/stressful cond(s). independent (either fixed in the inference, or inferred separately)
-function estimu_hom(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vector{<:Number}, fit_m::Vector{Float64}=[1., 1.]; cond_S="S")
+function estimu_hom(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vector{<:Number}, fit_m::Union{Vector{Float64},Tuple{Bool,Bool}}=[1., 1.]; cond_S="S")
     if typeof(fit_m) == Vector{Float64} 
         if fit_m[1] == fit_m[2] == 1.                                         
             m = "Homogeneous"
@@ -183,13 +204,13 @@ function estimu_hom(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
             else
                 s = "set to input"
             end
-            push!(est_res_p, ["Ratio mutant fitness", cond_S*"/UT", s, est_res_s.MLE[2]/est_res_p.MLE[2]])
-            push!(est_res_p, ["Fold change mutation rate", cond_S*"/UT", "calc. from 1&3", est_res_s.MLE[1]/est_res_p.MLE[1]])
+            push!(est_res_p, ["Ratio mutant fitness", cond_S*"/UT", s, est_res_s.MLE[2]/est_res_p.MLE[2], est_res_s.lower_bound[2]/est_res_p.upper_bound[2], est_res_s.upper_bound[2]/est_res_p.lower_bound[2]])
+            push!(est_res_p, ["Fold change mutation rate", cond_S*"/UT", "calc. from 1&3", est_res_s.MLE[1]/est_res_p.MLE[1], est_res_s.lower_bound[1]/est_res_p.upper_bound[1], est_res_s.upper_bound[1]/est_res_p.lower_bound[1]])
             msel_res_p.LL += msel_res_s.LL
             msel_res_p.AIC += msel_res_s.AIC
         else
-            push!(est_res_p, ["Mutation rate", cond_S, "failed", 0.])
-            push!(est_res_p, ["Mutant fitness", cond_S, "failed", -1.])
+            push!(est_res_p, ["Mutation rate", cond_S, "failed", 0., 0., 0.])
+            push!(est_res_p, ["Mutant fitness", cond_S, "failed", -1., -1., -1.])
             msel_res_p.LL = [-Inf]
             msel_res_p.AIC = [Inf]
         end

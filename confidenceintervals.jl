@@ -22,3 +22,111 @@ function CI_m(mc_counts, mc_max, m, q0, q, MLL)
     end
     return [l_1 u_1]
 end
+function CI_m_fitm(mc_counts, mc_max, m, inv_fit_m, MLL)
+    function LL_ratio_1(para)
+        if para == m
+            return -chisq_1_95/2
+        else
+            log_likelihood_1(P) = -log_likelihood_m_fitm(mc_counts, mc_max, para, P[1])
+            res = Optim.optimize(log_likelihood_1, [inv_fit_m])
+            P1 = Optim.minimizer(res)[1]
+            return -log_likelihood_m_fitm(mc_counts, mc_max, para, P1) - MLL - chisq_1_95/2
+        end
+    end
+    l_1 = find_zero(LL_ratio_1, (0., m))
+    u_1 = m
+    try
+        u_1 = find_zero(LL_ratio_1, (m, mc_max))
+    catch err
+        u_1 = find_zero(LL_ratio_1, (m, 10*mc_max))
+    end
+    function LL_ratio_2(para) 
+        if para == inv_fit_m
+            return -chisq_1_95/2
+        else
+            log_likelihood_2(P) = -log_likelihood_m_fitm(mc_counts, mc_max, P[1], para)
+            res = Optim.optimize(log_likelihood_2, [m])
+            P1 = Optim.minimizer(res)[1]
+            return -log_likelihood_m_fitm(mc_counts, mc_max, P1, para) - MLL - chisq_1_95/2
+        end
+    end
+    l_2 = find_zero(LL_ratio_2, (0., inv_fit_m))
+    u_2 = Inf
+    try
+        u_2 = find_zero(LL_ratio_2, (inv_fit_m, Inf))
+    catch err
+    end
+    return [l_1 u_1; l_2 u_2]
+end
+function CI_m_fitm(mc_counts, mc_max, m, inv_fit_m, MLL, eff)
+    function LL_ratio_1(para)
+        if para == m
+            return -chisq_1_95/2
+        else
+            log_likelihood_1(P) = -log_likelihood_m_fitm(mc_counts, mc_max, para, P[1], eff)
+            res = Optim.optimize(log_likelihood_1, [inv_fit_m])
+            P1 = Optim.minimizer(res)[1]
+            return -log_likelihood_m_fitm(mc_counts, mc_max, para, P1, eff) - MLL - chisq_1_95/2
+        end
+    end
+    l_1 = find_zero(LL_ratio_1, (0., m))
+    u_1 = m
+    try
+        u_1 = find_zero(LL_ratio_1, (m, mc_max))
+    catch err
+        u_1 = find_zero(LL_ratio_1, (m, 10*mc_max))
+    end
+    function LL_ratio_2(para) 
+        if para == inv_fit_m
+            return -chisq_1_95/2
+        else
+            log_likelihood_2(P) = -log_likelihood_m_fitm(mc_counts, mc_max, P[1], para, eff)
+            res = Optim.optimize(log_likelihood_2, [m])
+            P1 = Optim.minimizer(res)[1]
+            return -log_likelihood_m_fitm(mc_counts, mc_max, P1, para, eff) - MLL - chisq_1_95/2
+        end
+    end
+    l_2 = find_zero(LL_ratio_2, (0., inv_fit_m))
+    u_2 = Inf
+    try
+        u_2 = find_zero(LL_ratio_2, (inv_fit_m, Inf))
+    catch err
+    end
+    return [l_1 u_1; l_2 u_2]
+end
+function CI_m_fitm(mc_counts, mc_max, m, inv_fit_m, MLL, eff, small_eff::Bool)
+    function LL_ratio_1(para)
+        if para == m
+            return -chisq_1_95/2
+        else
+            log_likelihood_1(P) = -log_likelihood_m_fitm(mc_counts, mc_max, para, P[1], eff, true)
+            res = Optim.optimize(log_likelihood_1, [inv_fit_m])
+            P1 = Optim.minimizer(res)[1]
+            return -log_likelihood_m_fitm(mc_counts, mc_max, para, P1, eff, true) - MLL - chisq_1_95/2
+        end
+    end
+    l_1 = find_zero(LL_ratio_1, (0., m))
+    u_1 = m
+    try
+        u_1 = find_zero(LL_ratio_1, (m, mc_max))
+    catch err
+        u_1 = find_zero(LL_ratio_1, (m, 10*mc_max))
+    end
+    function LL_ratio_2(para) 
+        if para == inv_fit_m
+            return -chisq_1_95/2
+        else
+            log_likelihood_2(P) = -log_likelihood_m_fitm(mc_counts, mc_max, P[1], para, eff, true)
+            res = Optim.optimize(log_likelihood_2, [m])
+            P1 = Optim.minimizer(res)[1]
+            return -log_likelihood_m_fitm(mc_counts, mc_max, P1, para, eff, true) - MLL - chisq_1_95/2
+        end
+    end
+    l_2 = find_zero(LL_ratio_2, (0., inv_fit_m))
+    u_2 = Inf
+    try
+        u_2 = find_zero(LL_ratio_2, (inv_fit_m, Inf))
+    catch err
+    end
+    return [l_1 u_1; l_2 u_2]
+end
