@@ -130,3 +130,21 @@ function CI_m_fitm(mc_counts, mc_max, m, inv_fit_m, MLL, eff, small_eff::Bool)
     end
     return [l_1 u_1; l_2 u_2]
 end
+# Without change in mutation rate (fixed mutant fitness, single or multiple stressful cond.)
+function CI_joint_m(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, N_ratio, m, q0_UT, q_UT, q0_S, q_S, MLL)
+    function LL_ratio(para)
+        if para == m
+            return -chisq_1_95/2
+        else
+            return -log_likelihood_joint_m(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, para, q0_UT, q_UT, q0_S, q_S) - MLL - chisq_1_95/2
+        end
+    end
+    l = find_zero(LL_ratio, (0., m))
+    u = m
+    try
+        u = find_zero(LL_ratio, (m, mc_max))
+    catch err
+        u = find_zero(LL_ratio, (m, 10*mc_max))
+    end
+    return [l u]
+end

@@ -152,11 +152,16 @@ function estimu_0(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vecto
     res = Optim.optimize(LL, 0., mc_max)                                      
     if Optim.converged(res) == true
         est_res.status = ["jointly inferred", "set to input", "set to input"]
-        est_res.MLE = [Optim.minimizer(res)/Nf_UT, fit_m[1], fit_m[2]]           
-        msel_res.LL = [-Optim.minimum(res)]
-        msel_res.AIC = [2 + 2*Optim.minimum(res)]
+        m = Optim.minimizer(res)
+        MLL = Optim.minimum(res)
+        est_res.MLE = [m/Nf_UT, fit_m[1], fit_m[2]]   
+        b = CI_joint_m(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, N_ratio, m, q0_UT, q_UT, q0_S, q_S, MLL)        
+        est_res.lower_bound = [b[1]/Nf_UT, fit_m[1], fit_m[2]]
+        est_res.upper_bound = [b[2]/Nf_UT, fit_m[1], fit_m[2]]
+        msel_res.LL = [-MLL]
+        msel_res.AIC = [2 + 2*MLL]
         # Number of data points = total number of parallel cultures
-        msel_res.BIC = [1*log(length(mc_UT)+length(mc_S)) + 2*Optim.minimum(res)] 
+        msel_res.BIC = [1*log(length(mc_UT)+length(mc_S)) + 2*MLL] 
     else
         est_res.status = fill("failed", length(est_res.parameter))
         msel_res.LL = [-Inf]
@@ -219,7 +224,6 @@ function estimu_hom(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
     msel_res_p.model = [m]      
     return est_res_p, msel_res_p
 end
-
 # Mutant fitness jointly inferred (constrained to be equal under permissive/stressful cond(s).)
 function estimu_hom(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vector{<:Number}, fit_m::Bool; cond_S="S")
     parameter=["Mutation rate", "Mutant fitness", "Mutation rate", "Mutant fitness", "Ratio mutant fitness", "Fold change mutation rate"]
