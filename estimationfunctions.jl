@@ -248,36 +248,42 @@ function estimu_hom(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
             res = Optim.optimize(LL_small_eff, [initial_m(mc_UT, 1000), initial_m(mc_S, 1000), 1.]) 
             p = Optim.minimizer(res)
             MLL = Optim.minimum(res)
+            b = CI_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, p[1], p[2], p[3], MLL, eff[1], true)
         else
             LL(para) = -log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, para[1], para[2], para[3], eff[1])
             res = Optim.optimize(LL, [initial_m(mc_UT, 1000), initial_m(mc_S, 1000), 1.]) 
             p = Optim.minimizer(res)
             MLL = Optim.minimum(res)
+            b = CI_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, p[1], p[2], p[3], MLL, eff[1])
         end
     else
         if eff[1] < 0.5
             if eff[2] < 0.5
-                LL_small_eff_12(para) = -log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, para[1], para[2], para[3], eff, true)
+                LL_small_eff_12(para) = -log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, 1, para[1], para[2], para[3], eff, true)
                 res = Optim.optimize(LL_small_eff_12, [initial_m(mc_UT, 1000), initial_m(mc_S, 1000), 1.]) 
                 p = Optim.minimizer(res)
                 MLL = Optim.minimum(res)
+                b = CI_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, p[1], p[2], p[3], MLL, eff, true)
             else
-                LL_small_eff_1(para) = -log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, para[1], para[2], para[3], (eff[1], true, eff[2]))
+                LL_small_eff_1(para) = -log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, 1, para[1], para[2], para[3], (eff[1], true, eff[2]))
                 res = Optim.optimize(LL_small_eff_1, [initial_m(mc_UT, 1000), initial_m(mc_S, 1000), 1.]) 
                 p = Optim.minimizer(res)
                 MLL = Optim.minimum(res)
+                b = CI_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, p[1], p[2], p[3], MLL, (eff[1], true, eff[2]))
             end
         else
             if eff[2] < 0.5
-                LL_small_eff_2(para) = -log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, para[1], para[2], para[3], (eff[1], eff[2], true))
+                LL_small_eff_2(para) = -log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, 1, para[1], para[2], para[3], (eff[1], eff[2], true))
                 res = Optim.optimize(LL_small_eff_2, [initial_m(mc_UT, 1000), initial_m(mc_S, 1000), 1.]) 
                 p = Optim.minimizer(res)
                 MLL = Optim.minimum(res)
+                b = CI_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, p[1], p[2], p[3], MLL, (eff[1], eff[2], true))
             else
-                LL_12(para) = -log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, para[1], para[2], para[3], eff)
+                LL_12(para) = -log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, 1, para[1], para[2], para[3], eff)
                 res = Optim.optimize(LL_12, [initial_m(mc_UT, 1000), initial_m(mc_S, 1000), 1.]) 
                 p = Optim.minimizer(res)
                 MLL = Optim.minimum(res)
+                b = CI_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, p[1], p[2], p[3], MLL, eff)
             end
         end     
     end
