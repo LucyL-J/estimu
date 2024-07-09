@@ -123,7 +123,7 @@ function CI_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max,
         eff = [e[1] for e in eff]
         u_3_M_0(P) = -log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, P[1], P[2])
         res = Optim.optimize(u_3_M_0, [m_UT, m_S].*eff)
-        Optim.minimizer(res) .*= eff
+        Optim.minimizer(res) ./= eff
     else
         u_3_M(P) = -log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, P[1], P[2], u_3, eff)
         res = Optim.optimize(u_3_M, [m_UT, m_S])
