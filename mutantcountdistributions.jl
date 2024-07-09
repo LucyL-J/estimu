@@ -24,7 +24,7 @@ function beta_f(K::Int, inv_fit_m)
     return B
 end
 # For efficiency > 0.5, calculate hypergeometric functions reversely from K:1
-function q_coeffs(K::Int, inv_fit_m, eff)
+function q_coeffs(K::Int, inv_fit_m, eff::Float64)
     F = zeros(Float64, K)
     F[K] = pFq((inv_fit_m, inv_fit_m+1), (inv_fit_m+1+K, ), 1 - eff)
     F[K-1] = pFq((inv_fit_m, inv_fit_m+1), (inv_fit_m+K, ), 1 - eff)
@@ -36,7 +36,8 @@ function q_coeffs(K::Int, inv_fit_m, eff)
     return @. eff^inv_fit_m * B * F
 end
 # For efficiency < 0.5, calculate hypergeometric functions from 1:K
-function q_coeffs(K::Int, inv_fit_m, eff, small_eff::Bool)
+function q_coeffs(K::Int, inv_fit_m, eff::Tuple{Float64,Bool})
+    eff = eff[1]
     F = zeros(Float64, K)
     F[1] = pFq((inv_fit_m, inv_fit_m+1), (inv_fit_m+2, ), 1 - eff)
     F[2] = pFq((inv_fit_m, inv_fit_m+1), (inv_fit_m+3, ), 1 - eff)
@@ -59,7 +60,7 @@ function coeffs(K::Int, inv_fit_m, eff)
     else
         q0 = q0_coeff(inv_fit_m, eff)
         if eff < 0.5
-            q = q_coeffs(K, inv_fit_m, eff, true)
+            q = q_coeffs(K, inv_fit_m, (eff, true))
         else
             q = q_coeffs(K, inv_fit_m, eff)
         end
@@ -109,7 +110,7 @@ function p_mudi(K::Int, N, mu, fit_m, eff=1.)
         else
             q0 = q0_coeff(1/fit_m, eff)
             if eff < 0.5
-                q = q_coeffs(K, 1/fit_m, eff, true)
+                q = q_coeffs(K, 1/fit_m, (eff, true))
             else
                 q = q_coeffs(K, 1/fit_m, eff)
             end
@@ -129,7 +130,7 @@ function p_mudi(K::Int, N, mu_off, mu_on, f_on, rel_div_on, fit_m, eff=1.)
     else
         q0_off = q0_coeff(1/fit_m, eff)
         if eff < 0.5
-            q_off = q_coeffs(K, 1/fit_m, eff, true)
+            q_off = q_coeffs(K, 1/fit_m, (eff, true))
         else
             q_off = q_coeffs(K, 1/fit_m, eff)
         end
@@ -150,7 +151,7 @@ function p_mudi(K::Int, N, mu_off, mu_on, f_on, rel_div_on, fit_m, eff=1.)
         else
             q0_on = q0_coeff(ifit, eff)
             if eff < 0.5
-                q_on = q_coeffs(K, ifit, eff, true)
+                q_on = q_coeffs(K, ifit, (eff, true))
             else
                 q_on = q_coeffs(K, ifit, eff)
             end

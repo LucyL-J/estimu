@@ -61,37 +61,19 @@ function estimu(mc::Vector{Int}, Nf, eff, fit_m::Bool; cond="UT")
     msel_res = DataFrame(model=["Standard (diff. mutant fitness)"], status=["-"])                                                        
 	mc_max = maximum(mc)
     mc_counts = counts(mc, 0:mc_max)
-    # 2 inference parameters: Number of mutations, mutant fitness
-    suc = false
+    # Different cases regarding partial plating
     if eff == 1
-        LL_eff_1(para) = -log_likelihood_m_fitm(mc_counts, mc_max, para[1], para[2])
-        res = Optim.optimize(LL_eff_1, [initial_m(mc, 1000), 1.]) 
-        if Optim.converged(res) == true
-            suc = true
-            p = Optim.minimizer(res)
-            MLL = Optim.minimum(res)
-            b = CI_m_fitm(mc_counts, mc_max, p[1], p[2], MLL)
-        end
+        eff = ()
     elseif eff < 0.5
-        LL_small_eff(para) = -log_likelihood_m_fitm(mc_counts, mc_max, para[1], para[2], eff, true)
-        res = Optim.optimize(LL_small_eff, [initial_m(mc, 1000), 1.]) 
-        if Optim.converged(res) == true
-            suc = true
-            p = Optim.minimizer(res)
-            MLL = Optim.minimum(res)
-            b = CI_m_fitm(mc_counts, mc_max, p[1], p[2], MLL, eff, true)
-        end
-    else
-        LL(para) = -log_likelihood_m_fitm(mc_counts, mc_max, para[1], para[2], eff)
-        res = Optim.optimize(LL, [initial_m(mc, 1000), 1.]) 
-        if Optim.converged(res) == true
-            suc = true
-            p = Optim.minimizer(res)
-            MLL = Optim.minimum(res)
-            b = CI_m_fitm(mc_counts, mc_max, p[1], p[2], MLL, eff)
-        end
+        eff = (eff, true)
     end
-	if suc == true
+    # 2 inference parameters: Number of mutations, mutant fitness
+    LL(para) = -log_likelihood_m_fitm(mc_counts, mc_max, para[1], para[2], eff)
+    res = Optim.optimize(LL, [initial_m(mc, 1000), 1.]) 
+    if Optim.converged(res) == true
+        p = Optim.minimizer(res)
+        MLL = Optim.minimum(res)
+        b = CI_m_fitm(mc_counts, mc_max, p[1], p[2], eff, MLL)
 		est_res.status = ["inferred", "inferred"]
 		est_res.MLE = [p[1]/Nf, 1/p[2]]   
         est_res.lower_bound = [b[1,1]/Nf, 1/b[2,2]]
@@ -230,63 +212,35 @@ function estimu_hom(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
     status = ["inferred", "jointly inferred", "inferred", "jointly inferred", "constr.", "calc. from 1&3"]
     est_res = DataFrame(parameter=parameter, condition=condition, status=status)
     msel_res = DataFrame(model=["Homogeneous (constr. mutant fitness)"], status=["-"])                              
-    # 3 inference parameters: Number of mutations under permissive/stressful cond., mutant fitness
     mc_max_UT = maximum(mc_UT)
     mc_counts_UT = counts(mc_UT, 0:mc_max_UT)
     mc_max_S = maximum(mc_S)
     mc_counts_S = counts(mc_S, 0:mc_max_S)
     mc_max = max(mc_max_UT, mc_max_S)
     if eff[1] == eff[2] == 1
-        LL_eff_1(para) = -log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, para[1], para[2], para[3])
-        res = Optim.optimize(LL_eff_1, [initial_m(mc_UT, 1000), initial_m(mc_S, 1000), 1.]) 
-        p = Optim.minimizer(res)
-        MLL = Optim.minimum(res)
-        b = CI_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, p[1], p[2], p[3], MLL)
+        eff = ()
     elseif eff[1] == eff[2]
         if eff[1] < 0.5
-            LL_small_eff(para) = -log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, para[1], para[2], para[3], eff[1], true)
-            res = Optim.optimize(LL_small_eff, [initial_m(mc_UT, 1000), initial_m(mc_S, 1000), 1.]) 
-            p = Optim.minimizer(res)
-            MLL = Optim.minimum(res)
-            b = CI_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, p[1], p[2], p[3], MLL, eff[1], true)
+            eff = (eff[1], true)
         else
-            LL(para) = -log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, para[1], para[2], para[3], eff[1])
-            res = Optim.optimize(LL, [initial_m(mc_UT, 1000), initial_m(mc_S, 1000), 1.]) 
-            p = Optim.minimizer(res)
-            MLL = Optim.minimum(res)
-            b = CI_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, p[1], p[2], p[3], MLL, eff[1])
+            eff = eff[1]
         end
     else
+        eff_UT, eff_S = eff
         if eff[1] < 0.5
-            if eff[2] < 0.5
-                LL_small_eff_12(para) = -log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, 1, para[1], para[2], para[3], eff, true)
-                res = Optim.optimize(LL_small_eff_12, [initial_m(mc_UT, 1000), initial_m(mc_S, 1000), 1.]) 
-                p = Optim.minimizer(res)
-                MLL = Optim.minimum(res)
-                b = CI_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, p[1], p[2], p[3], MLL, eff, true)
-            else
-                LL_small_eff_1(para) = -log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, 1, para[1], para[2], para[3], (eff[1], true, eff[2]))
-                res = Optim.optimize(LL_small_eff_1, [initial_m(mc_UT, 1000), initial_m(mc_S, 1000), 1.]) 
-                p = Optim.minimizer(res)
-                MLL = Optim.minimum(res)
-                b = CI_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, p[1], p[2], p[3], MLL, (eff[1], true, eff[2]))
-            end
-        else
-            if eff[2] < 0.5
-                LL_small_eff_2(para) = -log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, 1, para[1], para[2], para[3], (eff[1], eff[2], true))
-                res = Optim.optimize(LL_small_eff_2, [initial_m(mc_UT, 1000), initial_m(mc_S, 1000), 1.]) 
-                p = Optim.minimizer(res)
-                MLL = Optim.minimum(res)
-                b = CI_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, p[1], p[2], p[3], MLL, (eff[1], eff[2], true))
-            else
-                LL_12(para) = -log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, 1, para[1], para[2], para[3], eff)
-                res = Optim.optimize(LL_12, [initial_m(mc_UT, 1000), initial_m(mc_S, 1000), 1.]) 
-                p = Optim.minimizer(res)
-                MLL = Optim.minimum(res)
-                b = CI_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, p[1], p[2], p[3], MLL, eff)
-            end
-        end     
+            eff_UT = (eff[1], true)
+        end
+        if eff[2] < 0.5
+            eff_S = (eff[2], true)
+        end
+        eff = (eff_UT, eff_S)
     end
+    # 3 inference parameters: Number of mutations under permissive/stressful cond., mutant fitness
+    LL(para) = -log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, para[1], para[2], para[3], eff)
+    res = Optim.optimize(LL, [initial_m(mc_UT, 1000), initial_m(mc_S, 1000), 1.]) 
+    p = Optim.minimizer(res)
+    MLL = Optim.minimum(res)
+    b = CI_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, p[1], p[2], p[3], eff, MLL)
 	if Optim.converged(res) == true
         est_res.MLE = [p[1]/Nf_UT, 1/p[3], p[2]/Nf_S, 1/p[3], 1., p[2]/p[1] * Nf_UT/Nf_S]
         est_res.lower_bound = [b[1,1]/Nf_UT, 1/b[3,2], b[2,1]/Nf_S, 1/b[3,2], 1., b[4,1] * Nf_UT/Nf_S]

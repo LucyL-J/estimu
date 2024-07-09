@@ -25,7 +25,7 @@ function log_likelihood_joint_m(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, 
         end
     end 
 end
-function log_likelihood_m_fitm(mc_counts, mc_max, m, inv_fit_m)
+function log_likelihood_m_fitm(mc_counts, mc_max, m, inv_fit_m, eff::Tuple{})
     if m <= 0. || inv_fit_m <= 0.
         return -Inf
     else
@@ -44,23 +44,8 @@ function log_likelihood_m_fitm(mc_counts, mc_max, m, inv_fit_m, eff)
     if m <= 0. || inv_fit_m <= 0.
         return -Inf
     else
-        q0 = q0_coeff(inv_fit_m, eff)
+        q0 = q0_coeff(inv_fit_m, eff[1])
         q = q_coeffs(mc_max, inv_fit_m, eff)
-        p = mudi(mc_max, m, q0, q)
-        ll = sum(mc_counts .* log.(p))
-        if !isnan(ll) && ll < 1.
-            return ll
-        else
-            return -Inf
-        end
-    end
-end
-function log_likelihood_m_fitm(mc_counts, mc_max, m, inv_fit_m, eff, small_eff::Bool)
-    if m <= 0. || inv_fit_m <= 0.
-        return -Inf
-    else
-        q0 = q0_coeff(inv_fit_m, eff)
-        q = q_coeffs(mc_max, inv_fit_m, eff, true)
         p = mudi(mc_max, m, q0, q)
         ll = sum(mc_counts .* log.(p))
         if !isnan(ll) && ll < 1.
@@ -83,7 +68,7 @@ function log_likelihood_m_fitm(mc_counts, mc_max, m_eff)
         end
     end
 end
-function log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, m_UT, m_S, inv_fit_m)
+function log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, m_UT, m_S, inv_fit_m, eff::Tuple{})
     if m_UT <= 0. || m_S <= 0. || inv_fit_m <= 0.
         return -Inf
     else
@@ -99,11 +84,11 @@ function log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_ma
         end
     end
 end
-function log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, m_UT, m_S, inv_fit_m, eff::Float64)
+function log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, m_UT, m_S, inv_fit_m, eff::Union{Float64,Tuple{Float64,Bool}})
     if m_UT <= 0. || m_S <= 0. || inv_fit_m <= 0.
         return -Inf
     else
-        q0 = q0_coeff(inv_fit_m, eff)
+        q0 = q0_coeff(inv_fit_m, eff[1])
         q = q_coeffs(mc_max, inv_fit_m, eff)
         @views p_UT = mudi(mc_max_UT, m_UT, q0, q[1:mc_max_UT])
         @views p_S = mudi(mc_max_S, m_S, q0, q[1:mc_max_S])
@@ -115,84 +100,14 @@ function log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_ma
         end
     end
 end
-function log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, m_UT, m_S, inv_fit_m, eff::Float64, small_eff::Bool)
+function log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, x, m_UT, m_S, inv_fit_m, eff)
     if m_UT <= 0. || m_S <= 0. || inv_fit_m <= 0.
         return -Inf
     else
-        q0 = q0_coeff(inv_fit_m, eff)
-        q = q_coeffs(mc_max, inv_fit_m, eff, true)
-        @views p_UT = mudi(mc_max_UT, m_UT, q0, q[1:mc_max_UT])
-        @views p_S = mudi(mc_max_S, m_S, q0, q[1:mc_max_S])
-        ll  = sum(mc_counts_UT .* log.(p_UT)) + sum(mc_counts_S .* log.(p_S))
-        if !isnan(ll) && ll < 1.
-            return ll
-        else
-            return -Inf
-        end
-    end
-end
-function log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, x, m_UT, m_S, inv_fit_m, eff::Vector{Float64})
-    if m_UT <= 0. || m_S <= 0. || inv_fit_m <= 0.
-        return -Inf
-    else
-        q0_UT = q0_coeff(inv_fit_m, eff[1])
-        q0_S = q0_coeff(inv_fit_m, eff[2])
+        q0_UT = q0_coeff(inv_fit_m, eff[1][1])
+        q0_S = q0_coeff(inv_fit_m, eff[2][1])
         q_UT = q_coeffs(mc_max_UT, inv_fit_m, eff[1])
         q_S = q_coeffs(mc_max_S, inv_fit_m, eff[2])
-        p_UT = mudi(mc_max_UT, m_UT, q0_UT, q_UT)
-        p_S = mudi(mc_max_S, m_S, q0_S, q_S)
-        ll  = sum(mc_counts_UT .* log.(p_UT)) + sum(mc_counts_S .* log.(p_S))
-        if !isnan(ll) && ll < 1.
-            return ll
-        else
-            return -Inf
-        end
-    end
-end
-function log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, x, m_UT, m_S, inv_fit_m, eff::Vector{Float64}, small_eff::Bool)
-    if m_UT <= 0. || m_S <= 0. || inv_fit_m <= 0.
-        return -Inf
-    else
-        q0_UT = q0_coeff(inv_fit_m, eff[1])
-        q0_S = q0_coeff(inv_fit_m, eff[2])
-        q_UT = q_coeffs(mc_max_UT, inv_fit_m, eff[1], true)
-        q_S = q_coeffs(mc_max_S, inv_fit_m, eff[2], true)
-        p_UT = mudi(mc_max_UT, m_UT, q0_UT, q_UT)
-        p_S = mudi(mc_max_S, m_S, q0_S, q_S)
-        ll  = sum(mc_counts_UT .* log.(p_UT)) + sum(mc_counts_S .* log.(p_S))
-        if !isnan(ll) && ll < 1.
-            return ll
-        else
-            return -Inf
-        end
-    end
-end
-function log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, x, m_UT, m_S, inv_fit_m, eff::Tuple{Float64,Bool,Float64})
-    if m_UT <= 0. || m_S <= 0. || inv_fit_m <= 0.
-        return -Inf
-    else
-        q0_UT = q0_coeff(inv_fit_m, eff[1])
-        q0_S = q0_coeff(inv_fit_m, eff[3])
-        q_UT = q_coeffs(mc_max_UT, inv_fit_m, eff[1], true)
-        q_S = q_coeffs(mc_max_S, inv_fit_m, eff[3])
-        p_UT = mudi(mc_max_UT, m_UT, q0_UT, q_UT)
-        p_S = mudi(mc_max_S, m_S, q0_S, q_S)
-        ll  = sum(mc_counts_UT .* log.(p_UT)) + sum(mc_counts_S .* log.(p_S))
-        if !isnan(ll) && ll < 1.
-            return ll
-        else
-            return -Inf
-        end
-    end
-end
-function log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, x, m_UT, m_S, inv_fit_m, eff::Tuple{Float64,Float64,Bool})
-    if m_UT <= 0. || m_S <= 0. || inv_fit_m <= 0.
-        return -Inf
-    else
-        q0_UT = q0_coeff(inv_fit_m, eff[1])
-        q0_S = q0_coeff(inv_fit_m, eff[2])
-        q_UT = q_coeffs(mc_max_UT, inv_fit_m, eff[1])
-        q_S = q_coeffs(mc_max_S, inv_fit_m, eff[2], true)
         p_UT = mudi(mc_max_UT, m_UT, q0_UT, q_UT)
         p_S = mudi(mc_max_S, m_S, q0_S, q_S)
         ll  = sum(mc_counts_UT .* log.(p_UT)) + sum(mc_counts_S .* log.(p_S))
