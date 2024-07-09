@@ -3,7 +3,7 @@ function log_likelihood_m(mc_counts, mc_max, m, q0, q)
         return -Inf
     else
         p = mudi(mc_max, m, q0, q)
-        @views ll = sum(mc_counts .* log.(p))
+        ll = sum(mc_counts .* log.(p))
         if !isnan(ll) && ll < 1.
             return ll
         else
@@ -17,7 +17,7 @@ function log_likelihood_joint_m(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, 
     else
         p_UT = mudi(mc_max_UT, m, q0_UT, q_UT)
         p_S = mudi(mc_max_S, m*N_ratio, q0_S, q_S)
-        @views ll = sum(mc_counts_UT .* log.(p_UT)) + sum(mc_counts_S .* log.(p_S))
+        ll = sum(mc_counts_UT .* log.(p_UT)) + sum(mc_counts_S .* log.(p_S))
         if !isnan(ll) && ll < 1.
             return ll
         else
@@ -32,7 +32,7 @@ function log_likelihood_m_fitm(mc_counts, mc_max, m, inv_fit_m)
         q0 = -1
         q = q_coeffs(mc_max, inv_fit_m)
         p = mudi(mc_max, m, q0, q)
-        @views ll = sum(mc_counts .* log.(p))
+        ll = sum(mc_counts .* log.(p))
         if !isnan(ll) && ll < 1.
             return ll
         else
@@ -47,7 +47,7 @@ function log_likelihood_m_fitm(mc_counts, mc_max, m, inv_fit_m, eff)
         q0 = q0_coeff(inv_fit_m, eff)
         q = q_coeffs(mc_max, inv_fit_m, eff)
         p = mudi(mc_max, m, q0, q)
-        @views ll = sum(mc_counts .* log.(p))
+        ll = sum(mc_counts .* log.(p))
         if !isnan(ll) && ll < 1.
             return ll
         else
@@ -62,7 +62,20 @@ function log_likelihood_m_fitm(mc_counts, mc_max, m, inv_fit_m, eff, small_eff::
         q0 = q0_coeff(inv_fit_m, eff)
         q = q_coeffs(mc_max, inv_fit_m, eff, true)
         p = mudi(mc_max, m, q0, q)
-        @views ll = sum(mc_counts .* log.(p))
+        ll = sum(mc_counts .* log.(p))
+        if !isnan(ll) && ll < 1.
+            return ll
+        else
+            return -Inf
+        end
+    end
+end
+function log_likelihood_m_fitm(mc_counts, mc_max, m_eff)
+    if m_eff <= 0.
+        return -Inf
+    else
+        p = mudi(mc_max, m_eff)
+        ll = sum(mc_counts .* log.(p))
         if !isnan(ll) && ll < 1.
             return ll
         else
@@ -78,7 +91,7 @@ function log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_ma
         q = q_coeffs(mc_max, inv_fit_m)
         @views p_UT = mudi(mc_max_UT, m_UT, q0, q[1:mc_max_UT])
         @views p_S = mudi(mc_max_S, m_S, q0, q[1:mc_max_S])
-        @views ll  = sum(mc_counts_UT .* log.(p_UT)) + sum(mc_counts_S .* log.(p_S))
+        ll  = sum(mc_counts_UT .* log.(p_UT)) + sum(mc_counts_S .* log.(p_S))
         if !isnan(ll) && ll < 1.
             return ll
         else
@@ -94,7 +107,7 @@ function log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_ma
         q = q_coeffs(mc_max, inv_fit_m, eff)
         @views p_UT = mudi(mc_max_UT, m_UT, q0, q[1:mc_max_UT])
         @views p_S = mudi(mc_max_S, m_S, q0, q[1:mc_max_S])
-        @views ll  = sum(mc_counts_UT .* log.(p_UT)) + sum(mc_counts_S .* log.(p_S))
+        ll  = sum(mc_counts_UT .* log.(p_UT)) + sum(mc_counts_S .* log.(p_S))
         if !isnan(ll) && ll < 1.
             return ll
         else
@@ -110,7 +123,7 @@ function log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_ma
         q = q_coeffs(mc_max, inv_fit_m, eff, true)
         @views p_UT = mudi(mc_max_UT, m_UT, q0, q[1:mc_max_UT])
         @views p_S = mudi(mc_max_S, m_S, q0, q[1:mc_max_S])
-        @views ll  = sum(mc_counts_UT .* log.(p_UT)) + sum(mc_counts_S .* log.(p_S))
+        ll  = sum(mc_counts_UT .* log.(p_UT)) + sum(mc_counts_S .* log.(p_S))
         if !isnan(ll) && ll < 1.
             return ll
         else
@@ -128,7 +141,7 @@ function log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_ma
         q_S = q_coeffs(mc_max_S, inv_fit_m, eff[2], true)
         p_UT = mudi(mc_max_UT, m_UT, q0_UT, q_UT)
         p_S = mudi(mc_max_S, m_S, q0_S, q_S)
-        @views ll  = sum(mc_counts_UT .* log.(p_UT)) + sum(mc_counts_S .* log.(p_S))
+        ll  = sum(mc_counts_UT .* log.(p_UT)) + sum(mc_counts_S .* log.(p_S))
         if !isnan(ll) && ll < 1.
             return ll
         else
@@ -146,7 +159,7 @@ function log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_ma
         q_S = q_coeffs(mc_max_S, inv_fit_m, eff[3])
         p_UT = mudi(mc_max_UT, m_UT, q0_UT, q_UT)
         p_S = mudi(mc_max_S, m_S, q0_S, q_S)
-        @views ll  = sum(mc_counts_UT .* log.(p_UT)) + sum(mc_counts_S .* log.(p_S))
+        ll  = sum(mc_counts_UT .* log.(p_UT)) + sum(mc_counts_S .* log.(p_S))
         if !isnan(ll) && ll < 1.
             return ll
         else
@@ -164,7 +177,7 @@ function log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_ma
         q_S = q_coeffs(mc_max_S, inv_fit_m, eff[2], true)
         p_UT = mudi(mc_max_UT, m_UT, q0_UT, q_UT)
         p_S = mudi(mc_max_S, m_S, q0_S, q_S)
-        @views ll  = sum(mc_counts_UT .* log.(p_UT)) + sum(mc_counts_S .* log.(p_S))
+        ll  = sum(mc_counts_UT .* log.(p_UT)) + sum(mc_counts_S .* log.(p_S))
         if !isnan(ll) && ll < 1.
             return ll
         else
@@ -182,6 +195,20 @@ function log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_ma
         q_S = q_coeffs(mc_max_S, inv_fit_m, eff[2])
         p_UT = mudi(mc_max_UT, m_UT, q0_UT, q_UT)
         p_S = mudi(mc_max_S, m_S, q0_S, q_S)
+        ll  = sum(mc_counts_UT .* log.(p_UT)) + sum(mc_counts_S .* log.(p_S))
+        if !isnan(ll) && ll < 1.
+            return ll
+        else
+            return -Inf
+        end
+    end
+end
+function log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, m_eff_UT, m_eff_S)
+    if m_eff_UT <= 0. || m_eff_S <= 0.
+        return -Inf
+    else
+        p_UT = mudi(mc_max_UT, m_eff_UT)
+        p_S = mudi(mc_max_S, m_eff_S)
         ll  = sum(mc_counts_UT .* log.(p_UT)) + sum(mc_counts_S .* log.(p_S))
         if !isnan(ll) && ll < 1.
             return ll
