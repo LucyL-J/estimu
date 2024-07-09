@@ -19,16 +19,15 @@ using StatsBase, DataFrames, Optim
 #        Alternatively, mutant fitness is inferred if fit_m=false
 # cond: Condition, by default = "UT" for untreated
 function estimu(mc::Vector{Int}, Nf, eff, fit_m::Float64=1.; cond="UT")
-    # Create the output data frames
-    est_res = DataFrame(parameter=["Mutation rate", "Mutant fitness"], condition=[cond, cond])
-    msel_res = DataFrame()
     # Model depends on the value of the mutant fitness
     if fit_m == 1.
-        msel_res = DataFrame(model=["Standard"])
+        M = "Standard"
     else
-        msel_res = DataFrame(model=["Standard (diff. mutant fitness)"])
-    end       
-    msel_res.status = ["-"]       
+        M = "Standard (diff. mutant fitness)"
+    end     
+    # Create the output data frames
+    est_res = DataFrame(parameter=["Mutation rate", "Mutant fitness"], condition=[cond, cond])
+    msel_res = DataFrame(model=[M], status=["-"])   
     # Pre-inference calculations
     mc_max = maximum(mc)
     mc_counts = counts(mc, 0:mc_max)
@@ -124,13 +123,13 @@ end
 # Mutant fitness fixed in the inference
 function estimu_0(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vector{<:Number}, fit_m::Vector{Float64}=[1., 1.]; cond_S="S") 
     if fit_m[1] ==  fit_m[2] == 1.                                         
-        m = "No SIM"
+        M = "No SIM"
     else                              
-        m = "No SIM (diff. mutant fitness)"
+        M = "No SIM (diff. mutant fitness)"
     end
     N_ratio = Nf_S/Nf_UT
     est_res = DataFrame(parameter=["Mutation rate", "Mutant fitness", "Mutant fitness"], condition=["UT+"*cond_S, "UT", cond_S])       
-    msel_res = DataFrame(model=[m], status=["-"])   
+    msel_res = DataFrame(model=[M], status=["-"])   
     mc_max_UT = maximum(mc_UT)
     mc_counts_UT = counts(mc_UT, 0:mc_max_UT)
     mc_max_S = maximum(mc_S)
@@ -188,14 +187,14 @@ end
 function estimu_hom(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vector{<:Number}, fit_m::Union{Vector{Float64},Tuple{Bool,Bool}}=[1., 1.]; cond_S="S")
     if typeof(fit_m) == Vector{Float64} 
         if fit_m[1] == fit_m[2] == 1.                                         
-            m = "Homogeneous"
+            M = "Homogeneous"
         elseif fit_m[1] == fit_m[2]
-            m = "Homogeneous (constr. fitness)"
+            M = "Homogeneous (constr. fitness)"
         else
-            m = "Homogeneous (unconstr. mutant fitness)"
+            M = "Homogeneous (unconstr. mutant fitness)"
         end
     else
-        m = "Homogeneous (unconstr. mutant fitness)"
+        M = "Homogeneous (unconstr. mutant fitness)"
     end
     # Estimation for permissive cond.
 	est_res_p, msel_res_p = estimu(mc_UT, Nf_UT, eff[1], fit_m[1])
@@ -221,7 +220,7 @@ function estimu_hom(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
         end
     end
     msel_res_p.BIC = [sum((typeof(fit_m[1])==Bool)+(sum(typeof(fit_m[2])==Bool))) * log(length(mc_UT)+length(mc_S)) - 2*msel_res_p.LL[1]]
-    msel_res_p.model = [m]      
+    msel_res_p.model = [M]      
     return est_res_p, msel_res_p
 end
 # Mutant fitness jointly inferred (constrained to be equal under permissive/stressful cond(s).)
