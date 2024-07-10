@@ -63,7 +63,7 @@ function estimu(mc::Vector{Int}, Nf, eff, fit_m::Bool; cond="UT")
     mc_counts = counts(mc, 0:mc_max)
     # Different cases regarding partial plating
     if eff == 1
-        eff = ()
+        eff = false
     elseif eff < 0.5
         eff = (eff, true)
     end
@@ -218,7 +218,7 @@ function estimu_hom(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
     mc_counts_S = counts(mc_S, 0:mc_max_S)
     mc_max = max(mc_max_UT, mc_max_S)
     if eff[1] == eff[2] == 1
-        eff = ()
+        eff = false
     elseif eff[1] == eff[2]
         if eff[1] < 0.5
             eff = (eff[1], true)
@@ -322,11 +322,10 @@ function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
     end   
     return est_res, msel_res
 end
-# Fraction of on-cells given, rel. division rate of on-cells inferred
+# Fraction of on-cells fixed, rel. division rate of on-cells inferred
 function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vector{<:Number}, f_on::Float64, rel_div_on::Bool, fit_m::Vector{Float64}=[1., 1.]; cond_S="S")
     est_res = DataFrame(parameter=["Mutation rate off-cells", "Mutant fitness", "Mutant fitness", "Mutation-supply ratio", "Mutation rate on-cells", "Fraction on-cells", "Rel. division rate on-cells", "Rel. mutation rate on-cells", "Fold change mean mutation rate"])
 	est_res.condition = [["UT+"*cond_S, "UT"]; fill(cond_S, 6); cond_S*"/UT"]
-    est_res.status = ["jointly inferred", "set to input", "set to input", "inferred", "calc. from 1,4&6", "set to input", "inferred", "calc. from 4&6", "calc. from 4&6"] 
     if rel_div_on == 0.
         msel_res = DataFrame(model=["Heterogeneous (zero division rate on-cells)"])                                                                              
 	else
@@ -342,23 +341,29 @@ function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
     S = initial_S(mc_S, m*N_ratio, 1000)
     q0_UT, q_UT = coeffs(mc_max_UT, 1/fit_m[1], eff[1])
     q0_S_off, q_S_off = coeffs(mc_max_S, 1/fit_m[2], eff[2]) 
-    # 3 inference parameters: Number of mutations in off-cells under permissive cond., mutation-supply ratio, rel. division rate on-cells                              
+    q0_S_on = -eff[2]
+    q_S_on = [eff[2]; zeros(Float64, mc_max_S-1)]
     if eff[2] == 1
-        LL_eff_1(para) = -log_likelihood_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, para[1], para[2], f_on, para[3], q0_UT, q_UT, q0_S_off, q_S_off, fit_m[2])
-        res = Optim.optimize(LL_eff_1, [m, S, 1.]) 
+        eff = false
     elseif eff[2] < 0.5
-        LL_small_eff(para) = -log_likelihood_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, para[1], para[2], f_on, para[3], q0_UT, q_UT, q0_S_off, q_S_off, fit_m[2], eff[2], true)
-        res = Optim.optimize(LL_small_eff, [m, S, 1.]) 
+        eff = (eff[2], true)
     else
-        LL(para) = -log_likelihood_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, para[1], para[2], f_on, para[3], q0_UT, q_UT, q0_S_off, q_S_off, fit_m[2], eff[2])
-        res = Optim.optimize(LL, [m, S, 1.]) 
-    end                                   
+        eff = eff[2]
+    end
+    # 3 inference parameters: Number of mutations in off-cells under permissive cond., mutation-supply ratio, rel. division rate on-cells                              
+    LL(para) = -log_likelihood_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, para[1], para[2], f_on, para[3], q0_UT, q_UT, q0_S_off, q_S_off, 1/fit_m[2], eff)
+    res = Optim.optimize(LL, [m, S, 1.])                                    
     if Optim.converged(res) == true
+        est_res.status = ["jointly inferred", "set to input", "set to input", "inferred", "calc. from 1,4&6", "set to input", "inferred", "calc. from 4&6", "calc. from 4&6"] 
         p = Optim.minimizer(res)
+        MLL = Optim.minimum(res)
         est_res.MLE = [p[1]/Nf_UT, fit_m[1], fit_m[2], p[2], p[2]*p[1]*(1-f_on)/(f_on*Nf_UT), f_on, p[3], p[2]*(1-f_on)/f_on, (1-f_on)*(1+p[2])]
-        msel_res.LL = [-Optim.minimum(res)]
-        msel_res.AIC = [6 + 2*Optim.minimum(res)]         
-        msel_res.BIC = [3*log(length(mc_UT)+length(mc_S)) + 2*Optim.minimum(res)] 
+        b = CI_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, p[1], p[2], f_on, p[3], q0_UT, q_UT, q0_S_off, q_S_off, q0_S_on, q_S_on, 1/fit_m[2], eff, MLL)
+        est_res.lower_bound = [b[1,1]/Nf_UT, fit_m[1], fit_m[2], b[2,1], b[4,1]*(1-f_on)/(f_on*Nf_UT), f_on, b[3,1], b[2,1]*(1-f_on)/f_on, (1-f_on)*(1+b[2,1])]
+        est_res.upper_bound = [b[1,2]/Nf_UT, fit_m[1], fit_m[2], b[2,2], b[4,2]*(1-f_on)/(f_on*Nf_UT), f_on, b[3,2], b[2,2]*(1-f_on)/f_on, (1-f_on)*(1+b[2,2])]
+        msel_res.LL = [-MLL]
+        msel_res.AIC = [6 + 2*MLL]         
+        msel_res.BIC = [3*log(length(mc_UT)+length(mc_S)) + 2*MLL] 
     else
         est_res.status = fill("failed", length(est_res.parameter))
         msel_res.LL = [-Inf]
@@ -381,6 +386,8 @@ function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
     S = initial_S(mc_S, m*N_ratio, 1000)
     q0_UT, q_UT = coeffs(mc_max_UT, 1/fit_m[1], eff[1])
     q0_S_off, q_S_off = coeffs(mc_max_S, 1/fit_m[2], eff[2])
+    q0_S_on = -eff[2]
+    q_S_on = [eff[2]; zeros(Float64, mc_max_S-1)]
     # For zero rel. division rate on-cells -> Fraction of on-cells cannot be inferred
     if rel_div_on == 0.
         parameter = [parameter; ["Mutation-supply ratio", "Rel. division rate on-cells"]]
@@ -388,17 +395,19 @@ function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
         status = [status; ["inferred", "set to input"]]
         est_res = DataFrame(parameter=parameter, condition=condition, status=status)
         msel_res = DataFrame(model=["Heterogeneous (zero division rate on-cells)"], status=["-"])
-        q0_S_on = -eff[2]
-        q_S_on = [eff[2]; zeros(Float64, mc_max_S-1)]
         # 2 inference parameters: Number of mutations in off-cells under permissive cond., mutation-supply ratio  
         LL_0(para) = -log_likelihood_joint_m_S(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, para[1], para[2], q0_UT, q_UT, q0_S_off, q_S_off, q0_S_on, q_S_on)
         res = Optim.optimize(LL_0, [m, S])                     
         if Optim.converged(res) == true
             p = Optim.minimizer(res)
+            MLL = Optim.minimum(res)
             est_res.MLE  = [p[1]/Nf_UT, fit_m[1], fit_m[2], p[2], 0.]
-            msel_res.LL = [-Optim.minimum(res)]
-            msel_res.AIC = [4 + 2*Optim.minimum(res)]         
-            msel_res.BIC = [2*log(length(mc_UT)+length(mc_S)) + 2*Optim.minimum(res)]                                                            
+            b = CI_joint_m_S(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, p[1], p[2], q0_UT, q_UT, q0_S_off, q_S_off, q0_S_on, q_S_on, MLL)
+            est_res.lower_bound = [b[1,1]/Nf_UT, fit_m[1], fit_m[2], b[2,1], 0.]
+            est_res.upper_bound = [b[1,2]/Nf_UT, fit_m[1], fit_m[2], b[2,2], 0.]
+            msel_res.LL = [-MLL]
+            msel_res.AIC = [4 + 2*MLL]         
+            msel_res.BIC = [2*log(length(mc_UT)+length(mc_S)) + 2*MLL]
         else
             est_res.status = fill("failed", length(est_res.parameter))
             msel_res.LL = [-Inf]
@@ -414,23 +423,26 @@ function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
         f_on = initial_f(mc_S, N_ratio, Nf_S, m, S, rel_div_on, 1000)
         est_res = DataFrame(parameter=parameter, condition=condition, status=status)
         msel_res = DataFrame(model=["Heterogeneous"], status=["-"])
-        # 3 inference parameters: Number of mutations in off-cells under permissive cond., mutation-supply ratio, fraction of on-cells                              
         if eff[2] == 1
-            LL_eff_1(para) = -log_likelihood_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, para[1], para[2], para[3], rel_div_on, q0_UT, q_UT, q0_S_off, q_S_off, fit_m[2])
-            res = Optim.optimize(LL_eff_1, [m, S, f_on]) 
+            eff = false
         elseif eff[2] < 0.5
-            LL_small_eff(para) = -log_likelihood_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, para[1], para[2], para[3], rel_div_on, q0_UT, q_UT, q0_S_off, q_S_off, fit_m[2], eff[2], true)
-            res = Optim.optimize(LL_small_eff, [m, S, f_on]) 
+            eff = (eff[2], true)
         else
-            LL(para) = -log_likelihood_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, para[1], para[2], para[3], rel_div_on, q0_UT, q_UT, q0_S_off, q_S_off, fit_m[2], eff[2])
-            res = Optim.optimize(LL, [m, S, f_on]) 
-        end                                                          
+            eff = eff[2]
+        end
+        # 3 inference parameters: Number of mutations in off-cells under permissive cond., mutation-supply ratio, fraction of on-cells                              
+        LL(para) = -log_likelihood_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, para[1], para[2], para[3], rel_div_on, q0_UT, q_UT, q0_S_off, q_S_off, 1/fit_m[2], eff)
+        res = Optim.optimize(LL, [m, S, f_on]) 
         if Optim.converged(res) == true
             p = Optim.minimizer(res)
-            est_res.MLE = [p[1]/Nf_UT, fit_m[1], fit_m[2], p[2], p[2]*p[1]*(1-p[3])/(p[3]*Nf_UT), f_on, rel_div_on, p[2]*(1-p[3])/p[3], (1-p[3])*(1+p[2])]
-            msel_res.LL = [-Optim.minimum(res)]
-            msel_res.AIC = [6 + 2*Optim.minimum(res)]         
-            msel_res.BIC = [3*log(length(mc_UT)+length(mc_S)) + 2*Optim.minimum(res)] 
+            MLL = Optim.minimum(res)
+            est_res.MLE = [p[1]/Nf_UT, fit_m[1], fit_m[2], p[2], p[2]*p[1]*(1-p[3])/(p[3]*Nf_UT), p[3], rel_div_on, p[2]*(1-p[3])/p[3], (1-p[3])*(1+p[2])]
+            b = CI_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, p[1], p[2], p[3], rel_div_on, q0_UT, q_UT, q0_S_off, q_S_off, q0_S_on, q_S_on, false, 1/fit_m[2], eff, MLL)
+            est_res.lower_bound = [b[1,1]/Nf_UT, fit_m[1], fit_m[2], b[2,1], b[4,1]/Nf_UT, b[3,1], rel_div_on, b[5,1], b[6,1]]
+            est_res.upper_bound = [b[1,2]/Nf_UT, fit_m[1], fit_m[2], b[2,2], b[4,2]/Nf_UT, b[3,2], rel_div_on, b[5,2], b[6,2]]
+            msel_res.LL = [-MLL]
+            msel_res.AIC = [6 + 2*MLL]         
+            msel_res.BIC = [3*log(length(mc_UT)+length(mc_S)) + 2*MLL] 
         else
             est_res.status = fill("failed", length(est_res.parameter))
             msel_res.LL = [-Inf]
@@ -444,7 +456,6 @@ end
 function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vector{<:Number}, f_on::Bool, rel_div_on::Bool, fit_m::Vector{Float64}=[1., 1.]; cond_S="S")
     est_res = DataFrame(parameter=["Mutation rate off-cells", "Mutant fitness", "Mutant fitness", "Mutation-supply ratio", "Mutation rate on-cells", "Fraction on-cells", "Rel. division rate on-cells", "Rel. mutation rate on-cells", "Fold change mean mutation rate"])
 	est_res.condition = [["UT+"*cond_S, "UT"]; fill(cond_S, 6); cond_S*"/UT"]
-    est_res.status = ["jointly inferred", "set to input", "set to input", "inferred", "calc. from 1,4&6", "inferred", "inferred", "calc. from 4&6", "calc. from 4&6"] 
     msel_res = DataFrame(model=["Heterogeneous"], status=["-"])
     mc_max_UT = maximum(mc_UT)
     mc_counts_UT = counts(mc_UT, 0:mc_max_UT)
@@ -456,23 +467,29 @@ function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
     f_on = initial_f(mc_S, N_ratio, Nf_S, m, S, 0., 1000)
     q0_UT, q_UT = coeffs(mc_max_UT, 1/fit_m[1], eff[1])
     q0_S_off, q_S_off = coeffs(mc_max_S, 1/fit_m[2], eff[2])
-    # 4 inference parameters: Number of mutations in off-cells under permissive cond., mutation-supply ratio, relative division rate on-cells, fraction of on-cells
+    q0_S_on = -eff[2]
+    q_S_on = [eff[2]; zeros(Float64, mc_max_S-1)]
     if eff[2] == 1
-        LL_eff_1(para) = -log_likelihood_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, para[1], para[2], para[3], para[4], q0_UT, q_UT, q0_S_off, q_S_off, fit_m[2])
-        res = Optim.optimize(LL_eff_1, [m, S, f_on, 1.]) 
+        eff = false
     elseif eff[2] < 0.5
-        LL_small_eff(para) = -log_likelihood_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, para[1], para[2], para[3], para[4], q0_UT, q_UT, q0_S_off, q_S_off, fit_m[2], eff[2], true)
-        res = Optim.optimize(LL_small_eff, [m, S, f_on, 1.]) 
+        eff = (eff[2], true)
     else
-        LL(para) = -log_likelihood_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, para[1], para[2], para[3], para[4], q0_UT, q_UT, q0_S_off, q_S_off, fit_m[2], eff[2])
-        res = Optim.optimize(LL, [m, S, f_on, 1.]) 
-    end                                                             
+        eff = eff[2]
+    end
+    # 4 inference parameters: Number of mutations in off-cells under permissive cond., mutation-supply ratio, relative division rate on-cells, fraction of on-cells
+    LL(para) = -log_likelihood_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, para[1], para[2], para[3], para[4], q0_UT, q_UT, q0_S_off, q_S_off, fit_m[2], eff)
+    res = Optim.optimize(LL, [m, S, f_on, 1.])                                                            
     if Optim.converged(res) == true
+        est_res.status = ["jointly inferred", "set to input", "set to input", "inferred", "calc. from 1,4&6", "inferred", "inferred", "calc. from 4&6", "calc. from 4&6"] 
         p = Optim.minimizer(res)
+        MLL = Optim.minimum(res)
         est_res.MLE = [p[1]/Nf_UT, fit_m[1], fit_m[2], p[2], p[2]*p[1]*(1-p[3])/(p[3]*Nf_UT), p[3], p[4], p[2]*(1-p[3])/p[3], (1-p[3])*(1+p[2])]                                                          
-        msel_res.LL = [-Optim.minimum(res)]
-        msel_res.AIC = [8 + 2*Optim.minimum(res)]         
-        msel_res.BIC = [4*log(length(mc_UT)+length(mc_S)) + 2*Optim.minimum(res)]  
+        b = CI_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, p[1], p[2], p[3], p[4], q0_UT, q_UT, q0_S_off, q_S_off, q0_S_on, q_S_on, true, 1/fit_m[2], eff, MLL)
+        est_res.lower_bound = [b[1,1]/Nf_UT, fit_m[1], fit_m[2], b[2,1], b[5,1]/Nf_UT, b[3,1], b[4,1], b[6,1], b[7,1]]
+        est_res.upper_bound = [b[1,2]/Nf_UT, fit_m[1], fit_m[2], b[2,2], b[5,2]/Nf_UT, b[3,2], b[4,2], b[6,2], b[7,2]]
+        msel_res.LL = [-MLL]
+        msel_res.AIC = [8 + 2*MLL]         
+        msel_res.BIC = [4*log(length(mc_UT)+length(mc_S)) + 2*MLL]  
     else
         est_res.status = fill("failed", length(est_res.parameter))
         msel_res.LL = [-Inf]

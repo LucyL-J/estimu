@@ -25,7 +25,7 @@ function log_likelihood_joint_m(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, 
         end
     end 
 end
-function log_likelihood_m_fitm(mc_counts, mc_max, m, inv_fit_m, eff::Tuple{})
+function log_likelihood_m_fitm(mc_counts, mc_max, m, inv_fit_m, eff::Bool)
     if m <= 0. || inv_fit_m <= 0.
         return -Inf
     else
@@ -68,7 +68,7 @@ function log_likelihood_m_fitm(mc_counts, mc_max, m_eff)
         end
     end
 end
-function log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, m_UT, m_S, inv_fit_m, eff::Tuple{})
+function log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, m_UT, m_S, inv_fit_m, eff::Bool)
     if m_UT <= 0. || m_S <= 0. || inv_fit_m <= 0.
         return -Inf
     else
@@ -147,7 +147,7 @@ function log_likelihood_joint_m_S(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S
         end
     end
 end
-function log_likelihood_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, m_off, S, f_on, rel_div_on, q0_UT, q_UT, q0_S_off, q_S_off, inv_fit_m)
+function log_likelihood_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, m_off, S, f_on, rel_div_on, q0_UT, q_UT, q0_S_off, q_S_off, inv_fit_m, eff::Bool)
     if m_off <= 0. || S < 0. || rel_div_on <= 0. || f_on < 0. || f_on >= 1. 
         return -Inf
     else
@@ -172,26 +172,8 @@ function log_likelihood_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc
         p_UT = mudi(mc_max_UT, m_off, q0_UT, q_UT)
         N_ratio *= scale_f(f_on, rel_div_on)
         ifit = inverse_fit_on(f_on, rel_div_on)*inv_fit_m
-        q0_S_on = q0_coeff(ifit, eff)
+        q0_S_on = q0_coeff(ifit, eff[1])
         q_S_on = q_coeffs(mc_max_S, ifit, eff)
-        p_S = mudi(mc_max_S, m_off*N_ratio, q0_S_off, q_S_off, S*m_off*N_ratio, q0_S_on, q_S_on)
-        ll  = sum(mc_counts_UT .* log.(p_UT)) + sum(mc_counts_S .* log.(p_S))
-        if !isnan(ll) && ll < 1.
-            return ll
-        else
-            return -Inf
-        end
-    end
-end
-function log_likelihood_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, m_off, S, f_on, rel_div_on, q0_UT, q_UT, q0_S_off, q_S_off, inv_fit_m, eff, small_eff::Bool)
-    if m_off <= 0. || S < 0. || rel_div_on <= 0. || f_on < 0. || f_on >= 1. 
-        return -Inf
-    else
-        p_UT = mudi(mc_max_UT, m_off, q0_UT, q_UT)
-        N_ratio *= scale_f(f_on, rel_div_on)
-        ifit = inverse_fit_on(f_on, rel_div_on)*inv_fit_m
-        q0_S_on = q0_coeff(ifit, eff)
-        q_S_on = q_coeffs(mc_max_S, ifit, eff, true)
         p_S = mudi(mc_max_S, m_off*N_ratio, q0_S_off, q_S_off, S*m_off*N_ratio, q0_S_on, q_S_on)
         ll  = sum(mc_counts_UT .* log.(p_UT)) + sum(mc_counts_S .* log.(p_S))
         if !isnan(ll) && ll < 1.
