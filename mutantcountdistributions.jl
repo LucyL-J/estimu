@@ -82,7 +82,7 @@ function mudi(K::Int, m, q0, q)
         @views S = sum((1:k) .* q[1:k] .* reverse(p[1:k]))
         @inbounds p[k+1] = m*S/k
     end
-    return p
+    return max.(p, 0.)
 end
 # Zero differential mutant fitness
 mudi(K::Int, m) = pdf(Poisson(m), 0:K)
@@ -95,7 +95,7 @@ function mudi(K::Int, m_off, q0_off, q_off, m_on, q0_on, q_on)
         @views S = sum((1:k) .* (m_off.*q_off[1:k] .+ m_on.*q_on[1:k]) .* reverse(p[1:k]))
         @inbounds p[k+1] = S/k
     end
-    return p
+    return max.(p, 0.)
 end
 
 # Probability mass and cumulative distribution functions
