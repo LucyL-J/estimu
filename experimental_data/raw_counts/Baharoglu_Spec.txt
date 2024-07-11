@@ -1,0 +1,3 @@
+Spectinomycin 0.2ug/mL
+37,98
+7.76E+08,6.70E+08
