@@ -1,2 +1,5 @@
 Manifest.toml
 .DS_Store
+.Rproj.user
+estimu.Rproj
+.Rhistory
