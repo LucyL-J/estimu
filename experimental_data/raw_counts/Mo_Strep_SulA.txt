@@ -1,3 +1,4 @@
 Streptomycin 2ug/mL
 1,2,8,2,1,4
 4.31E+08
+0.01
