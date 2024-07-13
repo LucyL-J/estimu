@@ -1,16 +1,5 @@
 meta_data <- read.csv("experimental_data/meta_data.csv")[,-1]
 
-read_counts <- function(df_row){
-  v1 <- as.vector(df_row)
-  v2 <- c()
-  for (j in 1:length(v1)){
-    if(!is.na(as.numeric(v1[[j]]))){
-      v2 <- append(v2, as.numeric(v1[[j]]))
-    }
-  }
-  return(v2)
-}
-
 # Number of parallel cultures (_b respective baseline experiment)
 n <- numeric(length(meta_data$ID))
 n_b <- numeric(length(meta_data$ID))

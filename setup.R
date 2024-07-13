@@ -143,3 +143,14 @@ estimu <- function(mc_UT, Nf_UT, mc_S, Nf_S, eff=1, fit_m=1., f_on=FALSE, rel_di
   }
   return(res)
 }
+
+read_counts <- function(df_row){
+  v1 <- as.vector(df_row)
+  v2 <- c()
+  for (j in 1:length(v1)){
+    if(!is.na(as.numeric(v1[[j]]))){
+      v2 <- append(v2, as.numeric(v1[[j]]))
+    }
+  }
+  return(v2)
+}

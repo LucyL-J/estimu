@@ -41,9 +41,14 @@ function estimu(mc::Vector{Int}, Nf, eff, fit_m::Float64=1.; cond="UT")
         MLL = Optim.minimum(res)
         # Mutation rate is calculated from m and the final population size
         est_res.MLE = [m/Nf, fit_m]     
-        b = CI_m(mc_counts, mc_max, m, q0, q, MLL)
-        est_res.lower_bound = [b[1]/Nf, fit_m]
-        est_res.upper_bound = [b[2]/Nf, fit_m]
+        try
+            b = CI_m(mc_counts, mc_max, m, q0, q, MLL)
+            est_res.lower_bound = [b[1]/Nf, fit_m]
+            est_res.upper_bound = [b[2]/Nf, fit_m] 
+        catch
+            est_res.lower_bound = [0., fit_m]
+            est_res.upper_bound = [Inf, fit_m] 
+        end
         msel_res.LL = [-MLL]
         msel_res.AIC = [2 + 2*MLL]
         msel_res.BIC = [log(length(mc)) + 2*MLL]                         
@@ -73,11 +78,16 @@ function estimu(mc::Vector{Int}, Nf, eff, fit_m::Bool; cond="UT")
     if Optim.converged(res) == true
         p = Optim.minimizer(res)
         MLL = Optim.minimum(res)
-        b = CI_m_fitm(mc_counts, mc_max, p[1], p[2], eff, MLL)
-		est_res.status = ["inferred", "inferred"]
+        est_res.status = ["inferred", "inferred"]
 		est_res.MLE = [p[1]/Nf, 1/p[2]]   
-        est_res.lower_bound = [b[1,1]/Nf, 1/b[2,2]]
-        est_res.upper_bound = [b[1,2]/Nf, 1/b[2,1]]
+        try
+            b = CI_m_fitm(mc_counts, mc_max, p[1], p[2], eff, MLL)
+            est_res.lower_bound = [b[1,1]/Nf, 1/b[2,2]]
+            est_res.upper_bound = [b[1,2]/Nf, 1/b[2,1]]
+        catch
+            est_res.lower_bound = [0., 0.]
+            est_res.upper_bound = [Inf, Inf]
+        end
         msel_res.LL = [-MLL]
         msel_res.AIC = [4 + 2*MLL]         
         msel_res.BIC = [2*log(length(mc)) + 2*MLL]                       
@@ -136,9 +146,14 @@ function estimu_0(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vecto
         m = Optim.minimizer(res)
         MLL = Optim.minimum(res)
         est_res.MLE = [m/Nf_UT, fit_m[1], fit_m[2]]   
-        b = CI_joint_m(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, N_ratio, m, q0_UT, q_UT, q0_S, q_S, MLL)        
-        est_res.lower_bound = [b[1]/Nf_UT, fit_m[1], fit_m[2]]
-        est_res.upper_bound = [b[2]/Nf_UT, fit_m[1], fit_m[2]]
+        try
+            b = CI_joint_m(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, N_ratio, m, q0_UT, q_UT, q0_S, q_S, MLL)        
+            est_res.lower_bound = [b[1]/Nf_UT, fit_m[1], fit_m[2]]
+            est_res.upper_bound = [b[2]/Nf_UT, fit_m[1], fit_m[2]]
+        catch
+            est_res.lower_bound = [0., fit_m[1], fit_m[2]]
+            est_res.upper_bound = [Inf, fit_m[1], fit_m[2]]
+        end
         msel_res.LL = [-MLL]
         msel_res.AIC = [2 + 2*MLL]
         # Number of data points = total number of parallel cultures
@@ -166,7 +181,7 @@ end
 # cond_S: Condition, by default = "S" for stressful 
 
 # Mutant fitness under permissive/stressful cond(s). independent (either fixed in the inference, or inferred separately)
-function estimu_hom(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vector{<:Number}, fit_m::Union{Vector{Float64},Tuple{Bool,Bool}}=[1., 1.]; cond_S="S")
+function estimu_hom(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vector{<:Number}, fit_m::Union{Vector{Float64},Tuple{Bool,Bool},BitVector}=[1., 1.]; cond_S="S")
     if typeof(fit_m) == Vector{Float64} 
         if fit_m[1] == fit_m[2] == 1.                                         
             M = "Homogeneous"
@@ -238,13 +253,18 @@ function estimu_hom(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
     # 3 inference parameters: Number of mutations under permissive/stressful cond., mutant fitness
     LL(para) = -log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, para[1], para[2], para[3], eff)
     res = Optim.optimize(LL, [initial_m(mc_UT, 1000), initial_m(mc_S, 1000), 1.]) 
-    p = Optim.minimizer(res)
-    MLL = Optim.minimum(res)
-    b = CI_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, p[1], p[2], p[3], eff, MLL)
 	if Optim.converged(res) == true
+        p = Optim.minimizer(res)
+        MLL = Optim.minimum(res)
         est_res.MLE = [p[1]/Nf_UT, 1/p[3], p[2]/Nf_S, 1/p[3], 1., p[2]/p[1] * Nf_UT/Nf_S]
-        est_res.lower_bound = [b[1,1]/Nf_UT, 1/b[3,2], b[2,1]/Nf_S, 1/b[3,2], 1., b[4,1] * Nf_UT/Nf_S]
-        est_res.upper_bound = [b[1,2]/Nf_UT, 1/b[3,1], b[2,2]/Nf_S, 1/b[3,1], 1., b[4,2] * Nf_UT/Nf_S]
+        try
+            b = CI_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, p[1], p[2], p[3], eff, MLL)
+            est_res.lower_bound = [b[1,1]/Nf_UT, 1/b[3,2], b[2,1]/Nf_S, 1/b[3,2], 1., b[4,1] * Nf_UT/Nf_S]
+            est_res.upper_bound = [b[1,2]/Nf_UT, 1/b[3,1], b[2,2]/Nf_S, 1/b[3,1], 1., b[4,2] * Nf_UT/Nf_S]
+        catch
+            est_res.lower_bound = [0., 0., 0., 0., 1., 0.]
+            est_res.upper_bound = [Inf, Inf, Inf, Inf, 1., Inf]
+        end
         msel_res.LL = [-MLL]
         msel_res.AIC = [6 + 2*MLL]
         msel_res.BIC = [3*log(length(mc_UT)+length(mc_S)) + 2*MLL] 
@@ -308,9 +328,14 @@ function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
         p = Optim.minimizer(res)     
         MLL = Optim.minimum(res)                                                          
         est_res.MLE = [p[1]/Nf_UT, fit_m[1], fit_m[2], p[2], p[2]*p[1]*(1-f_on)/(f_on*Nf_UT), f_on, rel_div_on, p[2]*(1-f_on)/f_on, (1-f_on)*(1+p[2])]
-        b = CI_joint_m_S(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, p[1], p[2], q0_UT, q_UT, q0_S_off, q_S_off, q0_S_on, q_S_on, MLL)
-        est_res.lower_bound = [b[1,1]/Nf_UT, fit_m[1], fit_m[2], b[2,1], b[3,1]*(1-f_on)/(f_on*Nf_UT), f_on, rel_div_on, b[2,1]*(1-f_on)/f_on, (1-f_on)*(1+b[2,1])]
-        est_res.upper_bound = [b[1,2]/Nf_UT, fit_m[1], fit_m[2], b[2,2], b[3,2]*(1-f_on)/(f_on*Nf_UT), f_on, rel_div_on, b[2,2]*(1-f_on)/f_on, (1-f_on)*(1+b[2,2])]  
+        try
+            b = CI_joint_m_S(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, p[1], p[2], q0_UT, q_UT, q0_S_off, q_S_off, q0_S_on, q_S_on, MLL)
+            est_res.lower_bound = [b[1,1]/Nf_UT, fit_m[1], fit_m[2], b[2,1], b[3,1]*(1-f_on)/(f_on*Nf_UT), f_on, rel_div_on, b[2,1]*(1-f_on)/f_on, (1-f_on)*(1+b[2,1])]
+            est_res.upper_bound = [b[1,2]/Nf_UT, fit_m[1], fit_m[2], b[2,2], b[3,2]*(1-f_on)/(f_on*Nf_UT), f_on, rel_div_on, b[2,2]*(1-f_on)/f_on, (1-f_on)*(1+b[2,2])]   
+        catch
+            est_res.lower_bound = [0., fit_m[1], fit_m[2], 0., 0., f_on, rel_div_on, 0., 0.]
+            est_res.upper_bound = [Inf, fit_m[1], fit_m[2], Inf, Inf, f_on, rel_div_on, Inf, Inf]  
+        end
         msel_res.LL = [-MLL]
         msel_res.AIC = [4 + 2*MLL]         
         msel_res.BIC = [2*log(length(mc_UT)+length(mc_S)) + 2*MLL]   
@@ -358,9 +383,14 @@ function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
         p = Optim.minimizer(res)
         MLL = Optim.minimum(res)
         est_res.MLE = [p[1]/Nf_UT, fit_m[1], fit_m[2], p[2], p[2]*p[1]*(1-f_on)/(f_on*Nf_UT), f_on, p[3], p[2]*(1-f_on)/f_on, (1-f_on)*(1+p[2])]
-        b = CI_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, p[1], p[2], f_on, p[3], q0_UT, q_UT, q0_S_off, q_S_off, q0_S_on, q_S_on, 1/fit_m[2], eff, MLL)
-        est_res.lower_bound = [b[1,1]/Nf_UT, fit_m[1], fit_m[2], b[2,1], b[4,1]*(1-f_on)/(f_on*Nf_UT), f_on, b[3,1], b[2,1]*(1-f_on)/f_on, (1-f_on)*(1+b[2,1])]
-        est_res.upper_bound = [b[1,2]/Nf_UT, fit_m[1], fit_m[2], b[2,2], b[4,2]*(1-f_on)/(f_on*Nf_UT), f_on, b[3,2], b[2,2]*(1-f_on)/f_on, (1-f_on)*(1+b[2,2])]
+        try
+            b = CI_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, p[1], p[2], f_on, p[3], q0_UT, q_UT, q0_S_off, q_S_off, q0_S_on, q_S_on, 1/fit_m[2], eff, MLL)
+            est_res.lower_bound = [b[1,1]/Nf_UT, fit_m[1], fit_m[2], b[2,1], b[4,1]*(1-f_on)/(f_on*Nf_UT), f_on, b[3,1], b[2,1]*(1-f_on)/f_on, (1-f_on)*(1+b[2,1])]
+            est_res.upper_bound = [b[1,2]/Nf_UT, fit_m[1], fit_m[2], b[2,2], b[4,2]*(1-f_on)/(f_on*Nf_UT), f_on, b[3,2], b[2,2]*(1-f_on)/f_on, (1-f_on)*(1+b[2,2])] 
+        catch
+            est_res.lower_bound = [0., fit_m[1], fit_m[2], 0., 0., f_on, 0., 0., 0.]
+            est_res.upper_bound = [Inf, fit_m[1], fit_m[2], Inf, Inf, f_on, Inf, Inf, Inf]
+        end
         msel_res.LL = [-MLL]
         msel_res.AIC = [6 + 2*MLL]         
         msel_res.BIC = [3*log(length(mc_UT)+length(mc_S)) + 2*MLL] 
@@ -402,9 +432,15 @@ function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
             p = Optim.minimizer(res)
             MLL = Optim.minimum(res)
             est_res.MLE  = [p[1]/Nf_UT, fit_m[1], fit_m[2], p[2], 0.]
-            b = CI_joint_m_S(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, p[1], p[2], q0_UT, q_UT, q0_S_off, q_S_off, q0_S_on, q_S_on, MLL)
-            est_res.lower_bound = [b[1,1]/Nf_UT, fit_m[1], fit_m[2], b[2,1], 0.]
-            est_res.upper_bound = [b[1,2]/Nf_UT, fit_m[1], fit_m[2], b[2,2], 0.]
+            try
+                b = CI_joint_m_S(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, p[1], p[2], q0_UT, q_UT, q0_S_off, q_S_off, q0_S_on, q_S_on, MLL)
+                est_res.lower_bound = [b[1,1]/Nf_UT, fit_m[1], fit_m[2], b[2,1], 0.]
+                est_res.upper_bound = [b[1,2]/Nf_UT, fit_m[1], fit_m[2], b[2,2], 0.] 
+            catch
+                est_res.lower_bound = [0., fit_m[1], fit_m[2], 0., 0.]
+                est_res.upper_bound = [Inf, fit_m[1], fit_m[2], Inf, 0.]
+
+            end
             msel_res.LL = [-MLL]
             msel_res.AIC = [4 + 2*MLL]         
             msel_res.BIC = [2*log(length(mc_UT)+length(mc_S)) + 2*MLL]
@@ -437,9 +473,15 @@ function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
             p = Optim.minimizer(res)
             MLL = Optim.minimum(res)
             est_res.MLE = [p[1]/Nf_UT, fit_m[1], fit_m[2], p[2], p[2]*p[1]*(1-p[3])/(p[3]*Nf_UT), p[3], rel_div_on, p[2]*(1-p[3])/p[3], (1-p[3])*(1+p[2])]
-            b = CI_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, p[1], p[2], p[3], rel_div_on, q0_UT, q_UT, q0_S_off, q_S_off, q0_S_on, q_S_on, false, 1/fit_m[2], eff, MLL)
-            est_res.lower_bound = [b[1,1]/Nf_UT, fit_m[1], fit_m[2], b[2,1], b[4,1]/Nf_UT, b[3,1], rel_div_on, b[5,1], b[6,1]]
-            est_res.upper_bound = [b[1,2]/Nf_UT, fit_m[1], fit_m[2], b[2,2], b[4,2]/Nf_UT, b[3,2], rel_div_on, b[5,2], b[6,2]]
+            try
+                b = CI_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, p[1], p[2], p[3], rel_div_on, q0_UT, q_UT, q0_S_off, q_S_off, q0_S_on, q_S_on, false, 1/fit_m[2], eff, MLL)
+                est_res.lower_bound = [b[1,1]/Nf_UT, fit_m[1], fit_m[2], b[2,1], b[4,1]/Nf_UT, b[3,1], rel_div_on, b[5,1], b[6,1]]
+                est_res.upper_bound = [b[1,2]/Nf_UT, fit_m[1], fit_m[2], b[2,2], b[4,2]/Nf_UT, b[3,2], rel_div_on, b[5,2], b[6,2]] 
+            catch
+                est_res.lower_bound = [0., fit_m[1], fit_m[2], 0., 0., 0., rel_div_on, 0., 0.]
+                est_res.upper_bound = [Inf, fit_m[1], fit_m[2], Inf, Inf, 1., rel_div_on, Inf, Inf]
+
+            end
             msel_res.LL = [-MLL]
             msel_res.AIC = [6 + 2*MLL]         
             msel_res.BIC = [3*log(length(mc_UT)+length(mc_S)) + 2*MLL] 
@@ -484,9 +526,14 @@ function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
         p = Optim.minimizer(res)
         MLL = Optim.minimum(res)
         est_res.MLE = [p[1]/Nf_UT, fit_m[1], fit_m[2], p[2], p[2]*p[1]*(1-p[3])/(p[3]*Nf_UT), p[3], p[4], p[2]*(1-p[3])/p[3], (1-p[3])*(1+p[2])]                                                          
-        b = CI_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, p[1], p[2], p[3], p[4], q0_UT, q_UT, q0_S_off, q_S_off, q0_S_on, q_S_on, true, 1/fit_m[2], eff, MLL)
-        est_res.lower_bound = [b[1,1]/Nf_UT, fit_m[1], fit_m[2], b[2,1], b[5,1]/Nf_UT, b[3,1], b[4,1], b[6,1], b[7,1]]
-        est_res.upper_bound = [b[1,2]/Nf_UT, fit_m[1], fit_m[2], b[2,2], b[5,2]/Nf_UT, b[3,2], b[4,2], b[6,2], b[7,2]]
+        try
+            b = CI_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, p[1], p[2], p[3], p[4], q0_UT, q_UT, q0_S_off, q_S_off, q0_S_on, q_S_on, true, 1/fit_m[2], eff, MLL)
+            est_res.lower_bound = [b[1,1]/Nf_UT, fit_m[1], fit_m[2], b[2,1], b[5,1]/Nf_UT, b[3,1], b[4,1], b[6,1], b[7,1]]
+            est_res.upper_bound = [b[1,2]/Nf_UT, fit_m[1], fit_m[2], b[2,2], b[5,2]/Nf_UT, b[3,2], b[4,2], b[6,2], b[7,2]] 
+        catch
+            est_res.lower_bound = [0., fit_m[1], fit_m[2], 0., 0., 0., 0., 0., 0.]
+            est_res.upper_bound = [Inf, fit_m[1], fit_m[2], Inf, Inf, 1., Inf, Inf, Inf]
+        end
         msel_res.LL = [-MLL]
         msel_res.AIC = [8 + 2*MLL]         
         msel_res.BIC = [4*log(length(mc_UT)+length(mc_S)) + 2*MLL]  

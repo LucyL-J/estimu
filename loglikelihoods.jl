@@ -206,7 +206,11 @@ function initial_m(mc, z_values::Int)         # Estimate number of mutations by 
     for i = 0:z_values-1
         m += initial_m(i/z_values, mc)
     end
-    return max(m/z_values, 0.)
+    if isnan(m)
+        return 0.
+    else
+        return max(m/z_values, 0.)
+    end
 end
 function initial_S(z, mc, m)             # Estimate the mutation-supply ratio for given z   
     if z == 0.
@@ -227,12 +231,16 @@ function initial_S(mc, m, z_values::Int) # Estimate the mutation-supply ratio by
     end
 end
 function initial_f(mc, N_ratio, Nf_S, m, S, rel_div_on, z_values::Int)
-    mu_inc = initial_m(mc, z_values)/(m*N_ratio)
-    f_upper = 1 - mu_inc/(S+1)                                                          
-    if f_upper <= 0.
-        f_upper = 1/mu_inc
+    if m == 0.
+        return 0.
+    else
+        mu_inc = initial_m(mc, z_values)/(m*N_ratio)
+        f_upper = 1 - mu_inc/(S+1)                                                          
+        if f_upper <= 0.
+            f_upper = 1/mu_inc
+        end
+        f_lower = - log(1-f_upper) / log(Nf_S)                                                                                                                                                                                                                                        
+        f_on = f_lower/(1 - rel_div_on)                                                                         
+        return minimum([maximum([f_lower, f_on]), f_upper])
     end
-    f_lower = - log(1-f_upper) / log(Nf_S)                                                                                                                                                                                                                                        
-    f_on = f_lower/(1 - rel_div_on)                                                                         
-    return minimum([maximum([f_lower, f_on]), f_upper])
 end
