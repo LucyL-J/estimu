@@ -1,9 +1,9 @@
 meta_data <- read.csv("experimental_data/meta_data.csv")[,-1]
 
-est_model <- c("no_SIM", "hom_wo_fitm", "hom_fitm", "hom_fitm_unconstr", "het_zero_div", "het_div")
-fit_m <- list("no_SIM"=1, "hom_wo_fitm"=1, "hom_fitm"=FALSE, "hom_fitm_unconstr"=c(FALSE,FALSE), "het_zero_div"=1, "het_div"=1)
-rel_div_on <- list("no_SIM"=0, "hom_wo_fitm"=0, "hom_fitm"=0, "hom_fitm_unconstr"=0, "het_zero_div"=0, "het_div"=FALSE)
-mod <- list("no_SIM"="no SIM", "hom_wo_fitm"="homogeneous", "hom_fitm"="homogeneous", "hom_fitm_unconstr"="homogeneous", "het_zero_div"="heterogeneous", "het_div"="heterogeneous")
+est_model <- c("no_SIM", "hom_wo_fitm", "hom_fitm", "hom_fitm_unconstr", "het_zero_div", "het_div", "het_zero_div_fon", "het_div_fon")
+fit_m <- list("no_SIM"=1, "hom_wo_fitm"=1, "hom_fitm"=FALSE, "hom_fitm_unconstr"=c(FALSE,FALSE), "het_zero_div"=1, "het_div"=1, "het_zero_div_fon"=1, "het_div_fon"=1)
+rel_div_on <- list("no_SIM"=0, "hom_wo_fitm"=0, "hom_fitm"=0, "hom_fitm_unconstr"=0, "het_zero_div"=0, "het_div"=FALSE, "het_zero_div_fon"=0, "het_div_fon"=FALSE)
+mod <- list("no_SIM"="no SIM", "hom_wo_fitm"="homogeneous", "hom_fitm"="homogeneous", "hom_fitm_unconstr"="homogeneous", "het_zero_div"="heterogeneous", "het_div"="heterogeneous", "het_zero_div_fon"="heterogeneous", "het_div_fon"="heterogeneous")
 est_p <- c("mu_UT","fitm_UT","mu_S","fitm_S", "fitm_ratio", "M", "mu_off", "S", "mu_on", "f_on", "rel_div_on", "mu_inc")
 pq <- c()
 for (p in est_p) {
@@ -25,27 +25,37 @@ for (i in 1:length(meta_data$ID)) {
   eff_UT <- as.numeric(mc_data_b[4,1])
   print(meta_data$ID[i])
   for (m in est_model) {
-    res <- estimu(mc_UT, Nf_UT, mc_S, Nf_S, eff = c(eff_UT, eff_S), fit_m = fit_m[[m]], rel_div_on = rel_div_on[[m]], mod = mod[[m]]) 
-    if (is.data.frame(res[[2]]) && res[[2]]$LL != -Inf) {
-      if (mod[m] == "no SIM"){
-        est_paras[nrow(est_paras) + 1,] <- c(meta_data$ID[i], m, "success", c(t(res[[1]][1:2,4:6])), c(t(res[[1]][1,4:6])), rep(1,9), c(t(res[[1]][1,4:6])), rep(0,3), rep(NA,12), c(t(res[[2]][1,3:5])))
+    st <- TRUE
+    f_on <- FALSE
+    if(is.element(m, c("het_zero_div_fon", "het_div_fon"))){
+      if(!is.na(as.numeric(meta_data$SOS_induction[i])) && is.na(as.logical(meta_data$SOS_induction[i]))){
+        f_on <- as.numeric(meta_data$SOS_induction[i])
+      } else {
+        st <- FALSE
       }
-      if (mod[m] == "homogeneous") {
-        est_paras[nrow(est_paras) + 1,] <- c(meta_data$ID[i], m, "success", c(t(res[[1]][1:6,4:6])), rep(NA,18), c(t(res[[2]][1,3:5])))
-      }
-      if (m == "het_div") {
-        est_paras[nrow(est_paras) + 1,] <- c(meta_data$ID[i], m, "success", rep(NA,15), c(t(res[[1]][9,4:6])), c(t(res[[1]][1,4:6])), c(t(res[[1]][4:8,4:6])), c(t(res[[2]][1,3:5])))
-      }
-      if (m == "het_zero_div") {
-        est_paras[nrow(est_paras) + 1,] <- c(meta_data$ID[i], m, "success", rep(NA,18), c(t(res[[1]][1:2,4:6])), rep(NA,6), rep(0,3), rep(NA,3), c(t(res[[2]][1,3:5])))
-      }
-    } else {
-      est_paras[nrow(est_paras) + 1,] <- c(meta_data$ID[i], m, "failed", rep(NA, 36), -Inf, -Inf, -Inf)
+    }
+    if(st){
+      res <- estimu(mc_UT, Nf_UT, mc_S, Nf_S, eff = c(eff_UT, eff_S), fit_m = fit_m[[m]], rel_div_on = rel_div_on[[m]], f_on = f_on, mod = mod[[m]]) 
+      if (is.data.frame(res[[2]]) && res[[2]]$LL != -Inf) {
+        if (mod[m] == "no SIM"){
+          est_paras[nrow(est_paras) + 1,] <- c(meta_data$ID[i], m, "success", c(t(res[[1]][1:2,4:6])), c(t(res[[1]][1,4:6])), rep(1,9), c(t(res[[1]][1,4:6])), rep(0,3), rep(NA,12), c(t(res[[2]][1,3:5])))
+        }
+        if (mod[m] == "homogeneous") {
+          est_paras[nrow(est_paras) + 1,] <- c(meta_data$ID[i], m, "success", c(t(res[[1]][1:6,4:6])), rep(NA,18), c(t(res[[2]][1,3:5])))
+        }
+        if (mod[m] == "heterogeneous"){
+          if (m == "het_zero_div") {
+            est_paras[nrow(est_paras) + 1,] <- c(meta_data$ID[i], m, "success", rep(NA,18), c(t(res[[1]][1:2,4:6])), rep(NA,6), rep(0,3), rep(NA,3), c(t(res[[2]][1,3:5])))
+          } else {
+            est_paras[nrow(est_paras) + 1,] <- c(meta_data$ID[i], m, "success", rep(NA,15), c(t(res[[1]][9,4:6])), c(t(res[[1]][1,4:6])), c(t(res[[1]][4:8,4:6])), c(t(res[[2]][1,3:5])))
+          }
+        }
+      } else {
+        est_paras[nrow(est_paras) + 1,] <- c(meta_data$ID[i], m, "failed", rep(NA, 36), -Inf, -Inf, -Inf)
+      } 
     }
   }
 }
 
-
 est_paras[,4:dim(est_paras)[2]][!is.na(est_paras[,4:dim(est_paras)[2]])] <- as.numeric(est_paras[,4:dim(est_paras)[2]][!is.na(est_paras[,4:dim(est_paras)[2]])])
-#est_paras <- arrange(est_paras, ID)
 write.csv(est_paras, file = "experimental_data/est_paras.csv")
