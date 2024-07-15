@@ -34,7 +34,7 @@ function estimu(mc::Vector{Int}, Nf, eff, fit_m::Float64=1.; cond="UT")
     q0, q = coeffs(mc_max, 1/fit_m, eff)
     # 1 inference parameter: Number of mutations 
     LL(para) = -log_likelihood_m(mc_counts, mc_max, para, q0, q)
-    res = Optim.optimize(LL, 0., mc_max)
+    res = Optim.optimize(LL, 0., mc_max, iterations=10^4)
     if Optim.converged(res) == true
         est_res.status = ["inferred", "set to input"]
         m = Optim.minimizer(res)
@@ -74,7 +74,7 @@ function estimu(mc::Vector{Int}, Nf, eff, fit_m::Bool; cond="UT")
     end
     # 2 inference parameters: Number of mutations, mutant fitness
     LL(para) = -log_likelihood_m_fitm(mc_counts, mc_max, para[1], para[2], eff)
-    res = Optim.optimize(LL, [max(1.,median(mc)), 1.]) 
+    res = Optim.optimize(LL, [max(1.,median(mc)), 1.], iterations=10^4) 
     if Optim.converged(res) == true
         p = Optim.minimizer(res)
         MLL = Optim.minimum(res)
@@ -140,7 +140,7 @@ function estimu_0(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vecto
     # 1 inference parameter: Number of mutations under untreated+stressful cond.                                            
     LL(para) = -log_likelihood_joint_m(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, para, q0_UT, q_UT, q0_S, q_S)
     # Maximum mutant count observed overall, used as an upper bound for the inference parameter
-    res = Optim.optimize(LL, 0., mc_max)                                      
+    res = Optim.optimize(LL, 0., mc_max, iterations=10^4)                                      
     if Optim.converged(res) == true
         est_res.status = ["jointly inferred", "set to input", "set to input"]
         m = Optim.minimizer(res)
@@ -252,7 +252,7 @@ function estimu_hom(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
     end
     # 3 inference parameters: Number of mutations under permissive/stressful cond., mutant fitness
     LL(para) = -log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, para[1], para[2], para[3], eff)
-    res = Optim.optimize(LL, [max(1.,median(mc_UT)), max(1.,median(mc_S)), 1.]) 
+    res = Optim.optimize(LL, [max(1.,median(mc_UT)), max(1.,median(mc_S)), 1.], iterations=10^4) 
 	if Optim.converged(res) == true
         p = Optim.minimizer(res)
         MLL = Optim.minimum(res)
@@ -322,7 +322,7 @@ function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
     end
     # 2 inference parameters: Number of mutations in off-cells under permissive cond., mutation-supply ratio
     LL(para) = -log_likelihood_joint_m_S(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, para[1], para[2], q0_UT, q_UT, q0_S_off, q_S_off, q0_S_on, q_S_on)
-    res = Optim.optimize(LL, [m, S])                                          
+    res = Optim.optimize(LL, [m, S], iterations=10^4)                                          
     if Optim.converged(res) == true
         est_res.status = ["jointly inferred", "set to input", "set to input", "inferred", "calc. from 1,4&6", "set to input", "set to input", "calc. from 4&6", "calc. from 4&6"] 
         p = Optim.minimizer(res)     
@@ -377,7 +377,7 @@ function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
     end
     # 3 inference parameters: Number of mutations in off-cells under permissive cond., mutation-supply ratio, rel. division rate on-cells                              
     LL(para) = -log_likelihood_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, para[1], para[2], f_on, para[3], q0_UT, q_UT, q0_S_off, q_S_off, 1/fit_m[2], eff)
-    res = Optim.optimize(LL, [m, S, 1.])                                    
+    res = Optim.optimize(LL, [m, S, 1.], iterations=10^4)                                    
     if Optim.converged(res) == true
         est_res.status = ["jointly inferred", "set to input", "set to input", "inferred", "calc. from 1,4&6", "set to input", "inferred", "calc. from 4&6", "calc. from 4&6"] 
         p = Optim.minimizer(res)
@@ -427,7 +427,7 @@ function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
         msel_res = DataFrame(model=["Heterogeneous (zero division rate on-cells)"], status=["-"])
         # 2 inference parameters: Number of mutations in off-cells under permissive cond., mutation-supply ratio  
         LL_0(para) = -log_likelihood_joint_m_S(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, para[1], para[2], q0_UT, q_UT, q0_S_off, q_S_off, q0_S_on, q_S_on)
-        res = Optim.optimize(LL_0, [m, S])                     
+        res = Optim.optimize(LL_0, [m, S], iterations=10^4)                     
         if Optim.converged(res) == true
             p = Optim.minimizer(res)
             MLL = Optim.minimum(res)
@@ -468,7 +468,7 @@ function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
         end
         # 3 inference parameters: Number of mutations in off-cells under permissive cond., mutation-supply ratio, fraction of on-cells                              
         LL(para) = -log_likelihood_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, para[1], para[2], para[3], rel_div_on, q0_UT, q_UT, q0_S_off, q_S_off, 1/fit_m[2], eff)
-        res = Optim.optimize(LL, [m, S, f_on]) 
+        res = Optim.optimize(LL, [m, S, f_on], iterations=10^4) 
         if Optim.converged(res) == true
             p = Optim.minimizer(res)
             MLL = Optim.minimum(res)
@@ -520,7 +520,7 @@ function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
     end
     # 4 inference parameters: Number of mutations in off-cells under permissive cond., mutation-supply ratio, relative division rate on-cells, fraction of on-cells
     LL(para) = -log_likelihood_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, para[1], para[2], para[3], para[4], q0_UT, q_UT, q0_S_off, q_S_off, fit_m[2], eff)
-    res = Optim.optimize(LL, [m, S, f_on, 1.])                                                            
+    res = Optim.optimize(LL, [m, S, f_on, 1.], iterations=10^4)                                                         
     if Optim.converged(res) == true
         est_res.status = ["jointly inferred", "set to input", "set to input", "inferred", "calc. from 1,4&6", "inferred", "inferred", "calc. from 4&6", "calc. from 4&6"] 
         p = Optim.minimizer(res)
