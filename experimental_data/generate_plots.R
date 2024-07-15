@@ -95,7 +95,8 @@ p_M_DNA
 selected_models <- data.frame(antibiotic=rep(unique(df_SIM$antibiotic), each=3))
 selected_models$mode_of_action <- mapvalues(selected_models$antibiotic, from=antibiotic_classes$antibiotic_abbr, to=antibiotic_classes$my_group) 
 selected_models$m <- rep(c("hom","none","het"), length(unique(df_SIM$antibiotic)))
-n <- match("by_AIC", names(df_SIM))
+criterion <- "by_AIC"
+n <- match(criterion, names(df_SIM))
 m <- match("SIM", names(df_SIM))
 v <- numeric(length(selected_models$antibiotic))
 for (i in 1:length(unique(df_SIM$antibiotic))) {
@@ -106,5 +107,41 @@ for (i in 1:length(unique(df_SIM$antibiotic))) {
 selected_models$prevalence <- v
 
 p_model_selection <- ggplot(data = selected_models, aes(x=factor(m, c("hom","none","het")), y=prevalence, fill=mode_of_action)) + geom_bar(stat = "identity")+ 
-  scale_fill_manual(values = c("#009092", "#FF00CC", "#FF6600", "#5ced73")) + xlab("Selected model")
+  scale_fill_manual(values = c("#009092", "#FF00CC", "#FF6600", "#5ced73")) + xlab("Selected model") + ggtitle(criterion)
 p_model_selection
+
+# Experiments, for which a heterogeneous stress response is selected or homogeneous/heterogeneous response cannot be distinguished clearly
+df_het <- subset(df_SIM, is.element(by_AIC, c("none", "het")))
+
+# Frenoy et al. 2018 Norfloxacin
+df_Nor <- subset(est_paras, ID == "Frenoy_Nor")
+# Untreated condition
+mc_data <- read.table(paste0("experimental_data/raw_counts/Frenoy_LB.txt"), header = FALSE, sep = ",", fill = TRUE)
+mc_UT <- read_counts(mc_data[2,])
+Nf_UT <- mean(read_counts(mc_data[3,]))
+eff_UT <- as.numeric(mc_data[4,1])
+p_mc_hom_UT <- pMudi(max(mc_UT), Nf_UT, df_Nor$mu_UT_MLE[4], eff=eff_UT, fit_m=df_Nor$fitm_UT_MLE[4]) * length(mc_UT)
+p_mc_hom_constr_UT <- pMudi(max(mc_UT), Nf_UT, df_Nor$mu_UT_MLE[3], eff=eff_UT, fit_m=df_Nor$fitm_UT_MLE[3]) * length(mc_UT)
+p_mc_het_UT <- pMudi(max(mc_UT), Nf_UT, df_Nor$mu_off_MLE[6], eff=eff_UT) * length(mc_UT)
+print(c(df_Nor$mu_UT_MLE[4], df_Nor$fitm_UT_MLE[4], df_Nor$mu_UT_MLE[3], df_Nor$fitm_UT_MLE[3]))
+print(df_Nor$mu_off_MLE[6])
+p_mc_UT <- ggplot() + geom_bar(aes(mc_UT), fill="#123288") + xlab("Number of colonies") + ylab("Number of plates") +
+  geom_line(aes(x=0:max(mc_UT), y=p_mc_hom_UT), color="#820298") + 
+  geom_line(aes(x=0:max(mc_UT), y=p_mc_hom_constr_UT), color="#f1aafd") + 
+  geom_line(aes(x=0:max(mc_UT), y=p_mc_het_UT), color="#FFD300") + ggtitle("Untreated condition")
+p_mc_UT
+# Stressful condition: 0.05 mug/mL Norfloxacin
+mc_data <- read.table(paste0("experimental_data/raw_counts/Frenoy_Nor.txt"), header = FALSE, sep = ",", fill = TRUE)
+mc_S <- read_counts(mc_data[2,])
+Nf_S <- mean(read_counts(mc_data[3,]))
+eff_S <- as.numeric(mc_data[4,1])
+p_mc_hom_S <- pMudi(max(mc_S), Nf_S, df_Nor$mu_S_MLE[4], eff=eff_S, fit_m=df_Nor$fitm_S_MLE[4]) * length(mc_S)
+p_mc_hom_constr_S <- pMudi(max(mc_S), Nf_S, df_Nor$mu_S_MLE[3], eff=eff_S, fit_m=df_Nor$fitm_S_MLE[3]) * length(mc_S)
+p_mc_het_S <- pMudi(max(mc_S), Nf_S, df_Nor$mu_off_MLE[6], eff=eff_S, S=df_Nor$S_MLE[6], f_on=df_Nor$f_on_MLE[6], rel_div_on=df_Nor$rel_div_on_MLE[6]) * length(mc_S)
+print(c(df_Nor$mu_S_MLE[4], df_Nor$fitm_S_MLE[4], df_Nor$mu_S_MLE[3], df_Nor$fitm_S_MLE[3]))
+print(c(df_Nor$mu_off_MLE[6], df_Nor$S_MLE[6], df_Nor$f_on_MLE[6], df_Nor$rel_div_on_MLE[6]))
+p_mc_s <- ggplot() + geom_bar(aes(mc_S), fill="#89CFF0") + xlab("Number of colonies") + ylab("Number of plates") +
+  geom_line(aes(x=0:max(mc_S), y=p_mc_hom_S), color="#820298") + 
+  geom_line(aes(x=0:max(mc_S), y=p_mc_hom_constr_S), color="#f1aafd") + 
+  geom_line(aes(x=0:max(mc_S), y=p_mc_het_S), color="#FFD300") + ggtitle("Norfloxacin")
+p_mc_s

@@ -123,7 +123,7 @@ pmf_mudi(k::Int, N, mu, fit_m, eff=1.) = p_mudi(max(2,k), N, mu, fit_m, eff)[k+1
 cdf_mudi(k::Int, N, mu, fit_m, eff=1.) = sum(p_mudi(max(2,k), N, mu, fit_m, eff)[1:k+1])
 
 # With a subpopulation of on-cells
-function p_mudi(K::Int, N, mu_off, mu_on, f_on, rel_div_on, fit_m, eff=1.)
+function p_mudi(K::Int, N, mu_off, S, f_on, rel_div_on, fit_m, eff=1.)
     if eff == 1.
         q0_off = -1
         q_off = q_coeffs(K, 1/fit_m)
@@ -157,7 +157,7 @@ function p_mudi(K::Int, N, mu_off, mu_on, f_on, rel_div_on, fit_m, eff=1.)
             end
         end
     end
-    return mudi(K, N*mu_off, q0_off, q_off, N*mu_on*f_on/(1-f_on), q0_on, q_on)
+    return mudi(K, N*mu_off, q0_off, q_off, N*mu_off*S, q0_on, q_on)
 end
-pmf_mudi(k::Int, N, mu_off, mu_on, f_on, rel_div_on, fit_m, eff=1.) = p_mudi(max(2,k), N, mu_off, mu_on, f_on, rel_div_on, fit_m, eff)[k+1]
-cdf_mudi(k::Int, N, mu_off, mu_on, f_on, rel_div_on, fit_m, eff=1.) = sum(p_mudi(max(2,k), N, mu_off, mu_on, f_on, rel_div_on, fit_m, eff)[1:k+1])
+pmf_mudi(k::Int, N, mu_off, S, f_on, rel_div_on, fit_m, eff=1.) = p_mudi(max(2,k), N, mu_off, S, f_on, rel_div_on, fit_m, eff)[k+1]
+cdf_mudi(k::Int, N, mu_off, S, f_on, rel_div_on, fit_m, eff=1.) = sum(p_mudi(max(2,k), N, mu_off, S, f_on, rel_div_on, fit_m, eff)[1:k+1])

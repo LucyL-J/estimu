@@ -144,6 +144,23 @@ estimu <- function(mc_UT, Nf_UT, mc_S, Nf_S, eff=1, fit_m=1., f_on=FALSE, rel_di
   return(res)
 }
 
+pMudi <- function(mc_max, Nf, mu, eff=1, fit_m=1., S=FALSE, f_on=0., rel_div_on=0.){
+  if(S == FALSE){
+    p <- julia_call(
+      "p_mudi",
+      as.integer(mc_max), Nf, mu, fit_m, eff,
+      need_return = "R"
+    )
+  } else {
+    p <- julia_call(
+      "p_mudi",
+      as.integer(mc_max), Nf, mu, S, f_on, rel_div_on, fit_m, eff,
+      need_return = "R"
+    )
+  }
+  return(p)
+}
+  
 read_counts <- function(df_row){
   v1 <- as.vector(df_row)
   v2 <- c()
