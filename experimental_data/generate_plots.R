@@ -1,5 +1,6 @@
 library("plyr")
 library("ggplot2")
+library("ggpubr")
 
 # Read data frames
 antibiotic_classes <- read.csv("experimental_data/antibiotic_classes.csv")[,-1]
@@ -59,3 +60,33 @@ p_M_antibiotic <- ggplot(data = df_SIM, aes(x=ID, y=M.1, group=antibiotic)) +
   scale_y_continuous(trans="log10") + theme(axis.text.x = element_text(angle = 90), plot.margin = margin(3.5,0.5,0.5,0.5, "cm")) +
   ylab("Fold change population-wide mutation rate")
 p_M_antibiotic
+
+# Estimated increase in population-wide mutation rate by mode of action
+# Model used in the inference, for purpose of comparison
+m <- "hom_wo_fitm"
+df_W <- merge(subset(est_paras, model == m), meta_data, by = "ID")
+
+# Testing for normality -> not normal
+shapiro.test(subset(df_W, mode_of_action == "DNA")$M_MLE)
+
+# Kruskal-Wallis test and pairwise comparison -> DNA-Pro and DNA-Wall are significantly different
+kruskal.test(df_W$M_MLE, df_W$mode_of_action)
+pairwise.wilcox.test(df_W$M_MLE, df_W$mode_of_action)
+compare_means(M_MLE ~ mode_of_action, data = df_W)
+my_comparison <- list(c("DNA","Other"),c("DNA","Pro"),c("DNA","Wall"))
+p_M_mode <- ggplot(data = df_W, aes(x=mode_of_action, y=M_MLE, fill=mode_of_action)) + geom_boxplot() +
+  coord_trans(y = "log10", ylim = c(5*10^-2,5*10^2)) + scale_y_continuous(breaks = c(0.1,1,10,100), labels = c(0.1,1,10,100)) +
+  scale_fill_manual(values = c("#009092", "#FF00CC", "#FF6600", "#5ced73")) + 
+  ylab("Estimated fold change in population-wide mutation rate") + 
+  stat_compare_means(comparisons = my_comparison, label.x = 1, label.y = c(70,110,170)) + stat_compare_means(label.y = 400) 
+p_M_mode
+# Comparing DNA - not DNA
+levels(df_W$mode_of_action) <- c("DNA", "Other", "Pro", "Wall", "not DNA")
+df_W$mode_of_action[which(is.element(df_W$mode_of_action, c("Pro","Other","Wall")))] <- "not DNA"
+wilcox.test(M_MLE ~ mode_of_action, data = df_W)
+p_M_DNA <- ggplot(data = df_W, aes(x=mode_of_action, y=M_MLE, fill=mode_of_action)) + geom_boxplot() +
+  coord_trans(y = "log10", ylim = c(5*10^-2,5*10^2)) + scale_y_continuous(breaks = c(0.1,1,10,100), labels = c(0.1,1,10,100)) +
+  scale_fill_manual(values = c("#009092", "#FF00CC", "#FF6600", "#5ced73")) + 
+  ylab("Estimated fold change in population-wide mutation rate") +
+  stat_compare_means(label.y = 400) 
+p_M_DNA
