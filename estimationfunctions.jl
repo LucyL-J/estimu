@@ -74,7 +74,7 @@ function estimu(mc::Vector{Int}, Nf, eff, fit_m::Bool; cond="UT")
     end
     # 2 inference parameters: Number of mutations, mutant fitness
     LL(para) = -log_likelihood_m_fitm(mc_counts, mc_max, para[1], para[2], eff)
-    res = Optim.optimize(LL, [initial_m(mc, 1000), 1.]) 
+    res = Optim.optimize(LL, [max(1.,median(mc)), 1.]) 
     if Optim.converged(res) == true
         p = Optim.minimizer(res)
         MLL = Optim.minimum(res)
@@ -252,7 +252,7 @@ function estimu_hom(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
     end
     # 3 inference parameters: Number of mutations under permissive/stressful cond., mutant fitness
     LL(para) = -log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, para[1], para[2], para[3], eff)
-    res = Optim.optimize(LL, [initial_m(mc_UT, 1000), initial_m(mc_S, 1000), 1.]) 
+    res = Optim.optimize(LL, [max(1.,median(mc_UT)), max(1.,median(mc_S)), 1.]) 
 	if Optim.converged(res) == true
         p = Optim.minimizer(res)
         MLL = Optim.minimum(res)
@@ -307,7 +307,7 @@ function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
     mc_counts_S = counts(mc_S, 0:mc_max_S)
     N_ratio = Nf_S/Nf_UT
     # Calculate initial values
-    m = initial_m(mc_UT, 1000)
+    m = max(1.,median(mc_UT))
     S = initial_S(mc_S, m*N_ratio, 1000)
     q0_UT, q_UT = coeffs(mc_max_UT, 1/fit_m[1], eff[1])
     q0_S_off, q_S_off = coeffs(mc_max_S, 1/fit_m[2], eff[2])
@@ -362,7 +362,7 @@ function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
     mc_max_S = maximum(mc_S)
     mc_counts_S = counts(mc_S, 0:mc_max_S)
     N_ratio = Nf_S/Nf_UT
-    m = initial_m(mc_UT, 1000)
+    m = max(1.,median(mc_UT))
     S = initial_S(mc_S, m*N_ratio, 1000)
     q0_UT, q_UT = coeffs(mc_max_UT, 1/fit_m[1], eff[1])
     q0_S_off, q_S_off = coeffs(mc_max_S, 1/fit_m[2], eff[2]) 
@@ -412,7 +412,7 @@ function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
     mc_max_S = maximum(mc_S)
     mc_counts_S = counts(mc_S, 0:mc_max_S)
     N_ratio = Nf_S/Nf_UT
-    m = initial_m(mc_UT, 1000)
+    m = max(1.,median(mc_UT))
     S = initial_S(mc_S, m*N_ratio, 1000)
     q0_UT, q_UT = coeffs(mc_max_UT, 1/fit_m[1], eff[1])
     q0_S_off, q_S_off = coeffs(mc_max_S, 1/fit_m[2], eff[2])
@@ -456,7 +456,7 @@ function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
         condition = [condition; [fill(cond_S, 5); cond_S*"/UT"]]
         status = [status; ["inferred", "calc. from 1,4&6", "inferred", "set to input", "calc. from 4&6", "calc. from 4&6"]]
         # Calculate the initial value for optimisation
-        f_on = initial_f(mc_S, N_ratio, Nf_S, m, S, rel_div_on, 1000)
+        f_on = initial_f(mc_S, N_ratio, Nf_S, m, S, rel_div_on)
         est_res = DataFrame(parameter=parameter, condition=condition, status=status)
         msel_res = DataFrame(model=["Heterogeneous"], status=["-"])
         if eff[2] == 1
@@ -504,9 +504,9 @@ function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
     mc_max_S = maximum(mc_S)
     mc_counts_S = counts(mc_S, 0:mc_max_S)
     N_ratio = Nf_S/Nf_UT
-    m = initial_m(mc_UT, 1000)
+    m = max(1.,median(mc_UT))
     S = initial_S(mc_S, m*N_ratio, 1000)
-    f_on = initial_f(mc_S, N_ratio, Nf_S, m, S, 0., 1000)
+    f_on = initial_f(mc_S, N_ratio, Nf_S, m, S, 0.)
     q0_UT, q_UT = coeffs(mc_max_UT, 1/fit_m[1], eff[1])
     q0_S_off, q_S_off = coeffs(mc_max_S, 1/fit_m[2], eff[2])
     q0_S_on = -eff[2]

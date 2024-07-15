@@ -4,7 +4,7 @@ function log_likelihood_m(mc_counts, mc_max, m, q0, q)
     else
         p = mudi(mc_max, m, q0, q)
         ll = sum(mc_counts .* log.(p))
-        if !isnan(ll) && ll < 1.
+        if !isnan(ll) && ll < 0.
             return ll
         else
             return -Inf
@@ -18,7 +18,7 @@ function log_likelihood_joint_m(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, 
         p_UT = mudi(mc_max_UT, m, q0_UT, q_UT)
         p_S = mudi(mc_max_S, m*N_ratio, q0_S, q_S)
         ll = sum(mc_counts_UT .* log.(p_UT)) + sum(mc_counts_S .* log.(p_S))
-        if !isnan(ll) && ll < 1.
+        if !isnan(ll) && ll < 0.
             return ll
         else
             return -Inf
@@ -33,7 +33,7 @@ function log_likelihood_m_fitm(mc_counts, mc_max, m, inv_fit_m, eff::Bool)
         q = q_coeffs(mc_max, inv_fit_m)
         p = mudi(mc_max, m, q0, q)
         ll = sum(mc_counts .* log.(p))
-        if !isnan(ll) && ll < 1.
+        if !isnan(ll) && ll < 0.
             return ll
         else
             return -Inf
@@ -48,7 +48,7 @@ function log_likelihood_m_fitm(mc_counts, mc_max, m, inv_fit_m, eff)
         q = q_coeffs(mc_max, inv_fit_m, eff)
         p = mudi(mc_max, m, q0, q)
         ll = sum(mc_counts .* log.(p))
-        if !isnan(ll) && ll < 1.
+        if !isnan(ll) && ll < 0.
             return ll
         else
             return -Inf
@@ -61,7 +61,7 @@ function log_likelihood_m_fitm(mc_counts, mc_max, m_eff)
     else
         p = mudi(mc_max, m_eff)
         ll = sum(mc_counts .* log.(p))
-        if !isnan(ll) && ll < 1.
+        if !isnan(ll) && ll < 0.
             return ll
         else
             return -Inf
@@ -77,7 +77,7 @@ function log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_ma
         @views p_UT = mudi(mc_max_UT, m_UT, q0, q[1:mc_max_UT])
         @views p_S = mudi(mc_max_S, m_S, q0, q[1:mc_max_S])
         ll  = sum(mc_counts_UT .* log.(p_UT)) + sum(mc_counts_S .* log.(p_S))
-        if !isnan(ll) && ll < 1.
+        if !isnan(ll) && ll < 0.
             return ll
         else
             return -Inf
@@ -93,7 +93,7 @@ function log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_ma
         @views p_UT = mudi(mc_max_UT, m_UT, q0, q[1:mc_max_UT])
         @views p_S = mudi(mc_max_S, m_S, q0, q[1:mc_max_S])
         ll  = sum(mc_counts_UT .* log.(p_UT)) + sum(mc_counts_S .* log.(p_S))
-        if !isnan(ll) && ll < 1.
+        if !isnan(ll) && ll < 0.
             return ll
         else
             return -Inf
@@ -111,7 +111,7 @@ function log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_ma
         p_UT = mudi(mc_max_UT, m_UT, q0_UT, q_UT)
         p_S = mudi(mc_max_S, m_S, q0_S, q_S)
         ll  = sum(mc_counts_UT .* log.(p_UT)) + sum(mc_counts_S .* log.(p_S))
-        if !isnan(ll) && ll < 1.
+        if !isnan(ll) && ll < 0.
             return ll
         else
             return -Inf
@@ -125,7 +125,7 @@ function log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_ma
         p_UT = mudi(mc_max_UT, m_eff_UT)
         p_S = mudi(mc_max_S, m_eff_S)
         ll  = sum(mc_counts_UT .* log.(p_UT)) + sum(mc_counts_S .* log.(p_S))
-        if !isnan(ll) && ll < 1.
+        if !isnan(ll) && ll < 0.
             return ll
         else
             return -Inf
@@ -140,7 +140,7 @@ function log_likelihood_joint_m_S(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S
         p_UT = mudi(mc_max_UT, m_off, q0_UT, q_UT)
         p_S = mudi(mc_max_S, m_off*N_ratio, q0_S_off, q_S_off, S*m_off*N_ratio, q0_S_on, q_S_on)
         ll  = sum(mc_counts_UT .* log.(p_UT)) + sum(mc_counts_S .* log.(p_S))
-        if !isnan(ll) && ll < 1.
+        if !isnan(ll) && ll < 0.
             return ll
         else
             return -Inf
@@ -158,7 +158,7 @@ function log_likelihood_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc
         q_S_on = q_coeffs(mc_max_S, ifit)
         p_S = mudi(mc_max_S, m_off*N_ratio, q0_S_off, q_S_off, S*m_off*N_ratio, q0_S_on, q_S_on)
         ll  = sum(mc_counts_UT .* log.(p_UT)) + sum(mc_counts_S .* log.(p_S))
-        if !isnan(ll) && ll < 1.
+        if !isnan(ll) && ll < 0.
             return ll
         else
             return -Inf
@@ -176,7 +176,7 @@ function log_likelihood_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc
         q_S_on = q_coeffs(mc_max_S, ifit, eff)
         p_S = mudi(mc_max_S, m_off*N_ratio, q0_S_off, q_S_off, S*m_off*N_ratio, q0_S_on, q_S_on)
         ll  = sum(mc_counts_UT .* log.(p_UT)) + sum(mc_counts_S .* log.(p_S))
-        if !isnan(ll) && ll < 1.
+        if !isnan(ll) && ll < 0.
             return ll
         else
             return -Inf
@@ -193,24 +193,6 @@ function empirical_pgf(z, x) # Empirical probability generating function calcula
     end
     g /= length(x)
     return g
-end
-function initial_m(z, mc)                     # Estimate number of mutations for given z        
-    if z == 0.
-        return log(empirical_pgf(z, mc)) 
-    else
-        return z/((1-z)*log(1-z)) * log(empirical_pgf(z, mc))
-    end
-end
-function initial_m(mc, z_values::Int)         # Estimate number of mutations by averaging over a number of z values
-    m = 0.
-    for i = 0:z_values-1
-        m += initial_m(i/z_values, mc)
-    end
-    if isnan(m)
-        return 0.
-    else
-        return max(m/z_values, 0.)
-    end
 end
 function initial_S(z, mc, m)             # Estimate the mutation-supply ratio for given z   
     if z == 0.
@@ -230,11 +212,11 @@ function initial_S(mc, m, z_values::Int) # Estimate the mutation-supply ratio by
         return S/z_values
     end
 end
-function initial_f(mc, N_ratio, Nf_S, m, S, rel_div_on, z_values::Int)
+function initial_f(mc, N_ratio, Nf_S, m, S, rel_div_on)
     if m == 0.
         return 0.
     else
-        mu_inc = initial_m(mc, z_values)/(m*N_ratio)
+        mu_inc = max(1.,median(mc))/(m*N_ratio)
         f_upper = 1 - mu_inc/(S+1)                                                          
         if f_upper <= 0.
             f_upper = 1/mu_inc
