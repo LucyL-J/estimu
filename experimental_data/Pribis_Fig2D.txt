@@ -1,0 +1,9 @@
+# concentrations in ng/ml, mutation rates: mutations per cell per generation *10^-8
+cipro_concentration	number_experiments	no_cipro_mutation_rate	range_no	cipro_mutation_rate	range_cipro	fold_induction_mutation_rate	fold_min	fold_max	of_MIC
+1	4	1.1	(0.78,1.4)	1.7	(1.2,2.2)	1.7	1.1	2.4	0.08333333333
+2	4	1.1	(0.78,1.4)	2.3	(2.0,2.6)	2.2	1.8	2.7	0.1666666667
+4	4	1.1	(0.78,1.4)	5.2	(3.4,7.0)	4.8	4.2	5.3	0.3333333333
+8.5		0.62	(0.51,0.75)	19	(6,50)	30	11	67	0.7083333333
+10	2	0.63	(0.55,0.70)	10	(10,11)	17	15	18	0.8333333333
+12	9	1.2	(0.92,1.4)	13	(8.1,16)	11	7.1	15	1
+14	2	0.63	(0.55,0.70)	5.7	(5.7,5.8)	9.3	8.3	10	1.1666666667

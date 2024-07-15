@@ -145,3 +145,18 @@ p_mc_s <- ggplot() + geom_bar(aes(mc_S), fill="#89CFF0") + xlab("Number of colon
   geom_line(aes(x=0:max(mc_S), y=p_mc_hom_constr_S), color="#f1aafd") + 
   geom_line(aes(x=0:max(mc_S), y=p_mc_het_S), color="#FFD300") + ggtitle("Norfloxacin")
 p_mc_s
+
+# Dose-dependence
+# Model used in the inference, for purpose of comparison
+m <- "hom_wo_fitm"
+df_W <- merge(subset(est_paras, model == m), meta_data, by = "ID")
+df_Pribis <- read.delim("experimental_data/Pribis_Fig2D.txt", header = TRUE, sep = '\t', comment.char="#")
+df_c <- subset(subset(subset(df_W, microbe == "E. coli"), strain != "DeltaLexA"), antibiotic == "Cip")
+p_c <- ggplot() + 
+  geom_point(data = df_c, aes(x=of_MIC, y=M_MLE)) +
+  geom_errorbar(data = df_c, aes(x=of_MIC, ymin=M_lower_bound, ymax=M_upper_bound)) +
+  geom_hline(yintercept = 1) +
+  geom_point(data = df_Pribis, aes(x=of_MIC, y=fold_induction_mutation_rate), color='blue') +
+  geom_errorbar(data = df_Pribis, aes(x=of_MIC, ymin=fold_min, ymax=fold_max), color='blue') +
+  ylab("Fold change population-wide mutation rate") + ggtitle(a)
+p_c
