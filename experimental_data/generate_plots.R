@@ -90,3 +90,21 @@ p_M_DNA <- ggplot(data = df_W, aes(x=mode_of_action, y=M_MLE, fill=mode_of_actio
   ylab("Estimated fold change in population-wide mutation rate") +
   stat_compare_means(label.y = 400) 
 p_M_DNA
+
+# Model selection for experiments with significant increase in population-wide mutation rate
+selected_models <- data.frame(antibiotic=rep(unique(df_SIM$antibiotic), each=3))
+selected_models$mode_of_action <- mapvalues(selected_models$antibiotic, from=antibiotic_classes$antibiotic_abbr, to=antibiotic_classes$my_group) 
+selected_models$m <- rep(c("hom","none","het"), length(unique(df_SIM$antibiotic)))
+n <- match("by_AIC", names(df_SIM))
+m <- match("SIM", names(df_SIM))
+v <- numeric(length(selected_models$antibiotic))
+for (i in 1:length(unique(df_SIM$antibiotic))) {
+  v[3*i-2] <- sum(subset(df_SIM, antibiotic == selected_models$antibiotic[3*i])[,n] == "hom") + sum(subset(df_SIM, antibiotic == selected_models$antibiotic[3*i])[,m] == "hom")
+  v[3*i-1] <- sum(subset(df_SIM, antibiotic == selected_models$antibiotic[3*i])[,n] == "none") 
+  v[3*i] <- sum(subset(df_SIM, antibiotic == selected_models$antibiotic[3*i])[,n] == "het")
+}
+selected_models$prevalence <- v
+
+p_model_selection <- ggplot(data = selected_models, aes(x=factor(m, c("hom","none","het")), y=prevalence, fill=mode_of_action)) + geom_bar(stat = "identity")+ 
+  scale_fill_manual(values = c("#009092", "#FF00CC", "#FF6600", "#5ced73")) + xlab("Selected model")
+p_model_selection
