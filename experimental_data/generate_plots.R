@@ -51,40 +51,46 @@ p_antibiotic <- ggplot(data = antibiotic_classes, aes(x=my_group, y=prevalence, 
 p_antibiotic
 
 # Estimated increase in population-wide mutation rate by antibiotic
-df_SIM <- subset(df, is.element(SIM, c("yes", "hom")))
+# Homogeneous-response model without differential mutant fitness used in the inference, for purpose of comparison
+p_M_antibiotic <- ggplot(data = df, aes(x=ID, y=M_wo_fitm.1, group=antibiotic)) + 
+  geom_point(aes(color=antibiotic)) + geom_point(aes(color=antibiotic)) +
+  geom_errorbar(aes(ymin=M_wo_fitm.2, ymax=M_wo_fitm.3, color=antibiotic)) +
+  geom_hline(yintercept = 1) +
+  scale_color_manual(values = subset(antibiotic_classes, is.element(antibiotic_abbr, unique(df$antibiotic)))$color) + 
+  scale_y_continuous(trans="log10") + theme(axis.text.x = element_text(angle = 90), plot.margin = margin(3.5,0.5,0.5,0.5, "cm")) +
+  ylab("Fold-change population-wide mutation rate")
+p_M_antibiotic
+
+# Experiments for which SIM was detected
+df_SIM <- subset(df, SIM == TRUE)
 p_M_antibiotic <- ggplot(data = df_SIM, aes(x=ID, y=M.1, group=antibiotic)) + 
   geom_point(aes(color=antibiotic)) + geom_point(aes(color=antibiotic)) +
   geom_errorbar(aes(ymin=M.2, ymax=M.3, color=antibiotic)) +
   geom_hline(yintercept = 1) +
   scale_color_manual(values = subset(antibiotic_classes, is.element(antibiotic_abbr, unique(df_SIM$antibiotic)))$color) + 
   scale_y_continuous(trans="log10") + theme(axis.text.x = element_text(angle = 90), plot.margin = margin(3.5,0.5,0.5,0.5, "cm")) +
-  ylab("Fold change population-wide mutation rate")
+  ylab("Increase population-wide mutation rate")
 p_M_antibiotic
 
-# Estimated increase in population-wide mutation rate by mode of action
-# Model used in the inference, for purpose of comparison
-m <- "hom_wo_fitm"
-df_W <- merge(subset(est_paras, model == m), meta_data, by = "ID")
-
 # Testing for normality -> not normal
-shapiro.test(subset(df_W, mode_of_action == "DNA")$M_MLE)
+shapiro.test(subset(df, mode_of_action == "DNA")$M_wo_fitm.1)
 
 # Kruskal-Wallis test and pairwise comparison -> DNA-Pro and DNA-Wall are significantly different
-kruskal.test(df_W$M_MLE, df_W$mode_of_action)
-pairwise.wilcox.test(df_W$M_MLE, df_W$mode_of_action)
-compare_means(M_MLE ~ mode_of_action, data = df_W)
+kruskal.test(df$M_wo_fitm.1, df$mode_of_action)
+pairwise.wilcox.test(df$M_wo_fitm.1, df$mode_of_action)
+compare_means(M_wo_fitm.1 ~ mode_of_action, data = df)
 my_comparison <- list(c("DNA","Other"),c("DNA","Pro"),c("DNA","Wall"))
-p_M_mode <- ggplot(data = df_W, aes(x=mode_of_action, y=M_MLE, fill=mode_of_action)) + geom_boxplot() +
+p_M_mode <- ggplot(data = df, aes(x=mode_of_action, y=M_wo_fitm.1, fill=mode_of_action)) + geom_boxplot() +
   coord_trans(y = "log10", ylim = c(5*10^-2,5*10^2)) + scale_y_continuous(breaks = c(0.1,1,10,100), labels = c(0.1,1,10,100)) +
   scale_fill_manual(values = c("#009092", "#FF00CC", "#FF6600", "#5ced73")) + 
   ylab("Estimated fold change in population-wide mutation rate") + 
   stat_compare_means(comparisons = my_comparison, label.x = 1, label.y = c(70,110,170)) + stat_compare_means(label.y = 400) 
 p_M_mode
 # Comparing DNA - not DNA
-levels(df_W$mode_of_action) <- c("DNA", "Other", "Pro", "Wall", "not DNA")
-df_W$mode_of_action[which(is.element(df_W$mode_of_action, c("Pro","Other","Wall")))] <- "not DNA"
-wilcox.test(M_MLE ~ mode_of_action, data = df_W)
-p_M_DNA <- ggplot(data = df_W, aes(x=mode_of_action, y=M_MLE, fill=mode_of_action)) + geom_boxplot() +
+levels(df$mode_of_action) <- c("DNA", "Other", "Pro", "Wall", "not DNA")
+df$mode_of_action[which(is.element(df$mode_of_action, c("Pro","Other","Wall")))] <- "not DNA"
+wilcox.test(M_wo_fitm.1 ~ mode_of_action, data = df)
+p_M_DNA <- ggplot(data = df, aes(x=mode_of_action, y=M_wo_fitm.1, fill=mode_of_action)) + geom_boxplot() +
   coord_trans(y = "log10", ylim = c(5*10^-2,5*10^2)) + scale_y_continuous(breaks = c(0.1,1,10,100), labels = c(0.1,1,10,100)) +
   scale_fill_manual(values = c("#009092", "#FF00CC", "#FF6600", "#5ced73")) + 
   ylab("Estimated fold change in population-wide mutation rate") +
@@ -97,10 +103,9 @@ selected_models$mode_of_action <- mapvalues(selected_models$antibiotic, from=ant
 selected_models$m <- rep(c("hom","none","het"), length(unique(df_SIM$antibiotic)))
 criterion <- "by_AIC"
 n <- match(criterion, names(df_SIM))
-m <- match("SIM", names(df_SIM))
 v <- numeric(length(selected_models$antibiotic))
 for (i in 1:length(unique(df_SIM$antibiotic))) {
-  v[3*i-2] <- sum(subset(df_SIM, antibiotic == selected_models$antibiotic[3*i])[,n] == "hom") + sum(subset(df_SIM, antibiotic == selected_models$antibiotic[3*i])[,m] == "hom")
+  v[3*i-2] <- sum(subset(df_SIM, antibiotic == selected_models$antibiotic[3*i])[,n] == "hom") 
   v[3*i-1] <- sum(subset(df_SIM, antibiotic == selected_models$antibiotic[3*i])[,n] == "none") 
   v[3*i] <- sum(subset(df_SIM, antibiotic == selected_models$antibiotic[3*i])[,n] == "het")
 }
@@ -121,9 +126,9 @@ mc_UT <- read_counts(mc_data[2,])
 Nf_UT <- mean(read_counts(mc_data[3,]))
 eff_UT <- as.numeric(mc_data[4,1])
 p_mc_hom_UT <- pMudi(max(mc_UT), Nf_UT, df_Nor$mu_UT_MLE[4], eff=eff_UT, fit_m=df_Nor$fitm_UT_MLE[4]) * length(mc_UT)
-p_mc_hom_constr_UT <- pMudi(max(mc_UT), Nf_UT, df_Nor$mu_UT_MLE[3], eff=eff_UT, fit_m=df_Nor$fitm_UT_MLE[3]) * length(mc_UT)
+p_mc_hom_constr_UT <- pMudi(max(mc_UT), Nf_UT, df_Nor$mu_UT_MLE[2], eff=eff_UT) * length(mc_UT)
 p_mc_het_UT <- pMudi(max(mc_UT), Nf_UT, df_Nor$mu_off_MLE[6], eff=eff_UT) * length(mc_UT)
-print(c(df_Nor$mu_UT_MLE[4], df_Nor$fitm_UT_MLE[4], df_Nor$mu_UT_MLE[3], df_Nor$fitm_UT_MLE[3]))
+print(c(df_Nor$mu_UT_MLE[4], df_Nor$fitm_UT_MLE[4], df_Nor$mu_UT_MLE[2]))
 print(df_Nor$mu_off_MLE[6])
 p_mc_UT <- ggplot() + geom_bar(aes(mc_UT), fill="#123288") + xlab("Number of colonies") + ylab("Number of plates") +
   geom_line(aes(x=0:max(mc_UT), y=p_mc_hom_UT), color="#820298") + 
@@ -136,9 +141,9 @@ mc_S <- read_counts(mc_data[2,])
 Nf_S <- mean(read_counts(mc_data[3,]))
 eff_S <- as.numeric(mc_data[4,1])
 p_mc_hom_S <- pMudi(max(mc_S), Nf_S, df_Nor$mu_S_MLE[4], eff=eff_S, fit_m=df_Nor$fitm_S_MLE[4]) * length(mc_S)
-p_mc_hom_constr_S <- pMudi(max(mc_S), Nf_S, df_Nor$mu_S_MLE[3], eff=eff_S, fit_m=df_Nor$fitm_S_MLE[3]) * length(mc_S)
+p_mc_hom_constr_S <- pMudi(max(mc_S), Nf_S, df_Nor$mu_S_MLE[2], eff=eff_S) * length(mc_S)
 p_mc_het_S <- pMudi(max(mc_S), Nf_S, df_Nor$mu_off_MLE[6], eff=eff_S, S=df_Nor$S_MLE[6], f_on=df_Nor$f_on_MLE[6], rel_div_on=df_Nor$rel_div_on_MLE[6]) * length(mc_S)
-print(c(df_Nor$mu_S_MLE[4], df_Nor$fitm_S_MLE[4], df_Nor$mu_S_MLE[3], df_Nor$fitm_S_MLE[3]))
+print(c(df_Nor$mu_S_MLE[4], df_Nor$fitm_S_MLE[4], df_Nor$mu_S_MLE[2]))
 print(c(df_Nor$mu_off_MLE[6], df_Nor$S_MLE[6], df_Nor$f_on_MLE[6], df_Nor$rel_div_on_MLE[6]))
 p_mc_s <- ggplot() + geom_bar(aes(mc_S), fill="#89CFF0") + xlab("Number of colonies") + ylab("Number of plates") +
   geom_line(aes(x=0:max(mc_S), y=p_mc_hom_S), color="#820298") + 
@@ -147,16 +152,13 @@ p_mc_s <- ggplot() + geom_bar(aes(mc_S), fill="#89CFF0") + xlab("Number of colon
 p_mc_s
 
 # Dose-dependence
-# Model used in the inference, for purpose of comparison
-m <- "hom_wo_fitm"
-df_W <- merge(subset(est_paras, model == m), meta_data, by = "ID")
 df_Pribis <- read.delim("experimental_data/Pribis_Fig2D.txt", header = TRUE, sep = '\t', comment.char="#")
-df_c <- subset(subset(subset(df_W, microbe == "E. coli"), strain != "DeltaLexA"), antibiotic == "Cip")
+df_c <- subset(subset(subset(df, microbe == "E. coli"), strain != "DeltaLexA"), antibiotic == "Cip")
 p_c <- ggplot() + 
-  geom_point(data = df_c, aes(x=of_MIC, y=M_MLE)) +
-  geom_errorbar(data = df_c, aes(x=of_MIC, ymin=M_lower_bound, ymax=M_upper_bound)) +
-  geom_hline(yintercept = 1) +
-  geom_point(data = df_Pribis, aes(x=of_MIC, y=fold_induction_mutation_rate), color='blue') +
-  geom_errorbar(data = df_Pribis, aes(x=of_MIC, ymin=fold_min, ymax=fold_max), color='blue') +
-  ylab("Fold change population-wide mutation rate") + ggtitle(a)
+  geom_point(data = df_c, aes(x=concentration, y=M_wo_fitm.1)) +
+  geom_errorbar(data = df_c, aes(x=concentration, ymin=M_wo_fitm.2, ymax=M_wo_fitm.3)) +
+  geom_hline(yintercept = 1) + scale_y_continuous(trans="log10") +
+  geom_point(data = df_Pribis, aes(x=cipro_concentration/1000, y=fold_induction_mutation_rate), color='blue') +
+  geom_errorbar(data = df_Pribis, aes(x=cipro_concentration/1000, ymin=fold_min, ymax=fold_max), color='blue') +
+  ylab("Fold-change population-wide mutation rate") + ggtitle("Cip")
 p_c
