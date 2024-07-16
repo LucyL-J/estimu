@@ -32,6 +32,7 @@ for (i in 1:length(meta_data$ID)) {
         f_on <- as.numeric(meta_data$SOS_induction[i])
       } else {
         st <- FALSE
+        est_paras[nrow(est_paras) + 1,] <- c(meta_data$ID[i], m, "NA", rep(NA, 36), -Inf, -Inf, -Inf)
       }
     }
     if(st){
@@ -45,7 +46,7 @@ for (i in 1:length(meta_data$ID)) {
         }
         if (mod[m] == "heterogeneous"){
           if (m == "het_zero_div") {
-            est_paras[nrow(est_paras) + 1,] <- c(meta_data$ID[i], m, "success", rep(NA,18), c(t(res[[1]][1:2,4:6])), rep(NA,6), rep(0,3), rep(NA,3), c(t(res[[2]][1,3:5])))
+            est_paras[nrow(est_paras) + 1,] <- c(meta_data$ID[i], m, "success", rep(NA,18), c(t(res[[1]][1,4:6])), c(t(res[[1]][4,4:6])), rep(NA,6), rep(0,3), rep(NA,3), c(t(res[[2]][1,3:5])))
           } else {
             est_paras[nrow(est_paras) + 1,] <- c(meta_data$ID[i], m, "success", rep(NA,15), c(t(res[[1]][9,4:6])), c(t(res[[1]][1,4:6])), c(t(res[[1]][4:8,4:6])), c(t(res[[2]][1,3:5])))
           }

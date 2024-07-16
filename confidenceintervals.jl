@@ -5,7 +5,7 @@ using Roots
 # Depend on the observed mutant counts, on which parameters are estimated, the ML estimates and the maximum likelihood itself 
 chisq_1_95 = 3.84145882069412447634704221854917705059051513671875
 # Stadard model (with optional diff. mutant fitness)
-function CI_m(mc_counts, mc_max, m, q0, q, MLL)
+function CI_m(mc_counts, mc_max, m, q0, q, eff, MLL)
     function LL_ratio(para) 
         if para == m
             return -chisq_1_95/2
@@ -14,7 +14,7 @@ function CI_m(mc_counts, mc_max, m, q0, q, MLL)
         end
     end
     l_1 = find_zero(LL_ratio, (0., m))
-    u_1 = find_zero(LL_ratio, (m, 10*mc_max))
+    u_1 = find_zero(LL_ratio, (m, m_max(mc_max,eff)))
     return [l_1 u_1]
 end
 function CI_m_fitm(mc_counts, mc_max, m, inv_fit_m, eff, MLL)
@@ -29,7 +29,7 @@ function CI_m_fitm(mc_counts, mc_max, m, inv_fit_m, eff, MLL)
         end
     end
     l_1 = find_zero(LL_ratio_1, (0., m))
-    u_1 = find_zero(LL_ratio_1, (m, 10*mc_max))
+    u_1 = find_zero(LL_ratio_1, (m, m_max(mc_max,eff)))
     function LL_ratio_2(para) 
         if para == inv_fit_m
             return -chisq_1_95/2
@@ -49,7 +49,7 @@ function CI_m_fitm(mc_counts, mc_max, m, inv_fit_m, eff, MLL)
     return [l_1 u_1; l_2 u_2]
 end
 # Without change in mutation rate (fixed mutant fitness, single or multiple stressful cond.)
-function CI_joint_m(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, N_ratio, m, q0_UT, q_UT, q0_S, q_S, MLL)
+function CI_joint_m(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, N_ratio, m, q0_UT, q_UT, q0_S, q_S, eff, MLL)
     function LL_ratio(para)
         if para == m
             return -chisq_1_95/2
@@ -58,7 +58,7 @@ function CI_joint_m(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, N_ra
         end
     end
     l = find_zero(LL_ratio, (0., m))
-    u = find_zero(LL_ratio, (m, 10*mc_max))
+    u = find_zero(LL_ratio, (m, m_max(mc_max,eff)))
     return [l u]
 end
 # Homogeneous response with jointly inferred mutant fitness
@@ -78,7 +78,7 @@ function CI_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max,
     l_1_M(P) = -log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, l_1, P[1], P[2], eff)
     res = Optim.optimize(l_1_M, [m_S, inv_fit_m])
     M[1] = Optim.minimizer(res)[1]/l_1
-    u_1 = find_zero(LL_ratio_1, (m_UT, 10*mc_max_UT))
+    u_1 = find_zero(LL_ratio_1, (m_UT, m_max(mc_max_UT,eff)))
     u_1_M(P) = -log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, u_1, P[1], P[2], eff)
     res = Optim.optimize(u_1_M, [m_S, inv_fit_m])
     M[2] = Optim.minimizer(res)[1]/u_1
@@ -96,7 +96,7 @@ function CI_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max,
     l_2_M(P) = -log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, P[1], l_2, P[2], eff)
     res = Optim.optimize(l_2_M, [m_UT, inv_fit_m])
     M[3] = l_2/Optim.minimizer(res)[1]
-    u_2 = find_zero(LL_ratio_2, (m_S, 10*mc_max_S))
+    u_2 = find_zero(LL_ratio_2, (m_S, m_max(mc_max_S,eff)))
     u_2_M(P) = -log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, P[1], u_2, P[2], eff)
     res = Optim.optimize(u_2_M, [m_UT, inv_fit_m])
     M[4] = u_2/Optim.minimizer(res)[1]
@@ -132,7 +132,7 @@ function CI_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max,
     return [l_1 u_1; l_2 u_2; l_3 u_3; minimum(M) maximum(M)]
 end
 # Heterogeneous response (fixed fraction and rel. division rate of on-cells)
-function CI_joint_m_S(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, m, S, q0_UT, q_UT, q0_S_off, q_S_off, q0_S_on, q_S_on, MLL)
+function CI_joint_m_S(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, m, S, q0_UT, q_UT, q0_S_off, q_S_off, q0_S_on, q_S_on, eff, MLL)
     m_on = Vector{Float64}(undef, 4)
     function LL_ratio_1(para)
         if para == m
@@ -148,7 +148,7 @@ function CI_joint_m_S(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, m
     l_1_P(P) = -log_likelihood_joint_m_S(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, l_1, P[1], q0_UT, q_UT, q0_S_off, q_S_off, q0_S_on, q_S_on)
     res = Optim.optimize(l_1_P, [S])
     m_on[1] = Optim.minimizer(res)[1]*l_1
-    u_1 = find_zero(LL_ratio_1, (m, 10*mc_max_S))
+    u_1 = find_zero(LL_ratio_1, (m, m_max(mc_max_S,eff)))
     u_1_P(P) = -log_likelihood_joint_m_S(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, u_1, P[1], q0_UT, q_UT, q0_S_off, q_S_off, q0_S_on, q_S_on)
     res = Optim.optimize(u_1_P, [S])
     m_on[2] = Optim.minimizer(res)[1]*u_1
@@ -193,7 +193,7 @@ function CI_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ra
     l_1_P(P) = -log_likelihood_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, l_1, P[1], f_on, P[2], q0_UT, q_UT, q0_S_off, q_S_off, inv_fit_m, eff)
     res = Optim.optimize(l_1_P, [S, rel_div_on])
     m_on[1] = Optim.minimizer(res)[1]*l_1
-    u_1 = find_zero(LL_ratio_1, (m, 10*mc_max_S))
+    u_1 = find_zero(LL_ratio_1, (m, m_max(mc_max_S,eff)))
     u_1_P(P) = -log_likelihood_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, u_1, P[1], f_on, P[2], q0_UT, q_UT, q0_S_off, q_S_off, inv_fit_m, eff)
     res = Optim.optimize(u_1_P, [S, rel_div_on])
     m_on[2] = Optim.minimizer(res)[1]*u_1
@@ -273,7 +273,7 @@ function CI_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ra
     m_on[1] = Optim.minimizer(res)[1]*l_1*(1-Optim.minimizer(res)[2])/Optim.minimizer(res)[2]
     mu_inc[1] = Optim.minimizer(res)[1]*(1-Optim.minimizer(res)[2])/Optim.minimizer(res)[2]
     M[1] = (1-Optim.minimizer(res)[2])*(1+Optim.minimizer(res)[1])
-    u_1 = find_zero(LL_ratio_1, (m, 10*mc_max_S))
+    u_1 = find_zero(LL_ratio_1, (m, m_max(mc_max_S,eff)))
     u_1_P(P) = -log_likelihood_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, u_1, P[1], P[2], rel_div_on, q0_UT, q_UT, q0_S_off, q_S_off, inv_fit_m, eff)
     res = Optim.optimize(l_1_P, [S, f_on])
     m_on[2] = Optim.minimizer(res)[1]*u_1*(1-Optim.minimizer(res)[2])/Optim.minimizer(res)[2]
@@ -372,3 +372,7 @@ function CI_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ra
         return [l_1 u_1; l_2 u_2; l_3 u_3; l_r u_r; minimum(m_on) maximum(m_on); minimum(mu_inc) maximum(mu_inc); minimum(M) maximum(M)]
     end
 end
+
+m_max(mc_max, eff::Bool) = 10*mc_max
+m_max(mc_max, eff::Union{Float64,Tuple{Float64,Bool}}) = 10*mc_max/eff[1]
+m_max(mc_max, eff) = 10*mc_max/min(eff[1][1], eff[2][1])
