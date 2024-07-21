@@ -48,7 +48,7 @@ function CI_m_fitm(mc_counts, mc_max, m, inv_fit_m, eff, MLL)
     end
     return [l_1 u_1; l_2 u_2]
 end
-# Without change in mutation rate (fixed mutant fitness, single or multiple stressful cond.)
+# Without change in mutation rate (fixed mutant fitness)
 function CI_joint_m(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, N_ratio, m, q0_UT, q_UT, q0_S, q_S, eff, MLL)
     function LL_ratio(para)
         if para == m
@@ -60,6 +60,38 @@ function CI_joint_m(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, N_ra
     l = find_zero(LL_ratio, (0., m))
     u = find_zero(LL_ratio, (m, m_max(mc_max,eff)))
     return [l u]
+end
+# Without change in mutation rate (jointly inferred mutant fitness)
+function CI_joint_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, N_ratio, m, inv_fit_m, eff, MLL)
+    function LL_ratio_1(para)
+        if para == m
+            return -chisq_1_95/2
+        else
+            log_likelihood_1(P) = -log_likelihood_joint_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, N_ratio, para, P[1], eff)
+            res = Optim.optimize(log_likelihood_1, [inv_fit_m])
+            P1 = Optim.minimizer(res)
+            return -log_likelihood_joint_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, N_ratio, para, P1, eff) - MLL - chisq_1_95/2
+        end
+    end
+    l_1 = find_zero(LL_ratio_1, (0., m))
+    u_1 = find_zero(LL_ratio_1, (m, m_max(mc_max,eff)))
+    function LL_ratio_2(para)
+        if para == inv_fit_m
+            return -chisq_1_95/2
+        else
+            log_likelihood_2(P) = -log_likelihood_joint_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, N_ratio, P1, para, eff)
+            res = Optim.optimize(log_likelihood_2, [m])
+            P1 = Optim.minimizer(res)
+            return -log_likelihood_joint_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, N_ratio, P1, para, eff) - MLL - chisq_1_95/2
+        end
+    end
+    l_2 = find_zero(LL_ratio_2, (0., inv_fit_m))
+    u_2 = Inf
+    try
+        u_2 = find_zero(LL_ratio_2, (inv_fit_m, Inf))
+    catch err
+    end
+    return [l_1 u_1; l_2 u_2]
 end
 # Homogeneous response with jointly inferred mutant fitness
 function CI_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, m_UT, m_S, inv_fit_m, eff, MLL)

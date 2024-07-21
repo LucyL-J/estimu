@@ -24,9 +24,12 @@ for eff_UT in [1, 0.9]
                 end
             end
         end
-        for fit_m in ([1.,1.], [0.8,0.4], false, (false,false))
+        for fit_m in ([1.,1.], [0.8,0.4], false)
             println((eff_UT, eff_S))
+            println(estimu_0(mc_UT, Nf_UT/eff_UT, mc_S, Nf_S/eff_S, [eff_UT,eff_S], fit_m)[1])
             println(estimu_hom(mc_UT, Nf_UT/eff_UT, mc_S, Nf_S/eff_S, [eff_UT,eff_S], fit_m)[1])
         end
+        println((eff_UT, eff_S))
+        println(estimu_hom(mc_UT, Nf_UT/eff_UT, mc_S, Nf_S/eff_S, [eff_UT,eff_S], (false,false))[1])
     end
 end
