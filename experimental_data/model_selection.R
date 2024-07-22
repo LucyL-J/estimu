@@ -37,16 +37,23 @@ S <- matrix(nrow = length(meta_data$ID), ncol = 3)
 rel_div_on <- matrix(nrow = length(meta_data$ID), ncol = 3)
 M_het <- matrix(nrow = length(meta_data$ID), ncol = 3)
 by_AIC <- character(length(meta_data$ID))
+Delta_AIC <- numeric(length(meta_data$ID))
 by_AIC_constr <- character(length(meta_data$ID))
+Delta_AIC_constr <- numeric(length(meta_data$ID))
 by_BIC <- character(length(meta_data$ID))
+Delta_BIC <- numeric(length(meta_data$ID))
 by_BIC_constr <- character(length(meta_data$ID))
+Delta_BIC_constr <- numeric(length(meta_data$ID))
 
 for (i in 1:length(meta_data$ID)) {
-  df_SIM <- subset(subset(est_paras, is.element(model, c("no_SIM", "hom_wo_fitm"))), ID == meta_data$ID[i])
+  df_SIM <- subset(subset(est_paras, is.element(model, c("no_SIM_wo_fitm", "hom_wo_fitm", "hom_fitm", "hom_fitm_unconstr"))), ID == meta_data$ID[i])
   M_wo_fitm[i,1] <- df_SIM$M_MLE[2]
   M_wo_fitm[i,2] <- df_SIM$M_lower_bound[2]
   M_wo_fitm[i,3] <- df_SIM$M_upper_bound[2]
-  if ((LRT(df_SIM$LL) == 2) && M_wo_fitm[i,1] > 1) {
+  s <- LRT(df_SIM$LL)
+  df_null <- subset(subset(est_paras, is.element(model, c("no_SIM_wo_fitm", "no_SIM_fitm"))), ID == meta_data$ID[i])
+  s_null <- LRT(df_null$LL)
+  if ((s >= s_null) && (df_SIM$AIC[s] - df_null$AIC[s_null] < -2) && (M_wo_fitm[i,1] > 1)) {
     SIM[i] <- TRUE
     df_hom <- subset(subset(est_paras, is.element(model, c("hom_wo_fitm", "hom_fitm", "hom_fitm_unconstr"))), ID == meta_data$ID[i])
     s <- LRT(df_hom$LL)
@@ -72,14 +79,18 @@ for (i in 1:length(meta_data$ID)) {
     hom_by_LRT_constr[i] <- c("hom_wo_fitm", "hom_fitm")[s_constr]
     AIC_hom_constr <- df_hom$AIC[s_constr]
     BIC_hom_constr <- df_hom$BIC[s_constr] 
-    df_het <- subset(subset(est_paras, is.element(model, c("no_SIM", "het_zero_div", "het_div_fon", "het_div"))), ID == meta_data$ID[i])
-    df_het <- arrange(df_het, match(model, c("no_SIM", "het_zero_div", "het_div_fon", "het_div")))
+    df_het <- subset(subset(est_paras, is.element(model, c("no_SIM_wo_fitm", "het_zero_div", "het_div_fon", "het_div"))), ID == meta_data$ID[i])
+    df_het <- arrange(df_het, match(model, c("no_SIM_wo_fitm", "het_zero_div", "het_div_fon", "het_div")))
     s <- LRT(df_het$LL)
     if (s == 1) {
       by_AIC[i] <- "hom"
       by_BIC[i] <- "hom"
       by_AIC_constr[i] <- "hom"
       by_BIC_constr[i] <- "hom"
+      Delta_AIC[i] <- Inf
+      Delta_BIC[i] <- Inf
+      Delta_AIC_constr[i] <- Inf
+      Delta_BIC_constr[i] <- Inf
     } else {
       S[i,1] <- df_het$S_MLE[s]
       S[i,2] <- df_het$S_lower_bound[s]
@@ -90,13 +101,17 @@ for (i in 1:length(meta_data$ID)) {
       M_het[i,1] <- df_het$M_MLE[s]
       M_het[i,2] <- df_het$M_lower_bound[s]
       M_het[i,3] <- df_het$M_upper_bound[s]
-      het_by_LRT[i] <- c("no_SIM", "het_zero_div", "het_div_fon", "het_div")[s]
+      het_by_LRT[i] <- c("no_SIM_wo_fitm", "het_zero_div", "het_div_fon", "het_div")[s]
       AIC_het <- df_het$AIC[s]
       BIC_het <- df_het$BIC[s] 
+      Delta_AIC[i] <- AIC_het - AIC_hom
+      Delta_BIC[i] <- BIC_het - BIC_hom
+      Delta_AIC_constr[i] <- AIC_het - AIC_hom_constr
+      Delta_BIC_constr[i] <- BIC_het - BIC_hom_constr
       if (AIC_het - AIC_hom < -2){
         by_AIC[i] <- "het"
       } else {
-        if (AIC_het - AIC_hom >2){
+        if (AIC_het - AIC_hom > 2){
           by_AIC[i] <- "hom"
         } else {
           by_AIC[i] <- "none"
@@ -105,7 +120,7 @@ for (i in 1:length(meta_data$ID)) {
       if (BIC_het - BIC_hom < -2){
         by_BIC[i] <- "het"
       } else {
-        if (BIC_het - BIC_hom >2){
+        if (BIC_het - BIC_hom > 2){
           by_BIC[i] <- "hom"
         } else {
           by_BIC[i] <- "none"
@@ -133,5 +148,5 @@ for (i in 1:length(meta_data$ID)) {
   }
 }
 
-est_sum <- data.frame(ID=meta_data$ID, M_wo_fitm=M_wo_fitm, SIM=SIM, hom_by_LRT=hom_by_LRT, M=M, fitm_UT=fitm_UT, fitm_ratio=fitm_ratio, hom_by_LRT_constr=hom_by_LRT_constr, M_constr=M_constr, fitm_UT_constr=fitm_UT_constr, het_by_LRT=het_by_LRT, S=S, rel_div_on=rel_div_on, M_het=M_het, by_AIC=by_AIC, by_AIC_constr=by_AIC_constr, by_BIC=by_BIC, by_BIC_constr=by_BIC_constr)
+est_sum <- data.frame(ID=meta_data$ID, M_wo_fitm=M_wo_fitm, SIM=SIM, hom_by_LRT=hom_by_LRT, M=M, fitm_UT=fitm_UT, fitm_ratio=fitm_ratio, hom_by_LRT_constr=hom_by_LRT_constr, M_constr=M_constr, fitm_UT_constr=fitm_UT_constr, het_by_LRT=het_by_LRT, S=S, rel_div_on=rel_div_on, M_het=M_het, by_AIC=by_AIC, Delta_AIC=Delta_AIC, by_AIC_constr=by_AIC_constr, Delta_AIC_constr=Delta_AIC_constr, by_BIC=by_BIC, Delta_BIC=Delta_BIC, by_BIC_constr=by_BIC_constr, Delta_BIC_constr=Delta_BIC_constr)
 write.csv(est_sum, file = "experimental_data/est_sum.csv")
