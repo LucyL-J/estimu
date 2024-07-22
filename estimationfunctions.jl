@@ -198,13 +198,14 @@ function estimu_0(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vecto
     LL(para) = -log_likelihood_joint_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, N_ratio, para[1], para[2], eff)
     res = Optim.optimize(LL, [max(1.,median(mc_UT),median(mc_S)), 1.], iterations=10^4) 
 	if Optim.converged(res) == true
+        est_res.status = ["jointly inferred", "jointly inferred", "jointly inferred"]
         p = Optim.minimizer(res)
         MLL = Optim.minimum(res)
-        est_res.MLE = [p[1]/Nf_UT, p[2], p[2]]   
+        est_res.MLE = [p[1]/Nf_UT, 1/p[2], 1/p[2]]   
         try
-            b = CI_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, N_ratio, p[1], p[2], eff, MLL)
-            est_res.lower_bound = [b[1,1]/Nf_UT, b[2,1], b[2,1]]
-            est_res.upper_bound = [b[1,2]/Nf_UT, b[2,2], b[2,2]]
+            b = CI_joint_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, N_ratio, p[1], p[2], eff, MLL)
+            est_res.lower_bound = [b[1,1]/Nf_UT, 1/b[2,2], 1/b[2,2]]
+            est_res.upper_bound = [b[1,2]/Nf_UT, 1/b[2,1], 1/b[2,1]]
         catch
             est_res.lower_bound = [0., 0., 0.]
             est_res.upper_bound = [Inf, Inf, Inf]

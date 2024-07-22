@@ -69,7 +69,7 @@ function CI_joint_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, m
         else
             log_likelihood_1(P) = -log_likelihood_joint_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, N_ratio, para, P[1], eff)
             res = Optim.optimize(log_likelihood_1, [inv_fit_m])
-            P1 = Optim.minimizer(res)
+            P1 = Optim.minimizer(res)[1]
             return -log_likelihood_joint_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, N_ratio, para, P1, eff) - MLL - chisq_1_95/2
         end
     end
@@ -79,9 +79,9 @@ function CI_joint_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, m
         if para == inv_fit_m
             return -chisq_1_95/2
         else
-            log_likelihood_2(P) = -log_likelihood_joint_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, N_ratio, P1, para, eff)
+            log_likelihood_2(P) = -log_likelihood_joint_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, N_ratio, P[1], para, eff)
             res = Optim.optimize(log_likelihood_2, [m])
-            P1 = Optim.minimizer(res)
+            P1 = Optim.minimizer(res)[1]
             return -log_likelihood_joint_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, N_ratio, P1, para, eff) - MLL - chisq_1_95/2
         end
     end
