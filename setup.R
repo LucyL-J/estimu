@@ -84,7 +84,7 @@ check_input <- function(mc, Nf, eff=1, fit_m=1., rel_div_on=FALSE, f_on=0.1){
 }
 
 estimu <- function(mc_UT, Nf_UT, mc_S, Nf_S, eff=1, fit_m=1., f_on=FALSE, rel_div_on=0., mod){
-  res <- "Warning: Model has to be one of the following 'standard', 'no SIM', 'homogeneous', 'heterogeneous'."
+  res <- "Warning: Model has to be one of the following 'standard', 'null', 'homogeneous', 'heterogeneous'."
   if(missing(mc_S) || missing(Nf_S)){
     mod <- "standard"
     print("Warning: No mutant counts or final population size under stressful condition given. Using the standard model to infer the mutation rate under permissive conditions.")
@@ -102,7 +102,7 @@ estimu <- function(mc_UT, Nf_UT, mc_S, Nf_S, eff=1, fit_m=1., f_on=FALSE, rel_di
       print(paste0("Model used for inference: ", res[[2]]$model[1]))
     }
   }
-  if(mod == "no SIM"){
+  if(mod == "null"){
     conv_input_UT <- check_input(mc_UT, Nf_UT, eff = eff, fit_m = fit_m)
     conv_input_S <- check_input(mc_S, Nf_S)
     if(conv_input_UT[[1]]&&conv_input_S[[1]]){
