@@ -53,7 +53,7 @@ p_antibiotic
 # Estimated increase in population-wide mutation rate by antibiotic
 # Homogeneous-response model without differential mutant fitness used in the inference, for purpose of comparison
 p_M_antibiotic <- ggplot(data = df, aes(x=ID, y=M_wo_fitm.1, group=antibiotic)) + 
-  geom_point(aes(color=antibiotic)) + geom_point(aes(color=antibiotic)) +
+  geom_point(aes(color=antibiotic)) +
   geom_errorbar(aes(ymin=M_wo_fitm.2, ymax=M_wo_fitm.3, color=antibiotic)) +
   geom_hline(yintercept = 1) +
   scale_color_manual(values = subset(antibiotic_classes, is.element(antibiotic_abbr, unique(df$antibiotic)))$color) + 
@@ -64,7 +64,7 @@ p_M_antibiotic
 # Experiments for which SIM was detected
 df_SIM <- subset(df, SIM == TRUE)
 p_M_antibiotic <- ggplot(data = df_SIM, aes(x=ID, y=M.1, group=antibiotic)) + 
-  geom_point(aes(color=antibiotic)) + geom_point(aes(color=antibiotic)) +
+  geom_point(aes(color=antibiotic)) +
   geom_errorbar(aes(ymin=M.2, ymax=M.3, color=antibiotic)) +
   geom_hline(yintercept = 1) +
   scale_color_manual(values = subset(antibiotic_classes, is.element(antibiotic_abbr, unique(df_SIM$antibiotic)))$color) + 
@@ -117,18 +117,24 @@ p_model_selection
 
 # Experiments, for which a heterogeneous stress response is selected or homogeneous/heterogeneous response cannot be distinguished clearly
 df_het <- subset(df_SIM, is.element(by_AIC, c("none", "het")))
+p_criterion <- ggplot(data = df_SIM, aes(x=ID, y=Delta_AIC, group=antibiotic)) + geom_point(aes(color=antibiotic)) +
+  scale_color_manual(values = subset(antibiotic_classes, is.element(antibiotic_abbr, unique(df_SIM$antibiotic)))$color) +
+  theme(axis.text.x = element_text(angle = 90), plot.margin = margin(3.5,0.5,0.5,0.5, "cm")) +
+  geom_hline(yintercept = 2) + geom_hline(yintercept = -2)
+p_criterion
 
 # Frenoy et al. 2018 Norfloxacin
 df_Nor <- subset(est_paras, ID == "Frenoy_Nor")
+print(subset(est_sum, ID == "Frenoy_Nor"))
 # Untreated condition
 mc_data <- read.table(paste0("experimental_data/raw_counts/Frenoy_LB.txt"), header = FALSE, sep = ",", fill = TRUE)
 mc_UT <- read_counts(mc_data[2,])
 Nf_UT <- mean(read_counts(mc_data[3,]))
 eff_UT <- as.numeric(mc_data[4,1])
-p_mc_hom_UT <- pMudi(max(mc_UT), Nf_UT, df_Nor$mu_UT_MLE[4], eff=eff_UT, fit_m=df_Nor$fitm_UT_MLE[4]) * length(mc_UT)
-p_mc_hom_constr_UT <- pMudi(max(mc_UT), Nf_UT, df_Nor$mu_UT_MLE[2], eff=eff_UT) * length(mc_UT)
-p_mc_het_UT <- pMudi(max(mc_UT), Nf_UT, df_Nor$mu_off_MLE[6], eff=eff_UT) * length(mc_UT)
-print(c(df_Nor$mu_UT_MLE[4], df_Nor$fitm_UT_MLE[4], df_Nor$mu_UT_MLE[2]))
+p_mc_hom_UT <- pMudi(max(mc_UT), Nf_UT, df_Nor$mu_UT_MLE[5], eff=eff_UT, fit_m=df_Nor$fitm_UT_MLE[5]) * length(mc_UT)
+p_mc_hom_constr_UT <- pMudi(max(mc_UT), Nf_UT, df_Nor$mu_UT_MLE[3], eff=eff_UT) * length(mc_UT)
+p_mc_het_UT <- pMudi(max(mc_UT), Nf_UT, df_Nor$mu_off_MLE[7], eff=eff_UT) * length(mc_UT)
+print(c(df_Nor$mu_UT_MLE[5], df_Nor$fitm_UT_MLE[5], df_Nor$mu_UT_MLE[3]))
 print(df_Nor$mu_off_MLE[6])
 p_mc_UT <- ggplot() + geom_bar(aes(mc_UT), fill="#123288") + xlab("Number of colonies") + ylab("Number of plates") +
   geom_line(aes(x=0:max(mc_UT), y=p_mc_hom_UT), color="#820298") + 
@@ -140,11 +146,11 @@ mc_data <- read.table(paste0("experimental_data/raw_counts/Frenoy_Nor.txt"), hea
 mc_S <- read_counts(mc_data[2,])
 Nf_S <- mean(read_counts(mc_data[3,]))
 eff_S <- as.numeric(mc_data[4,1])
-p_mc_hom_S <- pMudi(max(mc_S), Nf_S, df_Nor$mu_S_MLE[4], eff=eff_S, fit_m=df_Nor$fitm_S_MLE[4]) * length(mc_S)
-p_mc_hom_constr_S <- pMudi(max(mc_S), Nf_S, df_Nor$mu_S_MLE[2], eff=eff_S) * length(mc_S)
-p_mc_het_S <- pMudi(max(mc_S), Nf_S, df_Nor$mu_off_MLE[6], eff=eff_S, S=df_Nor$S_MLE[6], f_on=df_Nor$f_on_MLE[6], rel_div_on=df_Nor$rel_div_on_MLE[6]) * length(mc_S)
-print(c(df_Nor$mu_S_MLE[4], df_Nor$fitm_S_MLE[4], df_Nor$mu_S_MLE[2]))
-print(c(df_Nor$mu_off_MLE[6], df_Nor$S_MLE[6], df_Nor$f_on_MLE[6], df_Nor$rel_div_on_MLE[6]))
+p_mc_hom_S <- pMudi(max(mc_S), Nf_S, df_Nor$mu_S_MLE[5], eff=eff_S, fit_m=df_Nor$fitm_S_MLE[5]) * length(mc_S)
+p_mc_hom_constr_S <- pMudi(max(mc_S), Nf_S, df_Nor$mu_S_MLE[3], eff=eff_S) * length(mc_S)
+p_mc_het_S <- pMudi(max(mc_S), Nf_S, df_Nor$mu_off_MLE[7], eff=eff_S, S=df_Nor$S_MLE[7], f_on=df_Nor$f_on_MLE[7], rel_div_on=df_Nor$rel_div_on_MLE[7]) * length(mc_S)
+print(c(df_Nor$mu_S_MLE[5], df_Nor$fitm_S_MLE[5], df_Nor$mu_S_MLE[3]))
+print(c(df_Nor$mu_off_MLE[7], df_Nor$S_MLE[7], df_Nor$f_on_MLE[7], df_Nor$rel_div_on_MLE[7]))
 p_mc_s <- ggplot() + geom_bar(aes(mc_S), fill="#89CFF0") + xlab("Number of colonies") + ylab("Number of plates") +
   geom_line(aes(x=0:max(mc_S), y=p_mc_hom_S), color="#820298") + 
   geom_line(aes(x=0:max(mc_S), y=p_mc_hom_constr_S), color="#f1aafd") + 
