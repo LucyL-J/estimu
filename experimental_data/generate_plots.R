@@ -43,6 +43,12 @@ p_M_antibiotic <- ggplot(data = df, aes(x=ID, y=M_wo_fitm.1, group=antibiotic)) 
   ylab("Fold-change population-wide mutation rate")
 p_M_antibiotic
 
+# Plating efficiency/number of parallel cultures and width of confidence intervals
+p_CI <- ggplot(data = df, aes(x=plated_fraction, y=(M_wo_fitm.3-M_wo_fitm.2)/M_wo_fitm.1)) + 
+  geom_point(aes(color=log10(n_cultures))) + scale_y_continuous(trans="log10") + ylab("Normalised width of CI") +
+  scale_x_continuous(trans = "log10")
+p_CI
+
 # Experiments for which SIM was detected
 df_SIM <- subset(df, SIM == TRUE)
 p_M_antibiotic <- ggplot(data = df_SIM, aes(x=ID, y=M.1, group=antibiotic)) + 
