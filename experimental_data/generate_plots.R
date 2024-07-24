@@ -10,13 +10,14 @@ sum_data <- read.csv("experimental_data/sum_data.csv")[,-1]
 est_paras <- read.csv("experimental_data/est_paras.csv")[,-1]
 est_sum <- read.csv("experimental_data/est_sum.csv")[,-1]
 
-# Pool replicates, and order data frames
-meta_data$target_group <- mapvalues(meta_data$antibiotic, from = antibiotic_classes$antibiotic_abbr, to = antibiotic_classes$target_group)
+# Add target to meta data, pool replicates, and order data frames
+meta_data$target <- mapvalues(meta_data$antibiotic, from = antibiotic_classes$antibiotic_abbr, to = antibiotic_classes$target_group)
 meta_data <- subset(meta_data, replicate == 0)
-df <- merge(meta_data, est_sum, by = "ID")
+df <- merge(meta_data, sum_data, by = "ID")
+df <- merge(df, est_sum, by = "ID")
 df$antibiotic <- factor(df$antibiotic, levels = antibiotic_classes$antibiotic_abbr, ordered = TRUE)
 df$ID <- factor(df$ID, levels = unique(df$ID), ordered = TRUE)
-df$target_group <- factor(df$target_group, levels = unique(antibiotic_classes$target_group), ordered = TRUE)
+df$target <- factor(df$target, levels = unique(antibiotic_classes$target_group), ordered = TRUE)
 antibiotic_classes$antibiotic_abbr <- factor(antibiotic_classes$antibiotic_abbr, levels = antibiotic_classes$antibiotic_abbr, ordered = TRUE)
 antibiotic_classes$target_group <- factor(antibiotic_classes$target_group, levels = unique(antibiotic_classes$target_group), ordered = TRUE)
 
@@ -54,18 +55,17 @@ p_M_antibiotic <- ggplot(data = df_SIM, aes(x=ID, y=M.1, group=antibiotic)) +
 p_M_antibiotic
 
 # Testing for normality -> not normal
-shapiro.test(subset(df, is.element(target_group, c("DNA", "Gyrase")))$M_wo_fitm.1)
+shapiro.test(subset(df, is.element(, c("DNA", "Gyrase")))$M_wo_fitm.1)
 
-# Kruskal-Wallis test and pairwise comparison -> DNA and ribosome targeting significantly different
-kruskal.test(df$M_wo_fitm.1, df$target_group)
-print(compare_means(M_wo_fitm.1 ~ target_group, data = df), n = 45)
-# Comparing DNA/gyrase targeting with others
-df$KW <- df$target_group
-levels(df$KW) <- c(levels(df$KW), "DNA_direct_target", "Others")
-df$KW[is.element(df$KW, c("DNA", "Gyrase"))] <- "DNA_direct_target"
-df$KW[df$KW != "DNA_direct_target"] <- "Others"
-wilcox.test(M_wo_fitm.1 ~ KW, data = df)
-p_M_DNA <- ggplot(data = df, aes(x=KW, y=M_wo_fitm.1, fill=KW)) + geom_boxplot() +
+# Kruskal-Wallis test and pairwise comparison -> DNA and ribosome binding significantly different
+kruskal.test(df$M_wo_fitm.1, df$target)
+print(compare_means(M_wo_fitm.1 ~ target, data = df), n = 45)
+# Comparing antimicrobials that directly target DNA/gyrase with others
+df$DNA_direct_target <- logical(length(df$target))
+df$DNA_direct_target[is.element(df$target, c("DNA", "Gyrase"))] <- TRUE
+kruskal.test(df$M_wo_fitm.1, df$DNA_direct_target)
+wilcox.test(M_wo_fitm.1 ~ DNA_direct_target, data = df)
+p_M_DNA <- ggplot(data = df, aes(x=DNA_direct_target, y=M_wo_fitm.1, fill=DNA_direct_target)) + geom_boxplot() +
   coord_trans(y = "log10", ylim = c(5*10^-2,5*10^2)) + scale_y_continuous(breaks = c(0.1,1,10,100), labels = c(0.1,1,10,100)) +
   ylab("Estimated fold change in population-wide mutation rate") +
   stat_compare_means(label.y = 400) 
@@ -73,7 +73,7 @@ p_M_DNA
 
 # Model selection for experiments with significant increase in population-wide mutation rate
 selected_models <- data.frame(antibiotic=rep(unique(df_SIM$antibiotic), each=3))
-selected_models$target_group <- mapvalues(selected_models$antibiotic, from = antibiotic_classes$antibiotic_abbr, to = as.character(antibiotic_classes$target_group))
+selected_models$target <- mapvalues(selected_models$antibiotic, from = antibiotic_classes$antibiotic_abbr, to = as.character(antibiotic_classes$target_group))
 selected_models$m <- rep(c("hom","none","het"), length(unique(df_SIM$antibiotic)))
 criterion <- "by_AIC"
 n <- match(criterion, names(df_SIM))
@@ -90,8 +90,8 @@ p_msel_a <- ggplot(data = selected_models, aes(x=factor(m, c("hom","none","het")
   xlab("Selected model") + ggtitle(criterion) + ylab("Number of experiments")
 p_msel_a
 
-p_msel_t <- ggplot(data = selected_models, aes(x=factor(m, c("hom","none","het")), y=prevalence, fill=target_group)) + geom_bar(stat = "identity") + 
-  scale_fill_manual(values = turbo(length(unique(df_SIM$target_group)))) +
+p_msel_t <- ggplot(data = selected_models, aes(x=factor(m, c("hom","none","het")), y=prevalence, fill=target)) + geom_bar(stat = "identity") + 
+  scale_fill_manual(values = turbo(length(unique(df_SIM$target)))) +
   xlab("Selected model") + ggtitle(criterion) + ylab("Number of experiments") 
 p_msel_t
 
