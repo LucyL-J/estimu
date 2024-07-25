@@ -30,5 +30,5 @@ for (i in 1:length(meta_data$ID)) {
 }
 n_tot <- n + n_b
 
-sum_data <- data.frame(ID=meta_data$ID, n_cultures=n, n_cultures_baseline=n_b, n_cultures_tot=n_tot, plated_fraction=eff, plated_fraction_baseline=eff_b, mean_Nf=mean_N, CV_Nf=cv_N, mean_Nf_baseline=mean_N_b, CV_Nf_baseline=cv_N_b, replicate=meta_data$replicate, pooled = meta_data$pooled)
+sum_data <- data.frame(ID=meta_data$ID, n_cultures=n, n_cultures_baseline=n_b, n_cultures_tot=n_tot, plated_fraction=eff, plated_fraction_baseline=eff_b, mean_Nf=mean_N, CV_Nf=cv_N, mean_Nf_baseline=mean_N_b, CV_Nf_baseline=cv_N_b)
 write.csv(sum_data, file = "experimental_data/sum_data.csv")
