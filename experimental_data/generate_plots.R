@@ -10,18 +10,17 @@ sum_data <- read.csv("experimental_data/sum_data.csv")[,-1]
 est_paras <- read.csv("experimental_data/est_paras.csv")[,-1]
 est_sum <- read.csv("experimental_data/est_sum.csv")[,-1]
 
-# Add target to meta data, pool replicates, and order data frames
+# Add target to meta data, pool replicates and add levels to dataframes
 meta_data$target <- mapvalues(meta_data$antibiotic, from = antibiotic_classes$antibiotic_abbr, to = antibiotic_classes$target_group)
 meta_data <- subset(meta_data, replicate == 0)
 df <- merge(meta_data, sum_data, by = "ID")
 df <- merge(df, est_sum, by = "ID")
 df$antibiotic <- factor(df$antibiotic, levels = antibiotic_classes$antibiotic_abbr, ordered = TRUE)
-df$ID <- factor(df$ID, levels = unique(df$ID), ordered = TRUE)
 df$target <- factor(df$target, levels = unique(antibiotic_classes$target_group), ordered = TRUE)
 antibiotic_classes$antibiotic_abbr <- factor(antibiotic_classes$antibiotic_abbr, levels = antibiotic_classes$antibiotic_abbr, ordered = TRUE)
 antibiotic_classes$target_group <- factor(antibiotic_classes$target_group, levels = unique(antibiotic_classes$target_group), ordered = TRUE)
 
-# Color-coding antibiotics used in the studies (by target group)
+# Color-coding antibiotics used in the studies (sorted by target group)
 antibiotic_classes$color <- turbo(length(antibiotic_classes$antibiotic_abbr))
 v <- numeric(length(antibiotic_classes$antibiotic_abbr))
 for (i in 1:length(v)) {
@@ -31,6 +30,10 @@ antibiotic_classes$prevalence <- v
 p_antibiotic <- ggplot(data = antibiotic_classes, aes(x=target_group, y=prevalence, fill=antibiotic_abbr)) + 
   geom_bar(stat = "identity") + scale_fill_manual(values = antibiotic_classes$color) + xlab("Grouped by target") + ylab("Number of experiments")
 p_antibiotic
+
+# Sort by microbe (species)
+df <- arrange(df, microbe)
+df$ID <- factor(df$ID, levels = unique(df$ID), ordered = TRUE)
 
 # Estimated increase in population-wide mutation rate by antibiotic
 # Homogeneous-response model without differential mutant fitness used in the inference, for purpose of comparison
@@ -49,6 +52,9 @@ p_CI <- ggplot(data = df, aes(x=plated_fraction, y=(M_wo_fitm.3-M_wo_fitm.2)/M_w
   scale_x_continuous(trans = "log10")
 p_CI
 
+# Further analysis with experiments using E. coli
+df <- subset(df, microbe == "E. coli")
+
 # Experiments for which SIM was detected
 df_SIM <- subset(df, SIM == TRUE)
 p_M_antibiotic <- ggplot(data = df_SIM, aes(x=ID, y=M.1, group=antibiotic)) + 
@@ -61,17 +67,17 @@ p_M_antibiotic <- ggplot(data = df_SIM, aes(x=ID, y=M.1, group=antibiotic)) +
 p_M_antibiotic
 
 # Testing for normality -> not normal
-shapiro.test(subset(df, is.element(, c("DNA", "Gyrase")))$M_wo_fitm.1)
+shapiro.test(subset(df, is.element(target, c("DNA", "Gyrase")))$M_wo_fitm.1)
+shapiro.test(subset(df, target == "Ribosome")$M_wo_fitm.1)
 
-# Kruskal-Wallis test and pairwise comparison -> DNA and ribosome binding significantly different
-kruskal.test(df$M_wo_fitm.1, df$target)
-print(compare_means(M_wo_fitm.1 ~ target, data = df), n = 45)
-# Comparing antimicrobials that directly target DNA/gyrase with others
-df$DNA_direct_target <- logical(length(df$target))
-df$DNA_direct_target[is.element(df$target, c("DNA", "Gyrase"))] <- TRUE
-kruskal.test(df$M_wo_fitm.1, df$DNA_direct_target)
-wilcox.test(M_wo_fitm.1 ~ DNA_direct_target, data = df)
-p_M_DNA <- ggplot(data = df, aes(x=DNA_direct_target, y=M_wo_fitm.1, fill=DNA_direct_target)) + geom_boxplot() +
+# Kruskal-Wallis test -> DNA/DNA-gyrase and ribosome binding significantly different
+df_KW <- subset(df, is.element(target, c("DNA", "Gyrase", "Ribosome")))
+df_KW$group <- character(length(df_KW$target))
+df_KW$group[is.element(df_KW$target, c("DNA", "Gyrase"))] <- "DNA/-gyrase"
+df_KW$group[df_KW$target == "Ribosome"] <- "Ribosome"
+kruskal.test(df_KW$M_wo_fitm.1, df_KW$group)
+wilcox.test(M_wo_fitm.1 ~ group, data = df_KW)
+p_M_DNA <- ggplot(data = df_KW, aes(x=group, y=M_wo_fitm.1, fill=group)) + geom_boxplot() +
   coord_trans(y = "log10", ylim = c(5*10^-2,5*10^2)) + scale_y_continuous(breaks = c(0.1,1,10,100), labels = c(0.1,1,10,100)) +
   ylab("Estimated fold change in population-wide mutation rate") +
   stat_compare_means(label.y = 400) 
