@@ -140,7 +140,7 @@ p_mc_hom_UT <- pMudi(max(mc_UT), Nf_UT, df_Nor$mu_UT_MLE[5], eff=eff_UT, fit_m=d
 p_mc_hom_constr_UT <- pMudi(max(mc_UT), Nf_UT, df_Nor$mu_UT_MLE[3], eff=eff_UT) * length(mc_UT)
 p_mc_het_UT <- pMudi(max(mc_UT), Nf_UT, df_Nor$mu_off_MLE[7], eff=eff_UT) * length(mc_UT)
 print(c(df_Nor$mu_UT_MLE[5], df_Nor$fitm_UT_MLE[5], df_Nor$mu_UT_MLE[3]))
-print(df_Nor$mu_off_MLE[6])
+print(df_Nor$mu_off_MLE[7])
 p_mc_UT <- ggplot() + geom_bar(aes(mc_UT), fill="#123288") + xlab("Number of colonies") + ylab("Number of plates") +
   geom_line(aes(x=0:max(mc_UT), y=p_mc_hom_UT), color="#820298") + 
   geom_line(aes(x=0:max(mc_UT), y=p_mc_hom_constr_UT), color="#f1aafd") + 
