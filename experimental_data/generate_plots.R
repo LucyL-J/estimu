@@ -47,16 +47,15 @@ p_M_antibiotic <- ggplot(data = df, aes(x=ID, y=M_wo_fitm.1, group=antibiotic)) 
 p_M_antibiotic
 
 # Plating efficiency/number of parallel cultures and width of confidence intervals
+length(subset(df, plated_fraction < 1)$ID)
 p_CI <- ggplot(data = df, aes(x=plated_fraction, y=(M_wo_fitm.3-M_wo_fitm.2)/M_wo_fitm.1)) + 
   geom_point(aes(color=log10(n_cultures))) + scale_y_continuous(trans="log10") + ylab("Normalised width of CI") +
   scale_x_continuous(trans = "log10")
 p_CI
 
-# Further analysis with experiments using E. coli
-df <- subset(df, microbe == "E. coli")
-
 # Experiments for which SIM was detected
 df_SIM <- subset(df, SIM == TRUE)
+print(c(length(df_SIM$ID), length(subset(df, M_wo_fitm.1>1)$ID)))
 p_M_antibiotic <- ggplot(data = df_SIM, aes(x=ID, y=M.1, group=antibiotic)) + 
   geom_point(aes(color=antibiotic)) +
   geom_errorbar(aes(ymin=M.2, ymax=M.3, color=antibiotic)) +
@@ -66,8 +65,18 @@ p_M_antibiotic <- ggplot(data = df_SIM, aes(x=ID, y=M.1, group=antibiotic)) +
   ylab("Increase population-wide mutation rate")
 p_M_antibiotic
 
+# Further analysis with experiments using E. coli
+df <- subset(df, microbe == "E. coli")
+length(df$ID)
+df_SIM <- subset(df, SIM == TRUE)
+print(c(length(subset(df, M_wo_fitm.1>1)$ID), length(df_SIM$ID)))
+print(c(length(subset(subset(df, M_wo_fitm.1>1), is.element(target, c("DNA", "Gyrase")))$ID),length(subset(subset(df, M_wo_fitm.1>1), target=="Ribosome")$ID)))
+print(c(length(subset(df_SIM, is.element(target, c("DNA", "Gyrase")))$ID),length(subset(df_SIM, target=="Ribosome")$ID)))
+
 # Testing for normality -> not normal
+length(subset(df, is.element(target, c("DNA", "Gyrase")))$ID)
 shapiro.test(subset(df, is.element(target, c("DNA", "Gyrase")))$M_wo_fitm.1)
+length(subset(df, target=="Ribosome")$ID)
 shapiro.test(subset(df, target == "Ribosome")$M_wo_fitm.1)
 
 # Kruskal-Wallis test -> DNA/DNA-gyrase and ribosome binding significantly different
@@ -77,6 +86,8 @@ df_KW$group[is.element(df_KW$target, c("DNA", "Gyrase"))] <- "DNA/-gyrase"
 df_KW$group[df_KW$target == "Ribosome"] <- "Ribosome"
 kruskal.test(df_KW$M_wo_fitm.1, df_KW$group)
 wilcox.test(M_wo_fitm.1 ~ group, data = df_KW)
+median(subset(df_KW, group == "DNA/-gyrase")$M_wo_fitm.1)
+median(subset(df_KW, group == "Ribosome")$M_wo_fitm.1)
 p_M_DNA <- ggplot(data = df_KW, aes(x=group, y=M_wo_fitm.1, fill=group)) + geom_boxplot() +
   coord_trans(y = "log10", ylim = c(5*10^-2,5*10^2)) + scale_y_continuous(breaks = c(0.1,1,10,100), labels = c(0.1,1,10,100)) +
   ylab("Estimated fold change in population-wide mutation rate") +
