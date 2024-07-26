@@ -119,14 +119,14 @@ p_msel_t <- ggplot(data = selected_models, aes(x=factor(m, c("hom","none","het")
 p_msel_t
 
 # Difference in AIC between homogeneous and heterogeneous-response model
-p_Delta_AIC <- ggplot(data = df_SIM, aes(x=ID, y=Delta_AIC, group=antibiotic)) + geom_point(aes(color=antibiotic)) +
+p_Delta_AIC <- ggplot(data = df_SIM, aes(x=ID, y=Delta_AIC_constr, group=antibiotic)) + geom_point(aes(color=antibiotic)) +
   scale_color_manual(values = subset(antibiotic_classes, is.element(antibiotic_abbr, unique(df_SIM$antibiotic)))$color) +
   theme(axis.text.x = element_text(angle = 90), plot.margin = margin(3.5,0.5,0.5,0.5, "cm")) +
   geom_hline(yintercept = 2) + geom_hline(yintercept = -2)
 p_Delta_AIC
 
 # Experiments, for which a heterogeneous stress response is selected or homogeneous/heterogeneous response cannot be distinguished clearly
-df_het <- subset(df_SIM, is.element(by_AIC, c("none", "het")))
+df_het <- subset(df_SIM, is.element(by_AIC, c("het")))
 
 # Frenoy et al. 2018 Norfloxacin
 df_Nor <- subset(est_paras, ID == "Frenoy_Nor")
