@@ -1,4 +1,4 @@
-"","ID","author","antibiotic","concentration","of_MIC","growth_medium","duration_growth_phase","selective_marker","microbe","strain","baseline_ID","replicate","pooled","SOS_induction"
+"","ID","author","antibiotic","concentration","of_MIC","growth_medium","duration_growth_phase","selective_marker","species","strain","baseline_ID","replicate","pooled","SOS_induction"
 "1","Baharoglu_Amp","Baharoglu","Amp",0.05,0.01,"LB",24,"rif","E. coli","MG1655","Baharoglu_LB",0,FALSE,"FALSE"
 "2","Baharoglu_Cip","Baharoglu","Cip",0.05,0.01,"LB",24,"rif","E. coli","MG1655","Baharoglu_LB",0,FALSE,"0.7"
 "3","Baharoglu_Cm","Baharoglu","Cm",0.15,0.01,"LB",24,"rif","E. coli","MG1655","Baharoglu_LB",0,FALSE,"FALSE"
