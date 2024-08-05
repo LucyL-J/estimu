@@ -10,7 +10,7 @@ sum_data <- read.csv("experimental_data/sum_data.csv")[,-1]
 est_paras <- read.csv("experimental_data/est_paras.csv")[,-1]
 est_sum <- read.csv("experimental_data/est_sum.csv")[,-1]
 
-# Add target to meta data, pool replicates and add levels to dataframes
+# Add target to meta data, pool replicates and add levels to data frames
 meta_data$target <- mapvalues(meta_data$antibiotic, from = antibiotic_classes$antibiotic_abbr, to = antibiotic_classes$target_group)
 meta_data <- subset(meta_data, replicate == 0)
 df <- merge(meta_data, sum_data, by = "ID")
@@ -31,8 +31,8 @@ p_antibiotic <- ggplot(data = antibiotic_classes, aes(x=target_group, y=prevalen
   geom_bar(stat = "identity") + scale_fill_manual(values = antibiotic_classes$color) + xlab("Grouped by target") + ylab("Number of experiments")
 p_antibiotic
 
-# Sort by microbe (species)
-df <- arrange(df, microbe)
+# Sort by bacterial species
+df <- arrange(df, species)
 df$ID <- factor(df$ID, levels = unique(df$ID), ordered = TRUE)
 
 # Estimated increase in population-wide mutation rate by antibiotic
@@ -53,6 +53,9 @@ p_CI <- ggplot(data = df, aes(x=plated_fraction, y=(M_wo_fitm.3-M_wo_fitm.2)/M_w
   scale_x_continuous(trans = "log10")
 p_CI
 
+# Exclude experiments with less than 3 parallel cultures in the fluctuation assay under antimicrobial treatment
+df <- subset(df, n_cultures >= 3)
+
 # Experiments for which SIM was detected
 df_SIM <- subset(df, SIM == TRUE)
 print(c(length(df_SIM$ID), length(subset(df, M_wo_fitm.1>1)$ID)))
@@ -65,8 +68,8 @@ p_M_antibiotic <- ggplot(data = df_SIM, aes(x=ID, y=M.1, group=antibiotic)) +
   ylab("Increase population-wide mutation rate")
 p_M_antibiotic
 
-# Further analysis with experiments using E. coli
-df <- subset(df, microbe == "E. coli")
+# Further analysis with experiments using E. coli MG1655 (no mutant strains)
+df <- subset(subset(df, species == "E. coli"), strain == "MG1655")
 length(df$ID)
 df_SIM <- subset(df, SIM == TRUE)
 print(c(length(subset(df, M_wo_fitm.1>1)$ID), length(df_SIM$ID)))
