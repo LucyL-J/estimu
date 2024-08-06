@@ -95,7 +95,7 @@ function CI_joint_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, m
 end
 # Homogeneous response with jointly inferred mutant fitness
 function CI_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, m_UT, m_S, inv_fit_m, eff, MLL)
-    M = Vector{Float64}(undef, 6)
+    M = Vector{Float64}(undef, 8)
     function LL_ratio_1(para)
         if para == m_UT
             return -chisq_1_95/2
@@ -161,11 +161,13 @@ function CI_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max,
         res = Optim.optimize(u_3_M, [m_UT, m_S])
     end
     M[6] = Optim.minimizer(res)[2]/Optim.minimizer(res)[1]
+    M[7] = l_2/u_1
+    M[8] = u_2/l_1
     return [l_1 u_1; l_2 u_2; l_3 u_3; minimum(M) maximum(M)]
 end
 # Heterogeneous response (fixed fraction and rel. division rate of on-cells)
 function CI_joint_m_S(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, m, S, q0_UT, q_UT, q0_S_off, q_S_off, q0_S_on, q_S_on, eff, MLL)
-    m_on = Vector{Float64}(undef, 4)
+    m_on = Vector{Float64}(undef, 6)
     function LL_ratio_1(para)
         if para == m
             return -chisq_1_95/2
@@ -206,11 +208,13 @@ function CI_joint_m_S(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, m
     u_2_P(P) = -log_likelihood_joint_m_S(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, P[1], u_2, q0_UT, q_UT, q0_S_off, q_S_off, q0_S_on, q_S_on)
     res = Optim.optimize(u_2_P, 0., mc_max_S)
     m_on[4] = u_2*Optim.minimizer(res)[1]
+    m_on[5] = l_2*l_1
+    m_on[6] = u_2*u_1
     return [l_1 u_1; l_2 u_2; minimum(m_on) maximum(m_on)]
 end
 # Heterogeneous response (fraction of on-cells fixed, rel. division rate of on-cells inferred)
 function CI_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, m, S, f_on, rel_div_on, q0_UT, q_UT, q0_S_off, q_S_off, q0_S_on, q_S_on, inv_fit_m, eff, MLL)
-    m_on = Vector{Float64}(undef, 6)
+    m_on = Vector{Float64}(undef, 8)
     function LL_ratio_1(para)
         if para == m
             return -chisq_1_95/2
@@ -278,13 +282,15 @@ function CI_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ra
     u_3_P(P) = -log_likelihood_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, P[1], P[2], f_on, u_3, q0_UT, q_UT, q0_S_off, q_S_off, inv_fit_m, eff)
     res = Optim.optimize(u_3_P, [m, S])
     m_on[6] = Optim.minimizer(res)[2]*Optim.minimizer(res)[1]
+    m_on[7] = l_2*l_1
+    m_on[8] = u_2*u_1
     return [l_1 u_1; l_2 u_2; l_3 u_3; minimum(m_on) maximum(m_on)]
 end
 # Heterogeneous response (fraction of on-cells inferred, rel. division rate of on-cells fixed)
 function CI_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, m, S, f_on, rel_div_on, q0_UT, q_UT, q0_S_off, q_S_off, q0_S_on, q_S_on, infer_r::Bool, inv_fit_m, eff, MLL)
-    m_on = Vector{Float64}(undef, 6)
-    mu_inc = Vector{Float64}(undef, 6)
-    M = Vector{Float64}(undef, 6)
+    m_on = Vector{Float64}(undef, 8)
+    mu_inc = Vector{Float64}(undef, 8)
+    M = Vector{Float64}(undef, 8)
     function LL_ratio_1(para)
         if para == m
             return -chisq_1_95/2
@@ -363,10 +369,16 @@ function CI_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ra
     catch err
     end
     u_3_P(P) = -log_likelihood_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, P[1], u_3, P[2], rel_div_on, q0_UT, q_UT, q0_S_off, q_S_off, inv_fit_m, eff)
-    res = Optim.optimize(u_3_P, [m, f_on])
+    res = Optim.optimize(u_3_P, [m, S])
     m_on[6] = Optim.minimizer(res)[2]*Optim.minimizer(res)[1]*(1-u_3)/u_3
     mu_inc[6] = Optim.minimizer(res)[2]*(1-u_3)/u_3
     M[6] = (1-u_3)*(1+Optim.minimizer(res)[2])
+    m_on[7] = l_2*l_1*(1-u_3)/u_3
+    mu_inc[7] = l_2*(1-u_3)/u_3
+    M[7] = (1-u_3)*(1+l_2)
+    m_on[8] = u_2*u_1*(1-l_3)/l_3
+    mu_inc[8] = u_2*(1-l_3)/l_3
+    M[8] = (1-l_3)*(1+u_2)
     if infer_r == false
         return [l_1 u_1; l_2 u_2; l_3 u_3; minimum(m_on) maximum(m_on); minimum(mu_inc) maximum(mu_inc); minimum(M) maximum(M)]
     else
