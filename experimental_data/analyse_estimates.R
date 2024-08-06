@@ -68,14 +68,6 @@ p_M_antibiotic <- ggplot(data = df_SIM, aes(x=ID, y=M.1, group=antibiotic)) +
   ylab("Increase population-wide mutation rate")
 p_M_antibiotic
 
-# Further analysis with experiments using E. coli MG1655 (no mutant strains)
-df <- subset(subset(df, species == "E. coli"), strain == "MG1655")
-length(df$ID)
-df_SIM <- subset(df, SIM == TRUE)
-print(c(length(subset(df, M_wo_fitm.1>1)$ID), length(df_SIM$ID)))
-print(c(length(subset(subset(df, M_wo_fitm.1>1), is.element(target, c("DNA", "Gyrase")))$ID),length(subset(subset(df, M_wo_fitm.1>1), target=="Ribosome")$ID)))
-print(c(length(subset(df_SIM, is.element(target, c("DNA", "Gyrase")))$ID),length(subset(df_SIM, target=="Ribosome")$ID)))
-
 # Testing for normality -> not normal
 length(subset(df, is.element(target, c("DNA", "Gyrase")))$ID)
 shapiro.test(subset(df, is.element(target, c("DNA", "Gyrase")))$M_wo_fitm.1)
@@ -96,6 +88,14 @@ p_M_DNA <- ggplot(data = df_KW, aes(x=group, y=M_wo_fitm.1, fill=group)) + geom_
   ylab("Estimated fold change in population-wide mutation rate") +
   stat_compare_means(label.y = 400) 
 p_M_DNA
+
+# Further analysis with experiments using E. coli MG1655 (no mutant strains)
+df <- subset(subset(df, species == "E. coli"), strain == "MG1655")
+length(df$ID)
+df_SIM <- subset(df, SIM == TRUE)
+print(c(length(subset(df, M_wo_fitm.1>1)$ID), length(df_SIM$ID)))
+print(c(length(subset(subset(df, M_wo_fitm.1>1), is.element(target, c("DNA", "Gyrase")))$ID),length(subset(subset(df, M_wo_fitm.1>1), target=="Ribosome")$ID)))
+print(c(length(subset(df_SIM, is.element(target, c("DNA", "Gyrase")))$ID),length(subset(df_SIM, target=="Ribosome")$ID)))
 
 # Model selection for experiments with significant increase in population-wide mutation rate
 selected_models <- data.frame(antibiotic=rep(unique(df_SIM$antibiotic), each=3))
