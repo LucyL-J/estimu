@@ -48,13 +48,17 @@ p_M_antibiotic
 
 # Plating efficiency/number of parallel cultures and width of confidence intervals
 length(subset(df, plated_fraction < 1)$ID)
-p_CI <- ggplot(data = df, aes(x=plated_fraction, y=(M_wo_fitm.3-M_wo_fitm.2)/M_wo_fitm.1)) + 
-  geom_point(aes(color=log10(n_cultures))) + scale_y_continuous(trans="log10") + ylab("Normalised width of CI") +
-  scale_x_continuous(trans = "log10")
+df$width_CI <- (df$M_wo_fitm.3-df$M_wo_fitm.2)/df$M_wo_fitm.1
+reg <- lm(formula = log10(width_CI) ~ log10(plated_fraction*n_cultures), data = df)
+summary(reg)
+p_CI <- ggplot(data = df, aes(x=log10(plated_fraction*n_cultures), y=log10(width_CI))) + 
+  geom_point() + geom_smooth(method = lm)
 p_CI
 
-# Exclude experiments with less than 3 parallel cultures in the fluctuation assay under antimicrobial treatment
-df <- subset(df, n_cultures >= 3)
+p_CI_c <- ggplot(data = df, aes(x=plated_fraction, y=width_CI)) + 
+  geom_point(aes(color=log10(n_cultures))) + scale_y_continuous(trans="log10") +
+  scale_x_continuous(trans = "log10")
+p_CI_c
 
 # Experiments for which SIM was detected
 df_SIM <- subset(df, SIM == TRUE)
@@ -90,7 +94,9 @@ p_M_DNA <- ggplot(data = df_KW, aes(x=group, y=M_wo_fitm.1, fill=group)) + geom_
 p_M_DNA
 
 # Further analysis with experiments using E. coli MG1655 (no mutant strains)
+# Exclude experiments with less than 3 parallel cultures in the fluctuation assay under antimicrobial treatment
 df <- subset(subset(df, species == "E. coli"), strain == "MG1655")
+df <- subset(df, n_cultures >= 3)
 length(df$ID)
 df_SIM <- subset(df, SIM == TRUE)
 print(c(length(subset(df, M_wo_fitm.1>1)$ID), length(df_SIM$ID)))
