@@ -173,7 +173,7 @@ p_mc_s
 
 # Dose-dependence
 df_Pribis <- read.delim("experimental_data/Pribis_Fig2D.txt", header = TRUE, sep = '\t', comment.char="#")
-df_c <- subset(subset(subset(df, microbe == "E. coli"), strain != "DeltaLexA"), antibiotic == "Cip")
+df_c <- subset(df, antibiotic == "Cip")
 p_c <- ggplot() + 
   geom_point(data = df_c, aes(x=concentration, y=M_wo_fitm.1)) +
   geom_errorbar(data = df_c, aes(x=concentration, ymin=M_wo_fitm.2, ymax=M_wo_fitm.3)) +
