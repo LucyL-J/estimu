@@ -249,31 +249,43 @@ function estimu_hom(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
         M = "Homogeneous (unconstr. mutant fitness)"
     end
     # Estimation for permissive cond.
-	est_res_p, msel_res_p = estimu(mc_UT, Nf_UT, eff[1], fit_m[1])
-    if msel_res_p.LL[1] != -Inf
+	est_res_UT, msel_res_UT = estimu(mc_UT, Nf_UT, eff[1], fit_m[1])
+    if msel_res_UT.LL[1] != -Inf
         # Estimation for stressful cond.
-        est_res_s, msel_res_s = estimu(mc_S, Nf_S, eff[2], fit_m[2], cond=cond_S)
-        if msel_res_s.LL[1] != -Inf
-            est_res_p = vcat(est_res_p, est_res_s)
+        est_res_S, msel_res_S = estimu(mc_S, Nf_S, eff[2], fit_m[2], cond=cond_S)
+        if msel_res_S.LL[1] != -Inf
+            mc_max_UT = maximum(mc_UT)
+            mc_counts_UT = counts(mc_UT, 0:mc_max_UT)
+            mc_max_S = maximum(mc_S)
+            mc_counts_S = counts(mc_S, 0:mc_max_S)
+            if typeof(fit_m) == Vector{Float64}
+                q0_UT, q_UT = coeffs(mc_max_UT, 1/fit_m[1], eff[1])
+                q0_S, q_S = coeffs(mc_max_S, 1/fit_m[2], eff[2])
+                b_M = CI_m(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, est_res_UT.MLE[1]*Nf_UT, est_res_S.MLE[1]*Nf_S, q0_UT, q_UT, q0_S, q_S, -msel_res_UT.LL[1]-msel_res_S.LL[1])
+                b = [b_M; fit_m[1]/fit_m[2] fit_m[1]/fit_m[2]]
+            else
+                b = CI_m_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, est_res_UT.MLE[1]*Nf_UT, est_res_S.MLE[1]*Nf_S, 1/est_res_UT.MLE[2], 1/est_res_S.MLE[2], eff, -msel_res_UT.LL[1]-msel_res_S.LL[1])
+            end
+            est_res_UT = vcat(est_res_UT, est_res_S)
             if typeof(fit_m[2]) ==  Bool
                 s = "calc. from 2&4"
             else
                 s = "set to input"
             end
-            push!(est_res_p, ["Ratio mutant fitness", cond_S*"/UT", s, est_res_s.MLE[2]/est_res_p.MLE[2], est_res_s.lower_bound[2]/est_res_p.upper_bound[2], est_res_s.upper_bound[2]/est_res_p.lower_bound[2]])
-            push!(est_res_p, ["Fold change mutation rate", cond_S*"/UT", "calc. from 1&3", est_res_s.MLE[1]/est_res_p.MLE[1], est_res_s.lower_bound[1]/est_res_p.upper_bound[1], est_res_s.upper_bound[1]/est_res_p.lower_bound[1]])
-            msel_res_p.LL += msel_res_s.LL
-            msel_res_p.AIC += msel_res_s.AIC
+            push!(est_res_UT, ["Ratio mutant fitness", cond_S*"/UT", s, est_res_S.MLE[2]/est_res_UT.MLE[2], 1/b[2,2], 1/b[2,1]])
+            push!(est_res_UT, ["Fold change mutation rate", cond_S*"/UT", "calc. from 1&3", est_res_S.MLE[1]/est_res_UT.MLE[1], b[1,1]*Nf_UT/Nf_S, b[1,2]*Nf_UT/Nf_S])
+            msel_res_UT.LL += msel_res_S.LL
+            msel_res_UT.AIC += msel_res_S.AIC
         else
-            push!(est_res_p, ["Mutation rate", cond_S, "failed", 0., 0., 0.])
-            push!(est_res_p, ["Mutant fitness", cond_S, "failed", -1., -1., -1.])
-            msel_res_p.LL = [-Inf]
-            msel_res_p.AIC = [Inf]
+            push!(est_res_UT, ["Mutation rate", cond_S, "failed", 0., 0., 0.])
+            push!(est_res_UT, ["Mutant fitness", cond_S, "failed", -1., -1., -1.])
+            msel_res_UT.LL = [-Inf]
+            msel_res_UT.AIC = [Inf]
         end
     end
-    msel_res_p.BIC = [sum((typeof(fit_m[1])==Bool)+(sum(typeof(fit_m[2])==Bool))) * log(length(mc_UT)+length(mc_S)) - 2*msel_res_p.LL[1]]
-    msel_res_p.model = [M]      
-    return est_res_p, msel_res_p
+    msel_res_UT.BIC = [sum((typeof(fit_m[1])==Bool)+(sum(typeof(fit_m[2])==Bool))) * log(length(mc_UT)+length(mc_S)) - 2*msel_res_UT.LL[1]]
+    msel_res_UT.model = [M]      
+    return est_res_UT, msel_res_UT
 end
 # Mutant fitness jointly inferred (constrained to be equal under permissive/stressful cond(s).)
 function estimu_hom(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vector{<:Number}, fit_m::Bool; cond_S="S")

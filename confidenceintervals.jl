@@ -4,7 +4,7 @@ using Roots
 # The 95% quantile of the Chi-squared distribution used to calculate CIs
 # Depend on the observed mutant counts, on which parameters are estimated, the ML estimates and the maximum likelihood itself 
 chisq_1_95 = 3.84145882069412447634704221854917705059051513671875
-# Stadard model (with optional diff. mutant fitness)
+# Standard model (fixed mutant fitness)
 function CI_m(mc_counts, mc_max, m, q0, q, eff, MLL)
     function LL_ratio(para) 
         if para == m
@@ -17,6 +17,7 @@ function CI_m(mc_counts, mc_max, m, q0, q, eff, MLL)
     u_1 = find_zero(LL_ratio, (m, m_max(mc_max,eff)))
     return [l_1 u_1]
 end
+# Standard model (mutant fitness inferred)
 function CI_m_fitm(mc_counts, mc_max, m, inv_fit_m, eff, MLL)
     function LL_ratio_1(para)
         if para == m
@@ -93,9 +94,82 @@ function CI_joint_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, m
     end
     return [l_1 u_1; l_2 u_2]
 end
-# Homogeneous response with jointly inferred mutant fitness
+# Homogeneous response (fixed mutant fitness)
+function CI_m(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, m_UT, m_S, q0_UT, q_UT, q0_S, q_S, MLL)
+    function min_M(P)
+        if -log_likelihood_m(mc_counts_UT, mc_max_UT, P[1], q0_UT, q_UT) - log_likelihood_m(mc_counts_S, mc_max_S, P[2], q0_S, q_S) - MLL > chisq_1_95/2
+            return Inf
+        else
+            return P[2]/P[1]
+        end
+    end
+    res = Optim.optimize(min_M, [m_UT, m_S])
+    l = Optim.minimum(res)
+    function max_M(P)
+        if -log_likelihood_m(mc_counts_UT, mc_max_UT, P[1], q0_UT, q_UT) - log_likelihood_m(mc_counts_S, mc_max_S, P[2], q0_S, q_S) - MLL > chisq_1_95/2
+            return Inf
+        else
+            return -P[2]/P[1]
+        end
+    end
+    res = Optim.optimize(max_M, [m_UT, m_S])
+    u = -Optim.minimum(res)
+    return [l u]
+end
+# Homogeneous response (mutant fitness inferred separately)
+function CI_m_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, m_UT, m_S, inv_fit_m_UT, inv_fit_m_S, eff, MLL)
+    eff_UT, eff_S = eff
+    if eff[1] == 1.
+        eff_UT = false
+    elseif eff[1] < 0.5
+        eff_UT = (eff[1], true)
+    end
+    if eff[2] == 1.
+        eff_S = false
+    elseif eff[2] < 0.5
+        eff_S = (eff[2], true)
+    end
+    eff = (eff_UT, eff_S)
+    function min_M(P)
+        if -log_likelihood_m_fitm(mc_counts_UT, mc_max_UT, P[1], P[3], eff[1]) - log_likelihood_m_fitm(mc_counts_S, mc_max_S, P[2], P[4], eff[2]) - MLL > chisq_1_95/2
+            return Inf
+        else
+            return P[2]/P[1]
+        end
+    end
+    res = Optim.optimize(min_M, [m_UT, m_S, inv_fit_m_UT, inv_fit_m_S])
+    l_1 = Optim.minimum(res)
+    function max_M(P)
+        if -log_likelihood_m_fitm(mc_counts_UT, mc_max_UT, P[1], P[3], eff[1]) - log_likelihood_m_fitm(mc_counts_S, mc_max_S, P[2], P[4], eff[2]) - MLL > chisq_1_95/2
+            return Inf
+        else
+            return -P[2]/P[1]
+        end
+    end
+    res = Optim.optimize(max_M, [m_UT, m_S, inv_fit_m_UT, inv_fit_m_S])
+    u_1 = -Optim.minimum(res)
+    function min_ifit_ratio(P)
+        if -log_likelihood_m_fitm(mc_counts_UT, mc_max_UT, P[1], P[3], eff[1]) - log_likelihood_m_fitm(mc_counts_S, mc_max_S, P[2], P[4], eff[2]) - MLL > chisq_1_95/2
+            return Inf
+        else
+            return P[4]/P[3]
+        end
+    end
+    res = Optim.optimize(min_ifit_ratio, [m_UT, m_S, inv_fit_m_UT, inv_fit_m_S])
+    l_2 = Optim.minimum(res)
+    function max_ifit_ratio(P)
+        if -log_likelihood_m_fitm(mc_counts_UT, mc_max_UT, P[1], P[3], eff[1]) - log_likelihood_m_fitm(mc_counts_S, mc_max_S, P[2], P[4], eff[2]) - MLL > chisq_1_95/2
+            return Inf
+        else
+            return -P[4]/P[3]
+        end
+    end
+    res = Optim.optimize(max_ifit_ratio, [m_UT, m_S, inv_fit_m_UT, inv_fit_m_S])
+    u_2 = -Optim.minimum(res)
+    return [l_1 u_1; l_2 u_2]
+end
+# Homogeneous response (mutant fitness jointly inferred)
 function CI_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, m_UT, m_S, inv_fit_m, eff, MLL)
-    M = Vector{Float64}(undef, 8)
     function LL_ratio_1(para)
         if para == m_UT
             return -chisq_1_95/2
@@ -107,13 +181,7 @@ function CI_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max,
         end
     end
     l_1 = find_zero(LL_ratio_1, (0., m_UT))
-    l_1_M(P) = -log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, l_1, P[1], P[2], eff)
-    res = Optim.optimize(l_1_M, [m_S, inv_fit_m])
-    M[1] = Optim.minimizer(res)[1]/l_1
     u_1 = find_zero(LL_ratio_1, (m_UT, m_max(mc_max_UT,eff)))
-    u_1_M(P) = -log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, u_1, P[1], P[2], eff)
-    res = Optim.optimize(u_1_M, [m_S, inv_fit_m])
-    M[2] = Optim.minimizer(res)[1]/u_1
     function LL_ratio_2(para)
         if para == m_S
             return -chisq_1_95/2
@@ -125,13 +193,7 @@ function CI_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max,
         end
     end
     l_2 = find_zero(LL_ratio_2, (0., m_S))
-    l_2_M(P) = -log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, P[1], l_2, P[2], eff)
-    res = Optim.optimize(l_2_M, [m_UT, inv_fit_m])
-    M[3] = l_2/Optim.minimizer(res)[1]
     u_2 = find_zero(LL_ratio_2, (m_S, m_max(mc_max_S,eff)))
-    u_2_M(P) = -log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, P[1], u_2, P[2], eff)
-    res = Optim.optimize(u_2_M, [m_UT, inv_fit_m])
-    M[4] = u_2/Optim.minimizer(res)[1]
     function LL_ratio_3(para)
         if para == inv_fit_m
             return -chisq_1_95/2
@@ -143,31 +205,33 @@ function CI_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max,
         end
     end
     l_3 = find_zero(LL_ratio_3, (0., inv_fit_m))
-    l_3_M(P) = -log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, P[1], P[2], l_3, eff)
-    res = Optim.optimize(l_3_M, [m_UT, m_S])
-    M[5] = Optim.minimizer(res)[2]/Optim.minimizer(res)[1]
     u_3 = Inf
     try
         u_3 = find_zero(LL_ratio_3, (inv_fit_m, Inf))
     catch err
     end
-    if u_3 == Inf
-        eff = [e[1] for e in eff]
-        u_3_M_0(P) = -log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, P[1], P[2])
-        res = Optim.optimize(u_3_M_0, [m_UT, m_S].*eff)
-        Optim.minimizer(res) ./= eff
-    else
-        u_3_M(P) = -log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, P[1], P[2], u_3, eff)
-        res = Optim.optimize(u_3_M, [m_UT, m_S])
+    function min_M(P)
+        if -log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, P[1], P[2], P[3], eff) - MLL > chisq_1_95/2
+            return Inf
+        else
+            return P[2]/P[1]
+        end
     end
-    M[6] = Optim.minimizer(res)[2]/Optim.minimizer(res)[1]
-    M[7] = l_2/u_1
-    M[8] = u_2/l_1
-    return [l_1 u_1; l_2 u_2; l_3 u_3; minimum(M) maximum(M)]
+    res = Optim.optimize(min_M, [m_UT, m_S, inv_fit_m])
+    l_4 = Optim.minimum(res)
+    function max_M(P)
+        if -log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, P[1], P[2], P[3], eff) - MLL > chisq_1_95/2
+            return Inf
+        else
+            return -P[2]/P[1]
+        end
+    end
+    res = Optim.optimize(max_M, [m_UT, m_S, inv_fit_m])
+    u_4 = -Optim.minimum(res)
+    return [l_1 u_1; l_2 u_2; l_3 u_3; l_4 u_4]
 end
 # Heterogeneous response (fixed fraction and rel. division rate of on-cells)
 function CI_joint_m_S(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, m, S, q0_UT, q_UT, q0_S_off, q_S_off, q0_S_on, q_S_on, eff, MLL)
-    m_on = Vector{Float64}(undef, 6)
     function LL_ratio_1(para)
         if para == m
             return -chisq_1_95/2
@@ -179,13 +243,7 @@ function CI_joint_m_S(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, m
         end
     end
     l_1 = find_zero(LL_ratio_1, (0., m))
-    l_1_P(P) = -log_likelihood_joint_m_S(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, l_1, P[1], q0_UT, q_UT, q0_S_off, q_S_off, q0_S_on, q_S_on)
-    res = Optim.optimize(l_1_P, [S])
-    m_on[1] = Optim.minimizer(res)[1]*l_1
     u_1 = find_zero(LL_ratio_1, (m, m_max(mc_max_S,eff)))
-    u_1_P(P) = -log_likelihood_joint_m_S(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, u_1, P[1], q0_UT, q_UT, q0_S_off, q_S_off, q0_S_on, q_S_on)
-    res = Optim.optimize(u_1_P, [S])
-    m_on[2] = Optim.minimizer(res)[1]*u_1
     function LL_ratio_2(para)
         if para == S
             return -chisq_1_95/2
@@ -201,20 +259,29 @@ function CI_joint_m_S(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, m
         l_2 = find_zero(LL_ratio_2, (0., S))
     catch err
     end
-    l_2_P(P) = -log_likelihood_joint_m_S(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, P[1], l_2, q0_UT, q_UT, q0_S_off, q_S_off, q0_S_on, q_S_on)
-    res = Optim.optimize(l_2_P, 0., mc_max_S)
-    m_on[3] = l_2*Optim.minimizer(res)[1]
     u_2 = find_zero(LL_ratio_2, (S, Inf))
-    u_2_P(P) = -log_likelihood_joint_m_S(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, P[1], u_2, q0_UT, q_UT, q0_S_off, q_S_off, q0_S_on, q_S_on)
-    res = Optim.optimize(u_2_P, 0., mc_max_S)
-    m_on[4] = u_2*Optim.minimizer(res)[1]
-    m_on[5] = l_2*l_1
-    m_on[6] = u_2*u_1
-    return [l_1 u_1; l_2 u_2; minimum(m_on) maximum(m_on)]
+    function min_m_on(P)
+        if -log_likelihood_joint_m_S(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, P[1], P[2], q0_UT, q_UT, q0_S_off, q_S_off, q0_S_on, q_S_on) - MLL > chisq_1_95/2
+            return Inf
+        else
+            return P[2]*P[1]
+        end
+    end
+    res = Optim.optimize(min_m_on, [m, S])
+    l_3 = Optim.minimum(res)
+    function max_m_on(P)
+        if -log_likelihood_joint_m_S(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, P[1], P[2], q0_UT, q_UT, q0_S_off, q_S_off, q0_S_on, q_S_on) - MLL > chisq_1_95/2
+            return Inf
+        else
+            return -P[2]*P[1]
+        end
+    end
+    res = Optim.optimize(max_m_on, [m, S])
+    u_3 = -Optim.minimum(res)
+    return [l_1 u_1; l_2 u_2; l_3 u_3]
 end
 # Heterogeneous response (fraction of on-cells fixed, rel. division rate of on-cells inferred)
 function CI_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, m, S, f_on, rel_div_on, q0_UT, q_UT, q0_S_off, q_S_off, q0_S_on, q_S_on, inv_fit_m, eff, MLL)
-    m_on = Vector{Float64}(undef, 8)
     function LL_ratio_1(para)
         if para == m
             return -chisq_1_95/2
@@ -226,13 +293,7 @@ function CI_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ra
         end
     end
     l_1 = find_zero(LL_ratio_1, (0., m))
-    l_1_P(P) = -log_likelihood_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, l_1, P[1], f_on, P[2], q0_UT, q_UT, q0_S_off, q_S_off, inv_fit_m, eff)
-    res = Optim.optimize(l_1_P, [S, rel_div_on])
-    m_on[1] = Optim.minimizer(res)[1]*l_1
     u_1 = find_zero(LL_ratio_1, (m, m_max(mc_max_S,eff)))
-    u_1_P(P) = -log_likelihood_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, u_1, P[1], f_on, P[2], q0_UT, q_UT, q0_S_off, q_S_off, inv_fit_m, eff)
-    res = Optim.optimize(u_1_P, [S, rel_div_on])
-    m_on[2] = Optim.minimizer(res)[1]*u_1
     function LL_ratio_2(para) 
         if para == S
             return -chisq_1_95/2
@@ -248,13 +309,7 @@ function CI_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ra
         l_2 = find_zero(LL_ratio_2, (0., S))
     catch err
     end
-    l_2_P(P) = -log_likelihood_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, P[1], l_2, f_on, P[2], q0_UT, q_UT, q0_S_off, q_S_off, inv_fit_m, eff)
-    res = Optim.optimize(l_2_P, [m, rel_div_on])
-    m_on[3] = l_2*Optim.minimizer(res)[1]
     u_2 = find_zero(LL_ratio_2, (S, Inf))
-    u_2_P(P) = -log_likelihood_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, P[1], u_2, f_on, P[2], q0_UT, q_UT, q0_S_off, q_S_off, inv_fit_m, eff)
-    res = Optim.optimize(u_2_P, [m, rel_div_on])
-    m_on[4] = u_2*Optim.minimizer(res)[1]
     function LL_ratio_3(para)
         if para == rel_div_on
             return -chisq_1_95/2
@@ -275,22 +330,45 @@ function CI_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ra
         l_3 = find_zero(LL_ratio_3, (0., rel_div_on))
     catch err
     end
-    l_3_P(P) = -log_likelihood_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, P[1], P[2], f_on, l_3, q0_UT, q_UT, q0_S_off, q_S_off, inv_fit_m, eff)
-    res = Optim.optimize(l_3_P, [m, S])
-    m_on[5] = Optim.minimizer(res)[2]*Optim.minimizer(res)[1]
     u_3 = find_zero(LL_ratio_3, (rel_div_on, Inf))
-    u_3_P(P) = -log_likelihood_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, P[1], P[2], f_on, u_3, q0_UT, q_UT, q0_S_off, q_S_off, inv_fit_m, eff)
-    res = Optim.optimize(u_3_P, [m, S])
-    m_on[6] = Optim.minimizer(res)[2]*Optim.minimizer(res)[1]
-    m_on[7] = l_2*l_1
-    m_on[8] = u_2*u_1
-    return [l_1 u_1; l_2 u_2; l_3 u_3; minimum(m_on) maximum(m_on)]
+    function min_m_on(P)
+        if P[3] == 0. 
+            if -log_likelihood_joint_m_S(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, P[1], P[2], q0_UT, q_UT, q0_S_off, q_S_off, q0_S_on, q_S_on) - MLL > chisq_1_95/2
+                return Inf
+            else 
+                return P[2]*P[1]
+            end
+        else
+            if -log_likelihood_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, P[1], P[2], f_on, P[3], q0_UT, q_UT, q0_S_off, q_S_off, inv_fit_m, eff) - MLL > chisq_1_95/2
+                return Inf
+            else
+                return P[2]*P[1]
+            end
+        end
+    end
+    res = Optim.optimize(min_m_on, [m, S, rel_div_on])
+    l_4 = Optim.minimum(res)
+    function max_m_on(P)
+        if P[3] == 0. 
+            if -log_likelihood_joint_m_S(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, P[1], P[2], q0_UT, q_UT, q0_S_off, q_S_off, q0_S_on, q_S_on) - MLL > chisq_1_95/2
+                return Inf
+            else 
+                return -P[2]*P[1]
+            end
+        else
+            if -log_likelihood_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, P[1], P[2], f_on, P[3], q0_UT, q_UT, q0_S_off, q_S_off, inv_fit_m, eff) - MLL > chisq_1_95/2
+                return Inf
+            else
+                return -P[2]*P[1]
+            end
+        end
+    end
+    res = Optim.optimize(max_m_on, [m, S, rel_div_on])
+    u_4 = -Optim.minimum(res)
+    return [l_1 u_1; l_2 u_2; l_3 u_3; l_4 u_4]
 end
-# Heterogeneous response (fraction of on-cells inferred, rel. division rate of on-cells fixed)
+# Heterogeneous response (fraction of on-cells inferred, rel. division rate of on-cells fixed or inferred)
 function CI_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, m, S, f_on, rel_div_on, q0_UT, q_UT, q0_S_off, q_S_off, q0_S_on, q_S_on, infer_r::Bool, inv_fit_m, eff, MLL)
-    m_on = Vector{Float64}(undef, 8)
-    mu_inc = Vector{Float64}(undef, 8)
-    M = Vector{Float64}(undef, 8)
     function LL_ratio_1(para)
         if para == m
             return -chisq_1_95/2
@@ -306,17 +384,7 @@ function CI_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ra
         l_1 = find_zero(LL_ratio_1, (0., m))
     catch err
     end
-    l_1_P(P) = -log_likelihood_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, l_1, P[1], P[2], rel_div_on, q0_UT, q_UT, q0_S_off, q_S_off, inv_fit_m, eff)
-    res = Optim.optimize(l_1_P, [S, f_on])
-    m_on[1] = Optim.minimizer(res)[1]*l_1*(1-Optim.minimizer(res)[2])/Optim.minimizer(res)[2]
-    mu_inc[1] = Optim.minimizer(res)[1]*(1-Optim.minimizer(res)[2])/Optim.minimizer(res)[2]
-    M[1] = (1-Optim.minimizer(res)[2])*(1+Optim.minimizer(res)[1])
     u_1 = find_zero(LL_ratio_1, (m, m_max(mc_max_S,eff)))
-    u_1_P(P) = -log_likelihood_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, u_1, P[1], P[2], rel_div_on, q0_UT, q_UT, q0_S_off, q_S_off, inv_fit_m, eff)
-    res = Optim.optimize(l_1_P, [S, f_on])
-    m_on[2] = Optim.minimizer(res)[1]*u_1*(1-Optim.minimizer(res)[2])/Optim.minimizer(res)[2]
-    mu_inc[2] = Optim.minimizer(res)[1]*(1-Optim.minimizer(res)[2])/Optim.minimizer(res)[2]
-    M[2] = (1-Optim.minimizer(res)[2])*(1+Optim.minimizer(res)[1])
     function LL_ratio_2(para) 
         if para == S
             return -chisq_1_95/2
@@ -332,17 +400,7 @@ function CI_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ra
         l_2 = find_zero(LL_ratio_2, (0., S))
     catch err
     end
-    l_2_P(P) = -log_likelihood_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, P[1], l_2, P[2], rel_div_on, q0_UT, q_UT, q0_S_off, q_S_off, inv_fit_m, eff)
-    res = Optim.optimize(l_2_P, [m, f_on])
-    m_on[3] = l_2*Optim.minimizer(res)[1]*(1-Optim.minimizer(res)[2])/Optim.minimizer(res)[2]
-    mu_inc[3] = l_2*(1-Optim.minimizer(res)[2])/Optim.minimizer(res)[2]
-    M[3] = (1-Optim.minimizer(res)[2])*(1+l_2)
     u_2 = find_zero(LL_ratio_2, (S, Inf))
-    u_2_P(P) = -log_likelihood_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, P[1], u_2, P[2], rel_div_on, q0_UT, q_UT, q0_S_off, q_S_off, inv_fit_m, eff)
-    res = Optim.optimize(u_2_P, [m, f_on])
-    m_on[4] = u_2*Optim.minimizer(res)[1]*(1-Optim.minimizer(res)[2])/Optim.minimizer(res)[2]
-    mu_inc[4] = u_2*(1-Optim.minimizer(res)[2])/Optim.minimizer(res)[2]
-    M[4] = (1-Optim.minimizer(res)[2])*(1+l_2)
     function LL_ratio_3(para) 
         if para == f_on
             return -chisq_1_95/2
@@ -358,29 +416,67 @@ function CI_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ra
         l_3 = find_zero(LL_ratio_3, (0., f_on))
     catch err
     end
-    l_3_P(P) = -log_likelihood_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, P[1], P[2], l_3, rel_div_on, q0_UT, q_UT, q0_S_off, q_S_off, inv_fit_m, eff)
-    res = Optim.optimize(l_3_P, [m, S])
-    m_on[5] = Optim.minimizer(res)[2]*Optim.minimizer(res)[1]*(1-l_3)/l_3
-    mu_inc[5] = Optim.minimizer(res)[2]*(1-l_3)/l_3
-    M[5] = (1-l_3)*(1+Optim.minimizer(res)[2])
     u_3 = 1.
     try 
         u_3 = find_zero(LL_ratio_3, (f_on, 1.))
     catch err
     end
-    u_3_P(P) = -log_likelihood_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, P[1], u_3, P[2], rel_div_on, q0_UT, q_UT, q0_S_off, q_S_off, inv_fit_m, eff)
-    res = Optim.optimize(u_3_P, [m, S])
-    m_on[6] = Optim.minimizer(res)[2]*Optim.minimizer(res)[1]*(1-u_3)/u_3
-    mu_inc[6] = Optim.minimizer(res)[2]*(1-u_3)/u_3
-    M[6] = (1-u_3)*(1+Optim.minimizer(res)[2])
-    m_on[7] = l_2*l_1*(1-u_3)/u_3
-    mu_inc[7] = l_2*(1-u_3)/u_3
-    M[7] = (1-u_3)*(1+l_2)
-    m_on[8] = u_2*u_1*(1-l_3)/l_3
-    mu_inc[8] = u_2*(1-l_3)/l_3
-    M[8] = (1-l_3)*(1+u_2)
     if infer_r == false
-        return [l_1 u_1; l_2 u_2; l_3 u_3; minimum(m_on) maximum(m_on); minimum(mu_inc) maximum(mu_inc); minimum(M) maximum(M)]
+        function min_m_on(P)
+            if -log_likelihood_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, P[1], P[2], P[3], rel_div_on, q0_UT, q_UT, q0_S_off, q_S_off, inv_fit_m, eff) - MLL > chisq_1_95/2
+                return Inf
+            else
+                return P[2]*P[1]*(1-P[3])/P[3]
+            end
+        end
+        res = Optim.optimize(min_m_on, [m, S, f_on])
+        l_4 = Optim.minimum(res)
+        function max_m_on(P)
+            if -log_likelihood_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, P[1], P[2], P[3], rel_div_on, q0_UT, q_UT, q0_S_off, q_S_off, inv_fit_m, eff) - MLL > chisq_1_95/2
+                return Inf
+            else
+                return -P[2]*P[1]*(1-P[3])/P[3]
+            end
+        end
+        res = Optim.optimize(max_m_on, [m, S, f_on])
+        u_4 = -Optim.minimum(res)
+        function min_mu_inc(P)
+            if -log_likelihood_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, P[1], P[2], P[3], rel_div_on, q0_UT, q_UT, q0_S_off, q_S_off, inv_fit_m, eff) - MLL > chisq_1_95/2
+                return Inf
+            else
+                return P[2]*(1-P[3])/P[3]
+            end
+        end
+        res = Optim.optimize(min_mu_inc, [m, S, f_on])
+        l_5 = Optim.minimum(res)
+        function max_mu_inc(P)
+            if -log_likelihood_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, P[1], P[2], P[3], rel_div_on, q0_UT, q_UT, q0_S_off, q_S_off, inv_fit_m, eff) - MLL > chisq_1_95/2
+                return Inf
+            else
+                return -P[2]*(1-P[3])/P[3]
+            end
+        end
+        res = Optim.optimize(max_mu_inc, [m, S, f_on])
+        u_5 = -Optim.minimum(res)
+        function min_M(P)
+            if -log_likelihood_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, P[1], P[2], P[3], rel_div_on, q0_UT, q_UT, q0_S_off, q_S_off, inv_fit_m, eff) - MLL > chisq_1_95/2
+                return Inf
+            else
+                return (1-P[3])*(1+P[2])
+            end
+        end
+        res = Optim.optimize(min_M, [m, S, f_on])
+        l_6 = Optim.minimum(res)
+        function max_M(P)
+            if -log_likelihood_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, P[1], P[2], P[3], rel_div_on, q0_UT, q_UT, q0_S_off, q_S_off, inv_fit_m, eff) - MLL > chisq_1_95/2
+                return Inf
+            else
+                return -(1-P[3])*(1+P[2])
+            end
+        end
+        res = Optim.optimize(max_M, [m, S, f_on])
+        u_6 = -Optim.minimum(res)
+        return [l_1 u_1; l_2 u_2; l_3 u_3; l_4 u_4; l_5 u_5; l_6 u_6]
     else
         function LL_ratio_r(para)
             if para == rel_div_on
@@ -402,18 +498,128 @@ function CI_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ra
             l_r = find_zero(LL_ratio_r, (0., rel_div_on))
         catch err
         end
-        l_r_P(P) = -log_likelihood_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, P[1], P[2], P[3], l_r, q0_UT, q_UT, q0_S_off, q_S_off, inv_fit_m, eff)
-        res = Optim.optimize(l_r_P, [m, S, f_on])
-        push!(m_on, Optim.minimizer(res)[2]*Optim.minimizer(res)[1]*(1-Optim.minimizer(res)[3])/Optim.minimizer(res)[3])
-        push!(mu_inc, Optim.minimizer(res)[2]*(1-Optim.minimizer(res)[3])/Optim.minimizer(res)[3])
-        push!(M, (1-Optim.minimizer(res)[3])*(1+Optim.minimizer(res)[2]))
         u_r = find_zero(LL_ratio_r, (rel_div_on, Inf))
-        u_r_P(P) = -log_likelihood_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, P[1], P[2], P[3], u_r, q0_UT, q_UT, q0_S_off, q_S_off, inv_fit_m, eff)
-        res = Optim.optimize(u_r_P, [m, S, f_on])
-        push!(m_on, Optim.minimizer(res)[2]*Optim.minimizer(res)[1]*(1-Optim.minimizer(res)[3])/Optim.minimizer(res)[3])
-        push!(mu_inc, Optim.minimizer(res)[2]*(1-Optim.minimizer(res)[3])/Optim.minimizer(res)[3])
-        push!(M, (1-Optim.minimizer(res)[3])*(1+Optim.minimizer(res)[2]))
-        return [l_1 u_1; l_2 u_2; l_3 u_3; l_r u_r; minimum(m_on) maximum(m_on); minimum(mu_inc) maximum(mu_inc); minimum(M) maximum(M)]
+        function min_r_m_on(P)
+            if P[4] == 0. 
+                if -log_likelihood_joint_m_S(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, P[1], P[2], q0_UT, q_UT, q0_S_off, q_S_off, q0_S_on, q_S_on) - MLL > chisq_1_95/2
+                    return Inf
+                else 
+                    return P[2]*P[1]
+                end
+            else
+                if -log_likelihood_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, P[1], P[2], P[3], P[4], q0_UT, q_UT, q0_S_off, q_S_off, inv_fit_m, eff) - MLL > chisq_1_95/2
+                    return Inf
+                else
+                    return P[2]*P[1]
+                end
+            end
+        end
+        res = Optim.optimize(min_r_m_on, [m, S, f_on, rel_div_on])
+        l_4 = Optim.minimum(res)
+        if l_4 == Inf
+            l_4 = 0.
+        end
+        function max_r_m_on(P)
+            if P[4] == 0. 
+                if -log_likelihood_joint_m_S(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, P[1], P[2], q0_UT, q_UT, q0_S_off, q_S_off, q0_S_on, q_S_on) - MLL > chisq_1_95/2
+                    return Inf
+                else 
+                    return -P[2]*P[1]
+                end
+            else
+                if -log_likelihood_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, P[1], P[2], P[3], P[4], q0_UT, q_UT, q0_S_off, q_S_off, inv_fit_m, eff) - MLL > chisq_1_95/2
+                    return Inf
+                else
+                    return -P[2]*P[1]
+                end
+            end
+        end
+        res = Optim.optimize(max_r_m_on, [m, S, f_on, rel_div_on])
+        u_4 = -Optim.minimum(res)
+        if u_4 == -Inf
+            u_4 = Inf
+        end
+        function min_r_mu_inc(P)
+            if P[4] == 0. 
+                if -log_likelihood_joint_m_S(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, P[1], P[2], q0_UT, q_UT, q0_S_off, q_S_off, q0_S_on, q_S_on) - MLL > chisq_1_95/2
+                    return Inf
+                else 
+                    return P[2]*(1-P[3])/P[3]
+                end
+            else
+                if -log_likelihood_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, P[1], P[2], P[3], P[4], q0_UT, q_UT, q0_S_off, q_S_off, inv_fit_m, eff) - MLL > chisq_1_95/2
+                    return Inf
+                else
+                    return P[2]*(1-P[3])/P[3]
+                end
+            end
+        end
+        res = Optim.optimize(min_r_mu_inc, [m, S, f_on, rel_div_on])
+        l_5 = Optim.minimum(res)
+        if l_5 == Inf
+            l_5 = 0.
+        end
+        function max_r_mu_inc(P)
+            if P[4] == 0. 
+                if -log_likelihood_joint_m_S(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, P[1], P[2], q0_UT, q_UT, q0_S_off, q_S_off, q0_S_on, q_S_on) - MLL > chisq_1_95/2
+                    return Inf
+                else 
+                    return -P[2]*(1-P[3])/P[3]
+                end
+            else
+                if -log_likelihood_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, P[1], P[2], P[3], P[4], q0_UT, q_UT, q0_S_off, q_S_off, inv_fit_m, eff) - MLL > chisq_1_95/2
+                    return Inf
+                else
+                    return -P[2]*(1-P[3])/P[3]
+                end
+            end
+        end
+        res = Optim.optimize(max_r_mu_inc, [m, S, f_on, rel_div_on])
+        u_5 = -Optim.minimum(res)
+        if u_5 == -Inf
+            u_5 = Inf
+        end
+        function min_r_M(P)
+            if P[4] == 0. 
+                if -log_likelihood_joint_m_S(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, P[1], P[2], q0_UT, q_UT, q0_S_off, q_S_off, q0_S_on, q_S_on) - MLL > chisq_1_95/2
+                    return Inf
+                else 
+                    return (1-P[3])*(1+P[2])
+                end
+            else
+                if -log_likelihood_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, P[1], P[2], P[3], P[4], q0_UT, q_UT, q0_S_off, q_S_off, inv_fit_m, eff) - MLL > chisq_1_95/2
+                    return Inf
+                else
+                    return (1-P[3])*(1+P[2])
+                end
+            end
+        end
+        res = Optim.optimize(min_r_M, [m, S, f_on, rel_div_on])
+        l_6 = Optim.minimum(res)
+        if l_6 == Inf
+            l_6 = 0.
+        end
+        function max_r_M(P)
+            if P[4] == 0. 
+                if -log_likelihood_joint_m_S(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, P[1], P[2], q0_UT, q_UT, q0_S_off, q_S_off, q0_S_on, q_S_on) - MLL > chisq_1_95/2
+                    return Inf
+                else 
+                    return -(1-P[3])*(1+P[2])
+                end
+            else
+                if -log_likelihood_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, P[1], P[2], P[3], P[4], q0_UT, q_UT, q0_S_off, q_S_off, inv_fit_m, eff) - MLL > chisq_1_95/2
+                    return Inf
+                else
+                    return -(1-P[3])*(1+P[2])
+                end
+            end
+        end
+        res = Optim.optimize(max_r_mu_inc, [m, S, f_on, rel_div_on])
+        u_6 = -Optim.minimum(res)
+        if u_6 == -Inf
+            u_6 = Inf
+        end
+        return [l_1 u_1; l_2 u_2; l_3 u_3; l_r u_r; l_4 u_4; l_5 u_5; l_6 u_6]
     end
 end
 
