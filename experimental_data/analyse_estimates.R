@@ -153,7 +153,8 @@ p_Delta_AIC <- ggplot(data = df_SIM, aes(x=ID, y=Delta_AIC, group=antibiotic)) +
 p_Delta_AIC
 
 # Experiments, for which a heterogeneous stress response is selected or homogeneous/heterogeneous response cannot be distinguished clearly
-df_het <- subset(df_SIM, is.element(by_AIC, c("het", "none")))
+df_het <- subset(df_SIM, is.element(by_AIC, c("het")))
+df_none <- subset(df_SIM, is.element(by_AIC, c("none")))
 
 # Frenoy et al. 2018 Norfloxacin
 df_Nor <- subset(est_paras, ID == "Frenoy_Nor")
