@@ -29,7 +29,9 @@ for (i in 1:length(v)) {
 }
 antibiotic_classes$prevalence <- v
 p_antibiotic <- ggplot(data = antibiotic_classes, aes(x=target_group, y=prevalence, fill=antibiotic_abbr)) + 
-  geom_bar(stat = "identity") + scale_fill_manual(values = antibiotic_classes$color) + xlab("Grouped by target") + ylab("Number of experiments")
+  geom_bar(stat = "identity") + scale_fill_manual(values = antibiotic_classes$color, name = "Antibiotic (abbr)") + 
+  xlab("Grouped by target") + ylab("Number of experiments") + 
+  theme(axis.text.x = element_text(angle = 60, vjust = 0.9, hjust = 0.8))
 p_antibiotic
 
 # Sort by bacterial species
