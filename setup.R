@@ -42,10 +42,11 @@ check_input <- function(mc, Nf, eff=1, fit_m=1., rel_div_on=FALSE, f_on=0.1){
   if(is.numeric(fit_m) && (sum(fit_m>=0)==length(fit_m))){
     if(length(fit_m==1)){
       fit_m <- c(fit_m, fit_m)
-    }
-    if(length(fit_m)>2){
-      fit_m <- fit_m[1:2]
-      print("Note: More than two values for mutant fitness given; only the first two (untreated & stressful) will be used in the inference.")
+    } else {
+      if(length(fit_m)>2){
+        fit_m <- fit_m[1:2]
+        print("Note: More than two values for mutant fitness given; only the first two (untreated & stressful) will be used in the inference.")
+      } 
     }
   } else {
     if(is.logical(fit_m)){
@@ -83,15 +84,18 @@ check_input <- function(mc, Nf, eff=1, fit_m=1., rel_div_on=FALSE, f_on=0.1){
   return(list(status, mc, as.numeric(Nf), eff, fit_m, f_on, rel_div_on))
 }
 
-estimu <- function(mc_UT, Nf_UT, mc_S, Nf_S, eff=1, fit_m=1., f_on=FALSE, rel_div_on=0., mod){
-  res <- "Warning: Model has to be one of the following 'standard', 'null', 'homogeneous', 'heterogeneous'."
+estimu <- function(mc_UT, Nf_UT, mc_S, Nf_S, eff=1, fit_m=1., f_on=FALSE, rel_div_on=0., mod="all", criterion="AIC"){
+  res <- "Warning: Model has to be one of the following 'standard', 'null', 'homogeneous', 'heterogeneous', or 'all' (the default)."
+  if(!is.element(criterion, c("AIC", "BIC"))){
+    criterion <- "AIC"
+    print("Warning: selection criterion must be either 'AIC' or 'BIC'. Using the default AIC.")
+  }
   if(missing(mc_S) || missing(Nf_S)){
     mod <- "standard"
     print("Warning: No mutant counts or final population size under stressful condition given. Using the standard model to infer the mutation rate under permissive conditions.")
   } 
   if(mod == "standard"){
     conv_input <- check_input(mc_UT, Nf_UT, eff = eff, fit_m = fit_m)
-    print(conv_input)
     if(conv_input[[1]]){
       res <- julia_call(
         "estimu",
@@ -141,6 +145,193 @@ estimu <- function(mc_UT, Nf_UT, mc_S, Nf_S, eff=1, fit_m=1., f_on=FALSE, rel_di
       res <- list(res[[1]], res[[2]])
     }
   }
+  if(mod == "all"){
+    conv_input_UT <- check_input(mc_UT, Nf_UT, eff = eff, fit_m = fit_m)
+    conv_input_S <- check_input(mc_S, Nf_S, rel_div_on = rel_div_on)
+    if(conv_input_UT[[1]]&&conv_input_S[[1]]){
+      if(fit_m[1] != 1. && fit_m[2] != 1.){
+        res_null <- julia_call(
+          "estimu_0",
+          conv_input_UT[[2]], conv_input_UT[[3]], conv_input_S[[2]], conv_input_S[[3]], conv_input_UT[[4]], conv_input_UT[[5]],
+          need_return = "R"
+        )
+        res_hom <- julia_call(
+          "estimu_hom",
+          conv_input_UT[[2]], conv_input_UT[[3]], conv_input_S[[2]], conv_input_S[[3]], conv_input_UT[[4]], conv_input_UT[[5]],
+          need_return = "R"
+        )
+        hom <- list(res_null, res_hom)
+        LRT_hom <- LRT(c(res_null[[2]]$LL[1], res_hom[[2]]$LL[1]))
+        if (LRT_hom == 1){
+          hom[[2]][[2]]$status[1] <- "ns"
+        } else {
+          hom[[LRT_hom]][[2]]$status[1] <- "best hom."
+        }
+        if(criterion == "AIC"){
+          crit_hom <- hom[[LRT_hom]][[2]]$AIC[1] 
+        } else {
+          crit_hom <- hom[[LRT_hom]][[2]]$BIC[1] 
+        }
+        res_het_0 <- julia_call(
+          "estimu_het",
+          conv_input_UT[[2]], conv_input_UT[[3]], conv_input_S[[2]], conv_input_S[[3]], conv_input_UT[[4]], FALSE, 0., conv_input_UT[[5]],
+          need_return = "R"
+        ) 
+        if (conv_input_S[[7]] == 0.){
+          res_het <- julia_call(
+            "estimu_het",
+            conv_input_UT[[2]], conv_input_UT[[3]], conv_input_S[[2]], conv_input_S[[3]], conv_input_UT[[4]], FALSE, FALSE, conv_input_UT[[5]],
+            need_return = "R"
+          ) 
+          LRT_het <- min(LRT(c(res_null[[2]]$LL[1], res_het_0[[2]]$LL[1], -Inf, res_het[[2]]$LL[1])), 3)
+        } else {
+          res_het <- julia_call(
+            "estimu_het",
+            conv_input_UT[[2]], conv_input_UT[[3]], conv_input_S[[2]], conv_input_S[[3]], conv_input_UT[[4]], FALSE, conv_input_S[[7]], conv_input_UT[[5]],
+            need_return = "R"
+          ) 
+          LRT_het <- LRT(c(res_null[[2]]$LL[1], res_het_0[[2]]$LL[1], res_het[[2]]$LL[1]))
+        }
+        het <- list(res_null, res_het_0, res_het)
+        if (LRT_het == 1){
+          het[[2]][[2]]$status[1] <- "ns"
+          het[[3]][[2]]$status[1] <- "ns"
+        } else {
+          het[[LRT_het]][[2]]$status[1] <- "best het."
+        }
+        if(criterion == "AIC"){
+          crit_het <- het[[LRT_het]][[2]]$AIC[1] 
+        } else {
+          crit_het <- het[[LRT_het]][[2]]$BIC[1]
+        }
+        if(LRT_hom > 1 || LRT_het > 1){
+          print("Significant support for SIM")
+          if(crit_hom - crit_het < -2){
+            hom[[LRT_hom]][[2]]$status[1] <- "selected"
+            print(paste0("Selected model: ", hom[[LRT_hom]][[2]]$model[1]))
+          } else {
+            if(crit_hom - crit_het > 2){
+              het[[LRT_het]][[2]]$status[1] <- "selected"
+              print(paste0("Selected model: ", het[[LRT_het]][[2]]$model[1]))
+            } else {
+              print(paste0("Model selection between ", hom[[LRT_hom]][[2]]$model[1], "and", het[[LRT_het]][[2]]$model[1], " inconclusive."))
+            }
+          }
+        } else {
+          print("No significant support for SIM")
+        }
+        print("Estimated parameters under all models are:")
+        res <- list(hom[[1]][[2]], hom[[1]][[1]], hom[[2]][[2]], hom[[2]][[1]], het[[2]][[2]], het[[2]][[1]], het[[3]][[2]], het[[3]][[1]])
+      } else {
+        res_null <- julia_call(
+          "estimu_0",
+          conv_input_UT[[2]], conv_input_UT[[3]], conv_input_S[[2]], conv_input_S[[3]], conv_input_UT[[4]],
+          need_return = "R"
+        )
+        res_null_constr <- julia_call(
+          "estimu_0",
+          conv_input_UT[[2]], conv_input_UT[[3]], conv_input_S[[2]], conv_input_S[[3]], conv_input_UT[[4]], FALSE,
+          need_return = "R"
+        )
+        res_hom_1 <- julia_call(
+          "estimu_hom",
+          conv_input_UT[[2]], conv_input_UT[[3]], conv_input_S[[2]], conv_input_S[[3]], conv_input_UT[[4]],
+          need_return = "R"
+        )
+        res_hom_constr <- julia_call(
+          "estimu_hom",
+          conv_input_UT[[2]], conv_input_UT[[3]], conv_input_S[[2]], conv_input_S[[3]], conv_input_UT[[4]], FALSE,
+          need_return = "R"
+        )
+        res_hom_unconstr <- julia_call(
+          "estimu_hom",
+          conv_input_UT[[2]], conv_input_UT[[3]], conv_input_S[[2]], conv_input_S[[3]], conv_input_UT[[4]], c(FALSE, FALSE),
+          need_return = "R"
+        )
+        LRT_null <- LRT(c(res_null[[2]]$LL[1], res_null_constr[[2]]$LL[1]))
+        hom <- list(res_null, res_hom_1, res_hom_constr, res_hom_unconstr)
+        LRT_hom <- LRT(c(res_null[[2]]$LL[1], res_hom_1[[2]]$LL[1], res_hom_constr[[2]]$LL[1], res_hom_unconstr[[2]]$LL[1]))
+        if (LRT_null == 2 && LRT_hom == 2){
+          if(criterion == "AIC"){
+            crit_null <- res_null_constr[[2]]$AIC[1]
+            crit_hom <- res_hom_1[[2]]$AIC[1] 
+          } else {
+            crit_null <- res_null_constr[[2]]$BIC[1]
+            crit_hom <- res_hom_1[[2]]$BIC[1] 
+          }
+          if(crit_null - crit_hom < -2){
+            LRT_hom <- 1
+          } else {
+            if(crit_null - crit_hom < 2){
+              print(paste0("Model selection between ", res_null_constr[[2]]$model[1], "and", res_hom_1[[2]]$model[1], " inconclusive."))
+            }
+          }
+        }
+        if (LRT_hom == 1){
+          hom[[2]][[2]]$status[1] <- "ns"
+          hom[[3]][[2]]$status[1] <- "ns"
+          hom[[4]][[2]]$status[1] <- "ns"
+        } else {
+          hom[[LRT_hom]][[2]]$status[1] <- "best hom."
+        }
+        if(criterion == "AIC"){
+          crit_hom <- hom[[LRT_hom]][[2]]$AIC[1] 
+        } else {
+          crit_hom <- hom[[LRT_hom]][[2]]$BIC[1] 
+        }
+        res_het_0 <- julia_call(
+          "estimu_het",
+          conv_input_UT[[2]], conv_input_UT[[3]], conv_input_S[[2]], conv_input_S[[3]], conv_input_UT[[4]], FALSE, 0.,
+          need_return = "R"
+        ) 
+        if (conv_input_S[[7]] == 0.){
+          res_het <- julia_call(
+            "estimu_het",
+            conv_input_UT[[2]], conv_input_UT[[3]], conv_input_S[[2]], conv_input_S[[3]], conv_input_UT[[4]], FALSE, FALSE,
+            need_return = "R"
+          ) 
+          LRT_het <- min(LRT(c(res_null[[2]]$LL[1], res_het_0[[2]]$LL[1], -Inf, res_het[[2]]$LL[1])), 3)
+        } else {
+          res_het <- julia_call(
+            "estimu_het",
+            conv_input_UT[[2]], conv_input_UT[[3]], conv_input_S[[2]], conv_input_S[[3]], conv_input_UT[[4]], FALSE, conv_input_S[[7]],
+            need_return = "R"
+          )  
+          LRT_het <- LRT(c(res_null[[2]]$LL[1], res_het_0[[2]]$LL[1], res_het[[2]]$LL[1]))
+        }
+        het <- list(res_null, res_het_0, res_het)
+        if (LRT_het == 1){
+          het[[2]][[2]]$status[1] <- "ns"
+          het[[3]][[2]]$status[1] <- "ns"
+        } else {
+          het[[LRT_het]][[2]]$status[1] <- "best het."
+        }
+        if(criterion == "AIC"){
+          crit_het <- het[[LRT_het]][[2]]$AIC[1] 
+        } else {
+          crit_het <- het[[LRT_het]][[2]]$BIC[1]
+        }
+        if(LRT_hom > 1 || LRT_het > 1){
+          print("Significant support for SIM")
+          if(crit_hom - crit_het < -2){
+            hom[[LRT_hom]][[2]]$status[1] <- "selected"
+            print(paste0("Selected model: ", hom[[LRT_hom]][[2]]$model[1]))
+          } else {
+            if(crit_hom - crit_het > 2){
+              het[[LRT_het]][[2]]$status[1] <- "selected"
+              print(paste0("Selected model: ", het[[LRT_het]][[2]]$model[1]))
+            } else {
+              print(paste0("Model selection between ", hom[[LRT_hom]][[2]]$model[1], "and", het[[LRT_het]][[2]]$model[1], " inconclusive."))
+            }
+          }
+        } else {
+          print("No significant support for SIM")
+        }
+        print("Estimated parameters under all models are:")
+        res <- list(res_null[[2]], res_null[[1]], res_null_constr[[2]], res_null_constr[[1]], hom[[2]][[2]], hom[[2]][[1]], hom[[3]][[2]], hom[[3]][[1]], hom[[4]][[2]], hom[[4]][[1]], het[[2]][[2]], het[[2]][[1]], het[[3]][[2]], het[[3]][[1]])
+      }
+    }
+  }
   return(res)
 }
 
@@ -170,4 +361,24 @@ read_counts <- function(df_row){
     }
   }
   return(v2)
+}
+
+LRT <- function(LLs){
+  q <- numeric()
+  for (d in 1:(length(LLs)-1)) {
+    q <- append(q, qchisq(0.95, df=d)/2)
+  }  
+  m <- 1
+  while (m < length(LLs)) {
+    for (d in 1:(length(LLs)-m)) {
+      if (LLs[m] + q[d] < LLs[m+d]) {
+        m <- m + d
+        break
+      }      
+    }
+    if (d == (length(LLs)-m)) {
+      break
+    }
+  }
+  return(m)
 }

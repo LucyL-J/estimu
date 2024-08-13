@@ -3,26 +3,6 @@ library("plyr")
 est_paras <- read.csv("experimental_data/est_paras.csv")[,-1]
 IDs <- unique(est_paras$ID)
 
-LRT <- function(LLs){
-  q <- numeric()
-  for (d in 1:(length(LLs)-1)) {
-    q <- append(q, qchisq(0.95, df=d)/2)
-  }  
-  m <- 1
-  while (m < length(LLs)) {
-    for (d in 1:(length(LLs)-m)) {
-      if (LLs[m] + q[d] < LLs[m+d]) {
-        m <- m + d
-        break
-      }      
-    }
-    if (d == (length(LLs)-m)) {
-      break
-    }
-  }
-  return(m)
-}
-
 M_wo_fitm <- matrix(nrow = length(IDs), ncol = 3)
 SIM <- logical(length(IDs))
 hom_by_LRT <- character(length(IDs))
