@@ -44,9 +44,10 @@ p_M_antibiotic <- ggplot(data = df, aes(x=ID, y=M_wo_fitm.1, group=antibiotic)) 
   geom_point(aes(color=antibiotic)) +
   geom_errorbar(aes(ymin=M_wo_fitm.2, ymax=M_wo_fitm.3, color=antibiotic)) +
   geom_hline(yintercept = 1) +
-  scale_color_manual(values = subset(antibiotic_classes, is.element(antibiotic_abbr, unique(df$antibiotic)))$color) + 
+  scale_color_manual(values = subset(antibiotic_classes, is.element(antibiotic_abbr, unique(df$antibiotic)))$color, name = "Antibiotic (abbr)") + 
   scale_y_continuous(trans="log10") + theme(axis.text.x = element_text(angle = 90), plot.margin = margin(3.5,0.5,0.5,0.5, "cm")) +
-  ylab("Fold-change population-wide mutation rate")
+  ylab("Fold-change population-wide mutation rate") + xlab("Experiment ID") +
+  theme(axis.text.x = element_text(vjust = 0.5))
 p_M_antibiotic
 
 # Plating efficiency/number of parallel cultures and width of confidence intervals
@@ -66,8 +67,9 @@ cor.test(df$width_CI, df$plated_fraction, method = "kendall")
 cor.test(df$width_CI, df$n_cultures_tot, method = "kendall")
 cor.test(df$plated_fraction, df$n_cultures_tot, method = "kendall")
 p_CI_corr_p <- ggplot(data = df, aes(x=plated_fraction, y=width_CI)) + 
-  geom_point(aes(color=log10(n_cultures_tot))) + scale_x_continuous(trans = "log10") +
-  scale_y_continuous(trans="log10") + stat_cor(label.y.npc = "bottom", method = "kendall")
+  geom_point(aes(color=log10(n_cultures_tot)), name = "log(c)") + scale_x_continuous(trans = "log10") +
+  scale_y_continuous(trans="log10") + stat_cor(label.y.npc = "bottom", method = "kendall") +
+  ylab("Normalised width of 95% CI around MLE estimate") + xlab("Plated fraction")
 p_CI_corr_p
 
 p_CI_corr_n <- ggplot(data = df, aes(x=n_cultures_tot, y=width_CI)) + 
