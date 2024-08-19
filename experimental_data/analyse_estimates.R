@@ -67,58 +67,64 @@ cor.test(df$width_CI, df$plated_fraction, method = "kendall")
 cor.test(df$width_CI, df$n_cultures_tot, method = "kendall")
 cor.test(df$plated_fraction, df$n_cultures_tot, method = "kendall")
 p_CI_corr_p <- ggplot(data = df, aes(x=plated_fraction, y=width_CI)) + 
-  geom_point(aes(color=log10(n_cultures_tot)), name = "log(c)") + scale_x_continuous(trans = "log10") +
+  geom_point(aes(color=log10(n_cultures_tot))) + scale_x_continuous(trans = "log10") +
   scale_y_continuous(trans="log10") + stat_cor(label.y.npc = "bottom", method = "kendall") +
-  ylab("Normalised width of 95% CI around MLE estimate") + xlab("Plated fraction")
+  labs(x="Plated fraction", y="Normalised width of 95% CI around MLE estimate", color="log(c)")
 p_CI_corr_p
 
 p_CI_corr_n <- ggplot(data = df, aes(x=n_cultures_tot, y=width_CI)) + 
   geom_point(aes(color=log10(plated_fraction))) + 
-  scale_y_continuous(trans="log10") + scale_x_continuous(trans = "log10") + stat_cor(label.y.npc = "top", label.x.npc = "centre", method = "kendall") 
+  scale_y_continuous(trans="log10") + scale_x_continuous(trans = "log10") + stat_cor(label.y.npc = "top", label.x.npc = "centre", method = "kendall") +
+  labs(x="Total number of parallel cultures", y="Normalised width of 95% CI around MLE estimate", color="log(E)")
 p_CI_corr_n
 
 gmlm <- glmer(SIM ~ concentration + plated_fraction + n_cultures_tot + (1|target), data = df, family=binomial)
 summary(gmlm)
 
+print(subset(df, SIM == TRUE)$ID)
+# Further analysis with experiments using E. coli MG1655 and TD2158 (no mutant strains)
+df <- subset(subset(df, species == "E. coli"), is.element(strain, c("MG1655", "TD2158")))
+print(subset(df, SIM == TRUE)$ID)
+
 # Testing for normality -> not normal
 shapiro.test(df$M_wo_fitm.1)
-length(subset(df, is.element(target, c("DNA", "Gyrase")))$ID)
-shapiro.test(subset(df, is.element(target, c("DNA", "Gyrase")))$M_wo_fitm.1)
+length(subset(df, is.element(target, c("DNA", "DNA gyrase")))$ID)
+shapiro.test(subset(df, is.element(target, c("DNA", "DNA gyrase")))$M_wo_fitm.1)
 length(subset(df, target=="Ribosome")$ID)
 shapiro.test(subset(df, target == "Ribosome")$M_wo_fitm.1)
 
 # Kruskal-Wallis test -> DNA/DNA-gyrase and ribosome binding significantly different
 kruskal.test(M_wo_fitm.1 ~ target, data = df)
-df_KW <- subset(df, is.element(target, c("DNA", "Gyrase", "Ribosome")))
+df_KW <- subset(df, is.element(target, c("DNA", "DNA gyrase", "Ribosome")))
 df_KW$group <- character(length(df_KW$target))
-df_KW$group[is.element(df_KW$target, c("DNA", "Gyrase"))] <- "DNA/-gyrase"
+df_KW$group[is.element(df_KW$target, c("DNA", "DNA gyrase"))] <- "DNA/DNA gyrase"
 df_KW$group[df_KW$target == "Ribosome"] <- "Ribosome"
 kruskal.test(df_KW$M_wo_fitm.1, df_KW$group)
 wilcox.test(M_wo_fitm.1 ~ group, data = df_KW)
-median(subset(df_KW, group == "DNA/-gyrase")$M_wo_fitm.1)
+median(subset(df_KW, group == "DNA/DNA gyrase")$M_wo_fitm.1)
 median(subset(df_KW, group == "Ribosome")$M_wo_fitm.1)
-p_M_DNA <- ggplot(data = df_KW, aes(x=group, y=M_wo_fitm.1, fill=group)) + geom_boxplot() +
+p_M_DNA <- ggplot(data = df_KW, aes(x=group, y=M_wo_fitm.1)) + geom_boxplot(aes(fill=group), show.legend = FALSE) + 
+  geom_jitter(aes(color = SIM), width = 0.25, alpha = 0.8) + scale_color_manual(values = c("TRUE" = "red", "FALSE" = "darkgrey")) +
   coord_trans(y = "log10", ylim = c(5*10^-2,5*10^2)) + scale_y_continuous(breaks = c(0.1,1,10,100), labels = c(0.1,1,10,100)) +
-  ylab("Estimated fold change in population-wide mutation rate") +
-  stat_compare_means(label.y = 400) 
+  scale_fill_manual(values = c("DNA/DNA gyrase" = "#4E6ADB", "Ribosome" = "#DBE35A")) + 
+  ylab("Estimated fold change in population-wide mutation rate") + xlab("Antimicrobial target") +
+  stat_compare_means(label.y = 300) + theme(legend.position = "right")
 p_M_DNA
 
 # Experiments for which SIM was detected
 df_SIM <- subset(df, SIM == TRUE)
 print(c(length(df_SIM$ID), length(subset(df, M_wo_fitm.1>1)$ID)))
-print(c(length(subset(df_SIM, is.element(target, c("DNA", "Gyrase")))$ID),length(subset(df_SIM, target=="Ribosome")$ID)))
+print(c(length(subset(df_SIM, is.element(target, c("DNA", "DNA gyrase")))$ID),length(subset(df_SIM, target=="Ribosome")$ID)))
 p_M_antibiotic <- ggplot(data = df_SIM, aes(x=ID, y=M.1, group=antibiotic)) + 
   geom_point(aes(color=antibiotic)) +
   geom_errorbar(aes(ymin=M.2, ymax=M.3, color=antibiotic)) +
   geom_hline(yintercept = 1) +
-  scale_color_manual(values = subset(antibiotic_classes, is.element(antibiotic_abbr, unique(df_SIM$antibiotic)))$color) + 
-  scale_y_continuous(trans="log10") + theme(axis.text.x = element_text(angle = 90), plot.margin = margin(3.5,0.5,0.5,0.5, "cm")) +
-  ylab("Increase population-wide mutation rate")
+  scale_color_manual(values = subset(antibiotic_classes, is.element(antibiotic_abbr, unique(df_SIM$antibiotic)))$color, name = "Antimicrobial") + 
+  scale_y_continuous(trans="log10") + theme(axis.text.x = element_text(angle = 60, vjust = 0.9, hjust = 0.9), plot.margin = margin(3.5,0.5,0.5,0.5, "cm")) +
+  ylab("Increase population-wide mutation rate") + xlab("Experiment ID")
 p_M_antibiotic
 
-# Further analysis with experiments using E. coli MG1655 (no mutant strains)
 # Exclude experiments with less than 3 parallel cultures in the fluctuation assay under antimicrobial treatment
-df_SIM <- subset(subset(df_SIM, species == "E. coli"), strain == "MG1655")
 df_SIM <- subset(df_SIM, n_cultures >= 3)
 length(df_SIM$ID)
 print(c(length(subset(df, M_wo_fitm.1>1)$ID), length(df_SIM$ID)))
@@ -140,8 +146,8 @@ for (i in 1:length(unique(df_SIM$antibiotic))) {
 selected_models$prevalence <- v
 
 p_msel_a <- ggplot(data = selected_models, aes(x=factor(m, c("hom","none","het")), y=prevalence, fill=antibiotic)) + geom_bar(stat = "identity") + 
-  scale_fill_manual(values = subset(antibiotic_classes, is.element(antibiotic_abbr, unique(df_SIM$antibiotic)))$color) +
-  xlab("Selected model") + ggtitle(criterion) + ylab("Number of experiments")
+  scale_fill_manual(values = subset(antibiotic_classes, is.element(antibiotic_abbr, unique(df_SIM$antibiotic)))$color, name = "Antimicrobial") +
+  xlab("Selected model") + ylab("Number of experiments") + scale_x_discrete(labels = c("homogeneous", "none", "heterogeneous"))
 p_msel_a
 
 p_msel_t <- ggplot(data = selected_models, aes(x=factor(m, c("hom","none","het")), y=prevalence, fill=target)) + geom_bar(stat = "identity") + 
@@ -151,9 +157,10 @@ p_msel_t
 
 # Difference in AIC between homogeneous and heterogeneous-response model
 p_Delta_AIC <- ggplot(data = df_SIM, aes(x=ID, y=Delta_AIC, group=antibiotic)) + geom_point(aes(color=antibiotic)) +
-  scale_color_manual(values = subset(antibiotic_classes, is.element(antibiotic_abbr, unique(df_SIM$antibiotic)))$color) +
-  theme(axis.text.x = element_text(angle = 90), plot.margin = margin(3.5,0.5,0.5,0.5, "cm")) +
-  geom_hline(yintercept = 2) + geom_hline(yintercept = -2)
+  scale_color_manual(values = subset(antibiotic_classes, is.element(antibiotic_abbr, unique(df_SIM$antibiotic)))$color, name = "Antimicrobial") +
+  theme(axis.text.x = element_text(angle = 60, vjust = 0.9, hjust = 0.9), plot.margin = margin(3.5,0.5,0.5,0.5, "cm")) +
+  geom_hline(yintercept = 2, linetype = "dashed") + geom_hline(yintercept = -2, linetype = "dashed") +
+  ylab("Difference in AIC") + xlab("Experiment ID")
 p_Delta_AIC
 
 # Experiments, for which a heterogeneous stress response is selected or homogeneous/heterogeneous response cannot be distinguished clearly
@@ -173,10 +180,11 @@ p_mc_hom_constr_UT <- pMudi(max(mc_UT), Nf_UT, df_Nor$mu_UT_MLE[3], eff=eff_UT) 
 p_mc_het_UT <- pMudi(max(mc_UT), Nf_UT, df_Nor$mu_off_MLE[7], eff=eff_UT) * length(mc_UT)
 print(c(df_Nor$mu_UT_MLE[5], df_Nor$fitm_UT_MLE[5], df_Nor$mu_UT_MLE[3]))
 print(df_Nor$mu_off_MLE[7])
-p_mc_UT <- ggplot() + geom_bar(aes(mc_UT), fill="#123288") + xlab("Number of colonies") + ylab("Number of plates") +
-  geom_line(aes(x=0:max(mc_UT), y=p_mc_hom_UT), color="#820298") + 
-  geom_line(aes(x=0:max(mc_UT), y=p_mc_hom_constr_UT), color="#f1aafd") + 
-  geom_line(aes(x=0:max(mc_UT), y=p_mc_het_UT), color="#FFD300") + ggtitle("Untreated condition")
+p_mc_UT <- ggplot() + geom_histogram(aes(mc_UT, y=..density.. * length(mc_UT)), fill="#1C458A", bins = 50) + 
+  geom_line(aes(x=0:max(mc_UT), y=p_mc_hom_UT), color="#8F3F8C", linewidth = 1.) + 
+  geom_line(aes(x=0:max(mc_UT), y=p_mc_hom_constr_UT), color="#E0B0FF", linewidth = 1.) + 
+  geom_line(aes(x=0:max(mc_UT), y=p_mc_het_UT), color="#FFD300", linewidth = 1., linetype = "dashed") + 
+  ggtitle("Untreated experiments") + xlab("Number of colonies") + ylab("Number of plates")
 p_mc_UT
 # Stressful condition: 0.05 mug/mL Norfloxacin
 mc_data <- read.table(paste0("experimental_data/raw_counts/Frenoy_Nor.txt"), header = FALSE, sep = ",", fill = TRUE)
@@ -188,10 +196,11 @@ p_mc_hom_constr_S <- pMudi(max(mc_S), Nf_S, df_Nor$mu_S_MLE[3], eff=eff_S) * len
 p_mc_het_S <- pMudi(max(mc_S), Nf_S, df_Nor$mu_off_MLE[7], eff=eff_S, S=df_Nor$S_MLE[7], f_on=df_Nor$f_on_MLE[7], rel_div_on=df_Nor$rel_div_on_MLE[7]) * length(mc_S)
 print(c(df_Nor$mu_S_MLE[5], df_Nor$fitm_S_MLE[5], df_Nor$mu_S_MLE[3]))
 print(c(df_Nor$mu_off_MLE[7], df_Nor$S_MLE[7], df_Nor$f_on_MLE[7], df_Nor$rel_div_on_MLE[7]))
-p_mc_s <- ggplot() + geom_bar(aes(mc_S), fill="#89CFF0") + xlab("Number of colonies") + ylab("Number of plates") +
-  geom_line(aes(x=0:max(mc_S), y=p_mc_hom_S), color="#820298") + 
-  geom_line(aes(x=0:max(mc_S), y=p_mc_hom_constr_S), color="#f1aafd") + 
-  geom_line(aes(x=0:max(mc_S), y=p_mc_het_S), color="#FFD300") + ggtitle("Norfloxacin")
+p_mc_s <- ggplot() + geom_histogram(aes(mc_S, y=..density.. *length(mc_S)), fill="#8EC44F", bins = 20) + 
+  geom_line(aes(x=0:max(mc_S), y=p_mc_hom_S), color="#8F3F8C", linewidth = 1.) + 
+  geom_line(aes(x=0:max(mc_S), y=p_mc_hom_constr_S), color="#E0B0FF", linewidth = 1.) + 
+  geom_line(aes(x=0:max(mc_S), y=p_mc_het_S), color="#FFD300", linewidth = 1., linetype = "dashed") +
+  xlab("Number of colonies") + ylab("Number of plates") + ggtitle("Experiments with norfloxacin")
 p_mc_s
 
 # Dose-dependence
