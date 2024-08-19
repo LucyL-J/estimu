@@ -78,7 +78,7 @@ p_CI_corr_n <- ggplot(data = df, aes(x=n_cultures_tot, y=width_CI)) +
   labs(x="Total number of parallel cultures", y="Normalised width of 95% CI around MLE estimate", color="log(E)")
 p_CI_corr_n
 
-gmlm <- glmer(SIM ~ concentration + plated_fraction + n_cultures_tot + (1|target), data = df, family=binomial)
+gmlm <- glmer(SIM ~ of_MIC + plated_fraction + n_cultures_tot + (1|target) + (1|strain), data = df, family=binomial)
 summary(gmlm)
 
 print(subset(df, SIM == TRUE)$ID)
