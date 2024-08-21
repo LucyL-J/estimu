@@ -201,7 +201,7 @@ p_c <- ggplot() +
   geom_point(data = df_c, aes(x=concentration, y=M_wo_fitm.1)) +
   geom_errorbar(data = df_c, aes(x=concentration, ymin=M_wo_fitm.2, ymax=M_wo_fitm.3)) +
   geom_hline(yintercept = 1) + scale_y_continuous(trans="log10") +
-  geom_point(data = df_Pribis, aes(x=cipro_concentration/1000, y=fold_induction_mutation_rate), color='blue') +
-  geom_errorbar(data = df_Pribis, aes(x=cipro_concentration/1000, ymin=fold_min, ymax=fold_max), color='blue') +
+  geom_errorbar(data = df_Pribis, aes(x=cipro_concentration/1000, ymin=fold_min, ymax=fold_max), color='black') +
+  geom_point(data = df_Pribis, aes(x=cipro_concentration/1000, y=fold_induction_mutation_rate), color='red') +
   ylab("Fold-change population-wide mutation rate") + ggtitle("Cip")
 p_c
