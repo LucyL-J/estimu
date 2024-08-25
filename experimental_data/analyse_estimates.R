@@ -204,13 +204,43 @@ p_mc_s <- ggplot() + geom_histogram(aes(mc_S, y=..density.. *length(mc_S)), fill
 p_mc_s
 
 # Dose-dependence
+for (a in unique(df$antibiotic)) {
+  print(paste0(a, " ", length(df$ID[df$antibiotic == a]), " ", length(subset(df, SIM == TRUE)$ID[subset(df, SIM == TRUE)$antibiotic == a]))) 
+}
+
 df_Pribis <- read.delim("experimental_data/Pribis_Fig2D.txt", header = TRUE, sep = '\t', comment.char="#")
-df_c <- subset(df, antibiotic == "Cip")
-p_c <- ggplot() + 
-  geom_point(data = df_c, aes(x=concentration, y=M_wo_fitm.1)) +
-  geom_errorbar(data = df_c, aes(x=concentration, ymin=M_wo_fitm.2, ymax=M_wo_fitm.3)) +
-  geom_hline(yintercept = 1) + scale_y_continuous(trans="log10") +
-  geom_errorbar(data = df_Pribis, aes(x=cipro_concentration/1000, ymin=fold_min, ymax=fold_max), color='black') +
-  geom_point(data = df_Pribis, aes(x=cipro_concentration/1000, y=fold_induction_mutation_rate), color='red') +
-  ylab("Fold-change population-wide mutation rate") + ggtitle("Cip")
-p_c
+df_Cip <- subset(df, antibiotic == "Cip")
+df_Cip$of_MIC[df_Cip$ID == "Vasse_Cip"] <- df_Cip$concentration[df_Cip$ID == "Vasse_Cip"]/0.032
+p_Cip_MIC <- ggplot() + 
+  geom_errorbar(data = df_Cip, aes(x=of_MIC, ymin=M_wo_fitm.2, ymax=M_wo_fitm.3), width=0.05) +
+  geom_point(data = df_Cip, aes(x=of_MIC, y=M_wo_fitm.1), color=antibiotic_classes$color[antibiotic_classes$antibiotic_abbr == "Cip"]) +
+  geom_hline(yintercept = 1, linetype = "dashed") + scale_y_continuous(trans="log10") +
+  geom_errorbar(data = df_Pribis, aes(x=cipro_concentration/12, ymin=fold_min, ymax=fold_max), color='black', width=0.05) +
+  geom_point(data = df_Pribis, aes(x=cipro_concentration/12, y=fold_induction_mutation_rate), color='red') +
+  ylab("Fold-change population-wide mutation rate") + xlab("Ciprofloxacin concentration [MIC]")
+p_Cip_MIC
+p_Cip <- ggplot() + 
+  geom_errorbar(data = df_Cip, aes(x=concentration*1000, ymin=M_wo_fitm.2, ymax=M_wo_fitm.3), width=2) +
+  geom_point(data = df_Cip, aes(x=concentration*1000, y=M_wo_fitm.1), color=antibiotic_classes$color[antibiotic_classes$antibiotic_abbr == "Cip"]) +
+  geom_hline(yintercept = 1, linetype = "dashed") + scale_y_continuous(trans="log10") +
+  ylab("Fold-change population-wide mutation rate") + xlab("Ciprofloxacin concentration [ng/mL]")
+p_Cip
+
+df_MMC <- subset(df, antibiotic == "MMC")
+df_MMC$concentration[df_MMC$ID == "Baharoglu_MMC"] <- df_MMC$concentration[df_MMC$ID == "Mo_MMC_MG1655"]/12.5
+p_MMC <- ggplot() + 
+  geom_errorbar(data = df_MMC, aes(x=concentration*1000, ymin=M_wo_fitm.2, ymax=M_wo_fitm.3), width=50) +
+  geom_point(data = df_MMC, aes(x=concentration*1000, y=M_wo_fitm.1), color=antibiotic_classes$color[antibiotic_classes$antibiotic_abbr == "MMC"]) +
+  geom_hline(yintercept = 1, linetype = "dashed") + scale_y_continuous(trans="log10") +
+  ylab("Fold-change population-wide mutation rate") + xlab("Mitomycin concentration [ng/mL]")
+p_MMC
+
+df_Trim <- subset(df, antibiotic == "Trim")
+p_Trim <- ggplot() + 
+  geom_errorbar(data = df_Trim, aes(x=concentration*1000, ymin=M_wo_fitm.2, ymax=M_wo_fitm.3), width=5) +
+  geom_point(data = df_Trim, aes(x=concentration*1000, y=M_wo_fitm.1), color=antibiotic_classes$color[antibiotic_classes$antibiotic_abbr == "Trim"]) +
+  geom_hline(yintercept = 1, linetype = "dashed") + scale_y_continuous(trans="log10") +
+  ylab("Fold-change population-wide mutation rate") + xlab("Trimethoprim concentration [ng/mL]")
+p_Trim
+
+
