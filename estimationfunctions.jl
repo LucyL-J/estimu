@@ -27,7 +27,7 @@ function estimu(mc::Vector{Int}, Nf, eff, fit_m::Float64=1.; cond="UT")
     end     
     # Create the output data frames
     est_res = DataFrame(parameter=["Mutation rate", "Mutant fitness"], condition=[cond, cond])
-    msel_res = DataFrame(model=[M], status=["-"])   
+    msel_res = DataFrame(model=[M], selection_result=["-"])   
     # Pre-inference calculations
     mc_max = maximum(mc)
     mc_counts = counts(mc, 0:mc_max)
@@ -63,7 +63,7 @@ end
 # Mutant fitness not given -> inferred 
 function estimu(mc::Vector{Int}, Nf, eff, fit_m::Bool; cond="UT")
     est_res = DataFrame(parameter=["Mutation rate", "Mutant fitness"], condition=[cond, cond])
-    msel_res = DataFrame(model=["Standard (diff. mutant fitness)"], status=["-"])                                                        
+    msel_res = DataFrame(model=["Standard (diff. mutant fitness)"], selection_result=["-"])                                                        
 	mc_max = maximum(mc)
     mc_counts = counts(mc, 0:mc_max)
     # Different cases regarding partial plating
@@ -121,7 +121,7 @@ function estimu_0(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vecto
     end
     N_ratio = Nf_S/Nf_UT
     est_res = DataFrame(parameter=["Mutation rate", "Mutant fitness", "Mutant fitness"], condition=["UT+"*cond_S, "UT", cond_S])       
-    msel_res = DataFrame(model=[M], status=["-"])   
+    msel_res = DataFrame(model=[M], selection_result=["-"])   
     mc_max_UT = maximum(mc_UT)
     mc_counts_UT = counts(mc_UT, 0:mc_max_UT)
     mc_max_S = maximum(mc_S)
@@ -170,7 +170,7 @@ end
 function estimu_0(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vector{<:Number}, fit_m::Bool; cond_S="S") 
     N_ratio = Nf_S/Nf_UT
     est_res = DataFrame(parameter=["Mutation rate", "Mutant fitness", "Mutant fitness"], condition=["UT+"*cond_S, "UT+"*cond_S, "UT+"*cond_S])       
-    msel_res = DataFrame(model=["No SIM (diff. mutant fitness)"], status=["-"])                            
+    msel_res = DataFrame(model=["No SIM (diff. mutant fitness)"], selection_result=["-"])                            
     mc_max_UT = maximum(mc_UT)
     mc_counts_UT = counts(mc_UT, 0:mc_max_UT)
     mc_max_S = maximum(mc_S)
@@ -293,7 +293,7 @@ function estimu_hom(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
     condition = ["UT", "UT+"*cond_S, cond_S, "UT+"*cond_S, "", cond_S*"/UT"]
     status = ["inferred", "jointly inferred", "inferred", "jointly inferred", "constr.", "calc. from 1&3"]
     est_res = DataFrame(parameter=parameter, condition=condition, status=status)
-    msel_res = DataFrame(model=["Homogeneous (constr. mutant fitness)"], status=["-"])                              
+    msel_res = DataFrame(model=["Homogeneous (constr. mutant fitness)"], selection_result=["-"])                              
     mc_max_UT = maximum(mc_UT)
     mc_counts_UT = counts(mc_UT, 0:mc_max_UT)
     mc_max_S = maximum(mc_S)
@@ -367,7 +367,7 @@ function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
 	else
         M = ["Heterogeneous"]
 	end
-    msel_res = DataFrame(model=M, status=["-"])
+    msel_res = DataFrame(model=M, selection_result=["-"])
     mc_max_UT = maximum(mc_UT)
     mc_counts_UT = counts(mc_UT, 0:mc_max_UT)
     mc_max_S = maximum(mc_S)
@@ -419,7 +419,7 @@ function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
     est_res = DataFrame(parameter=["Mutation rate off-cells", "Mutant fitness", "Mutant fitness", "Mutation-supply ratio", "Mutation rate on-cells", "Fraction on-cells", "Rel. division rate on-cells", "Rel. mutation rate on-cells", "Fold change mean mutation rate"])
 	est_res.condition = [["UT+"*cond_S, "UT"]; fill(cond_S, 6); cond_S*"/UT"]
     msel_res = DataFrame(model=["Heterogeneous"])
-    msel_res.status = ["-"] 
+    msel_res.selection_result = ["-"] 
     mc_max_UT = maximum(mc_UT)
     mc_counts_UT = counts(mc_UT, 0:mc_max_UT)
     mc_max_S = maximum(mc_S)
@@ -487,7 +487,7 @@ function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
         condition = [condition; [cond_S, cond_S]]
         status = [status; ["inferred", "set to input"]]
         est_res = DataFrame(parameter=parameter, condition=condition, status=status)
-        msel_res = DataFrame(model=["Heterogeneous (zero division rate on-cells)"], status=["-"])
+        msel_res = DataFrame(model=["Heterogeneous (zero division rate on-cells)"], selection_result=["-"])
         # 2 inference parameters: Number of mutations in off-cells under permissive cond., mutation-supply ratio  
         LL_0(para) = -log_likelihood_joint_m_S(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, para[1], para[2], q0_UT, q_UT, q0_S_off, q_S_off, q0_S_on, q_S_on)
         res = Optim.optimize(LL_0, [m, S], iterations=10^4)                     
@@ -521,7 +521,7 @@ function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
         # Calculate the initial value for optimisation
         f_on = initial_f(mc_S, N_ratio, Nf_S, m, S, rel_div_on)
         est_res = DataFrame(parameter=parameter, condition=condition, status=status)
-        msel_res = DataFrame(model=["Heterogeneous"], status=["-"])
+        msel_res = DataFrame(model=["Heterogeneous"], selection_result=["-"])
         if eff[2] == 1
             eff = false
         elseif eff[2] < 0.5
@@ -561,7 +561,7 @@ end
 function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vector{<:Number}, f_on::Bool, rel_div_on::Bool, fit_m::Vector{Float64}=[1., 1.]; cond_S="S")
     est_res = DataFrame(parameter=["Mutation rate off-cells", "Mutant fitness", "Mutant fitness", "Mutation-supply ratio", "Mutation rate on-cells", "Fraction on-cells", "Rel. division rate on-cells", "Rel. mutation rate on-cells", "Fold change mean mutation rate"])
 	est_res.condition = [["UT+"*cond_S, "UT"]; fill(cond_S, 6); cond_S*"/UT"]
-    msel_res = DataFrame(model=["Heterogeneous"], status=["-"])
+    msel_res = DataFrame(model=["Heterogeneous"], selection_result=["-"])
     mc_max_UT = maximum(mc_UT)
     mc_counts_UT = counts(mc_UT, 0:mc_max_UT)
     mc_max_S = maximum(mc_S)

@@ -84,8 +84,8 @@ check_input <- function(mc, Nf, eff=1, fit_m=1., rel_div_on=FALSE, f_on=0.1){
   return(list(status, mc, as.numeric(Nf), eff, fit_m, f_on, rel_div_on))
 }
 
-estimu <- function(mc_UT, Nf_UT, mc_S, Nf_S, eff=1, fit_m=1., f_on=FALSE, rel_div_on=0., mod="all", criterion="AIC"){
-  res <- "Warning: Model has to be one of the following 'standard', 'null', 'homogeneous', 'heterogeneous', or 'all' (the default)."
+estimu <- function(mc_UT, Nf_UT, mc_S, Nf_S, eff=1, fit_m=1., f_on=FALSE, rel_div_on=0., mod="selection", criterion="AIC"){
+  res <- "Warning: Model has to be one of the following 'standard', 'null', 'homogeneous', 'heterogeneous', or 'selection' (the default)."
   if(!is.element(criterion, c("AIC", "BIC"))){
     criterion <- "AIC"
     print("Warning: selection criterion must be either 'AIC' or 'BIC'. Using the default AIC.")
@@ -145,7 +145,7 @@ estimu <- function(mc_UT, Nf_UT, mc_S, Nf_S, eff=1, fit_m=1., f_on=FALSE, rel_di
       res <- list(res[[1]], res[[2]])
     }
   }
-  if(mod == "all"){
+  if(mod == "selection"){
     conv_input_UT <- check_input(mc_UT, Nf_UT, eff = eff, fit_m = fit_m)
     conv_input_S <- check_input(mc_S, Nf_S, rel_div_on = rel_div_on)
     if(conv_input_UT[[1]]&&conv_input_S[[1]]){
@@ -163,9 +163,9 @@ estimu <- function(mc_UT, Nf_UT, mc_S, Nf_S, eff=1, fit_m=1., f_on=FALSE, rel_di
         hom <- list(res_null, res_hom)
         LRT_hom <- LRT(c(res_null[[2]]$LL[1], res_hom[[2]]$LL[1]))
         if (LRT_hom == 1){
-          hom[[2]][[2]]$status[1] <- "ns"
+          hom[[2]][[2]]$selection_result[1] <- "ns"
         } else {
-          hom[[LRT_hom]][[2]]$status[1] <- "best hom."
+          hom[[LRT_hom]][[2]]$selection_result[1] <- "best hom."
         }
         if(criterion == "AIC"){
           crit_hom <- hom[[LRT_hom]][[2]]$AIC[1] 
@@ -194,10 +194,10 @@ estimu <- function(mc_UT, Nf_UT, mc_S, Nf_S, eff=1, fit_m=1., f_on=FALSE, rel_di
         }
         het <- list(res_null, res_het_0, res_het)
         if (LRT_het == 1){
-          het[[2]][[2]]$status[1] <- "ns"
-          het[[3]][[2]]$status[1] <- "ns"
+          het[[2]][[2]]$selection_result[1] <- "ns"
+          het[[3]][[2]]$selection_result[1] <- "ns"
         } else {
-          het[[LRT_het]][[2]]$status[1] <- "best het."
+          het[[LRT_het]][[2]]$selection_result[1] <- "best het."
         }
         if(criterion == "AIC"){
           crit_het <- het[[LRT_het]][[2]]$AIC[1] 
@@ -207,11 +207,11 @@ estimu <- function(mc_UT, Nf_UT, mc_S, Nf_S, eff=1, fit_m=1., f_on=FALSE, rel_di
         if(LRT_hom > 1 || LRT_het > 1){
           print("Significant support for SIM")
           if(crit_hom - crit_het < -2){
-            hom[[LRT_hom]][[2]]$status[1] <- "selected"
+            hom[[LRT_hom]][[2]]$selection_result[1] <- "selected"
             print(paste0("Selected model: ", hom[[LRT_hom]][[2]]$model[1]))
           } else {
             if(crit_hom - crit_het > 2){
-              het[[LRT_het]][[2]]$status[1] <- "selected"
+              het[[LRT_het]][[2]]$selection_result[1] <- "selected"
               print(paste0("Selected model: ", het[[LRT_het]][[2]]$model[1]))
             } else {
               print(paste0("Model selection between ", hom[[LRT_hom]][[2]]$model[1], "and", het[[LRT_het]][[2]]$model[1], " inconclusive."))
@@ -268,11 +268,11 @@ estimu <- function(mc_UT, Nf_UT, mc_S, Nf_S, eff=1, fit_m=1., f_on=FALSE, rel_di
           }
         }
         if (LRT_hom == 1){
-          hom[[2]][[2]]$status[1] <- "ns"
-          hom[[3]][[2]]$status[1] <- "ns"
-          hom[[4]][[2]]$status[1] <- "ns"
+          hom[[2]][[2]]$selection_result[1] <- "ns"
+          hom[[3]][[2]]$selection_result[1] <- "ns"
+          hom[[4]][[2]]$selection_result[1] <- "ns"
         } else {
-          hom[[LRT_hom]][[2]]$status[1] <- "best hom."
+          hom[[LRT_hom]][[2]]$selection_result[1] <- "best hom."
         }
         if(criterion == "AIC"){
           crit_hom <- hom[[LRT_hom]][[2]]$AIC[1] 
@@ -301,10 +301,10 @@ estimu <- function(mc_UT, Nf_UT, mc_S, Nf_S, eff=1, fit_m=1., f_on=FALSE, rel_di
         }
         het <- list(res_null, res_het_0, res_het)
         if (LRT_het == 1){
-          het[[2]][[2]]$status[1] <- "ns"
-          het[[3]][[2]]$status[1] <- "ns"
+          het[[2]][[2]]$selection_result[1] <- "ns"
+          het[[3]][[2]]$selection_result[1] <- "ns"
         } else {
-          het[[LRT_het]][[2]]$status[1] <- "best het."
+          het[[LRT_het]][[2]]$selection_result[1] <- "best het."
         }
         if(criterion == "AIC"){
           crit_het <- het[[LRT_het]][[2]]$AIC[1] 
@@ -314,11 +314,11 @@ estimu <- function(mc_UT, Nf_UT, mc_S, Nf_S, eff=1, fit_m=1., f_on=FALSE, rel_di
         if(LRT_hom > 1 || LRT_het > 1){
           print("Significant support for SIM")
           if(crit_hom - crit_het < -2){
-            hom[[LRT_hom]][[2]]$status[1] <- "selected"
+            hom[[LRT_hom]][[2]]$selection_result[1] <- "selected"
             print(paste0("Selected model: ", hom[[LRT_hom]][[2]]$model[1]))
           } else {
             if(crit_hom - crit_het > 2){
-              het[[LRT_het]][[2]]$status[1] <- "selected"
+              het[[LRT_het]][[2]]$selection_result[1] <- "selected"
               print(paste0("Selected model: ", het[[LRT_het]][[2]]$model[1]))
             } else {
               print(paste0("Model selection between ", hom[[LRT_hom]][[2]]$model[1], "and", het[[LRT_het]][[2]]$model[1], " inconclusive."))
