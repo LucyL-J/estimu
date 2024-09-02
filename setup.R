@@ -149,7 +149,7 @@ estimu <- function(mc_UT, Nf_UT, mc_S, Nf_S, plateff=1, fit_m=1., f_on=FALSE, re
     conv_input_UT <- check_input(mc_UT, Nf_UT, plateff = plateff, fit_m = fit_m)
     conv_input_S <- check_input(mc_S, Nf_S, rel_div_on = rel_div_on)
     if(conv_input_UT[[1]]&&conv_input_S[[1]]){
-      if(fit_m[1] != 1. && fit_m[2] != 1.){
+      if(conv_input_UT[[5]][1] != 1. && conv_input_UT[[5]][2] != 1.){
         res_null <- julia_call(
           "estimu_0",
           conv_input_UT[[2]], conv_input_UT[[3]], conv_input_S[[2]], conv_input_S[[3]], conv_input_UT[[4]], conv_input_UT[[5]],
@@ -321,7 +321,7 @@ estimu <- function(mc_UT, Nf_UT, mc_S, Nf_S, plateff=1, fit_m=1., f_on=FALSE, re
               het[[LRT_het]][[2]]$selection_result[1] <- "selected"
               print(paste0("Selected model: ", het[[LRT_het]][[2]]$model[1]))
             } else {
-              print(paste0("Model selection between ", hom[[LRT_hom]][[2]]$model[1], "and", het[[LRT_het]][[2]]$model[1], " inconclusive."))
+              print(paste0("Model selection between ", hom[[LRT_hom]][[2]]$model[1], " and ", het[[LRT_het]][[2]]$model[1], " inconclusive."))
             }
           }
         } else {

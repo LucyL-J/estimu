@@ -310,4 +310,146 @@ or as two fixed values, different for the untreated and the stressed conditions,
 ```
 estimu(mc_UT, Nf_UT, mc_S, Nf_S, plateff, mod="heterogeneous", fit_m = c(0.8, 0.6))
 ```
-Note however, that the differential mutant fitness cannot be inferred for the heterogeneous-response model.
+Note however, that the differential mutant fitness cannot be set as an inference parameter for the heterogeneous-response model.
+
+### Model selection
+Model selection between the null, homogeneous- and heterogeneous-response model is done via
+```
+estimu(mc_UT, Nf_UT, mc_S, Nf_S, plateff, mod="selection")
+```
+which prints the following
+```
+[1] "Significant support for SIM"
+[1] "Selected model: Heterogeneous (zero division rate on-cells)"
+[1] "Estimated parameters under all models are:"
+[[1]]
+   model selection_result        LL      AIC      BIC
+1 No SIM                - -78.57215 159.1443 160.6707
+
+[[2]]
+       parameter condition           status          MLE  lower_bound  upper_bound
+1  Mutation rate      UT+S jointly inferred 1.609803e-09 1.046441e-09 2.333277e-09
+2 Mutant fitness        UT     set to input 1.000000e+00 1.000000e+00 1.000000e+00
+3 Mutant fitness         S     set to input 1.000000e+00 1.000000e+00 1.000000e+00
+
+[[3]]
+                          model selection_result        LL      AIC      BIC
+1 No SIM (diff. mutant fitness)                - -78.04629 160.0926 163.1453
+
+[[4]]
+       parameter condition           status          MLE  lower_bound  upper_bound
+1  Mutation rate      UT+S jointly inferred 1.681720e-09 1.088476e-09 2.445260e-09
+2 Mutant fitness      UT+S jointly inferred 7.624708e-01 4.596772e-01 1.288685e+00
+3 Mutant fitness      UT+S jointly inferred 7.624708e-01 4.596772e-01 1.288685e+00
+
+[[5]]
+        model selection_result        LL      AIC      BIC
+1 Homogeneous        best hom. -71.63627 147.2725 143.2725
+
+[[6]]
+                  parameter condition         status          MLE  lower_bound  upper_bound
+1             Mutation rate        UT       inferred 9.964485e-10 5.301000e-10 1.659978e-09
+2            Mutant fitness        UT   set to input 1.000000e+00 1.000000e+00 1.000000e+00
+3             Mutation rate         S       inferred 5.049334e-09 2.663162e-09 8.495935e-09
+4            Mutant fitness         S   set to input 1.000000e+00 1.000000e+00 1.000000e+00
+5      Ratio mutant fitness      S/UT   set to input 1.000000e+00 1.000000e+00 1.000000e+00
+6 Fold change mutation rate      S/UT calc. from 1&3 5.067331e+00 2.234407e+00 1.147827e+01
+
+[[7]]
+                                 model selection_result        LL      AIC      BIC
+1 Homogeneous (constr. mutant fitness)                - -71.15921 148.3184 152.8975
+
+[[8]]
+                  parameter condition           status          MLE  lower_bound  upper_bound
+1             Mutation rate        UT         inferred 1.050952e-09 5.573958e-10 1.753498e-09
+2            Mutant fitness      UT+S jointly inferred 7.702790e-01 4.627993e-01 1.310349e+00
+3             Mutation rate         S         inferred 5.211676e-09 2.752077e-09 8.753446e-09
+4            Mutant fitness      UT+S jointly inferred 7.702790e-01 4.627993e-01 1.310349e+00
+5      Ratio mutant fitness                    constr. 1.000000e+00 1.000000e+00 1.000000e+00
+6 Fold change mutation rate      S/UT   calc. from 1&3 4.959006e+00 2.205198e+00 1.114531e+01
+
+[[9]]
+                                   model selection_result        LL      AIC      BIC
+1 Homogeneous (unconstr. mutant fitness)                - -69.79779 147.5956 146.6483
+
+[[10]]
+                  parameter condition         status          MLE  lower_bound  upper_bound
+1             Mutation rate        UT       inferred 9.867440e-10 5.161329e-10 1.669117e-09
+2            Mutant fitness        UT       inferred 1.050062e+00 5.553820e-01 2.125351e+00
+3             Mutation rate         S       inferred 5.676540e-09 3.008222e-09 9.498186e-09
+4            Mutant fitness         S       inferred 4.010447e-01 1.366183e-01 1.022935e+00
+5      Ratio mutant fitness      S/UT calc. from 2&4 3.819249e-01 1.093237e-01 1.146350e+00
+6 Fold change mutation rate      S/UT calc. from 1&3 5.752799e+00 2.523235e+00 1.310361e+01
+
+[[11]]
+                                        model selection_result        LL      AIC      BIC
+1 Heterogeneous (zero division rate on-cells)         selected -69.44947 142.8989 145.9517
+
+[[12]]
+                    parameter condition           status          MLE  lower_bound  upper_bound
+1     Mutation rate off-cells      UT+S jointly inferred 1.032803e-09 5.678150e-10 1.681530e-09
+2              Mutant fitness        UT     set to input 1.000000e+00 1.000000e+00 1.000000e+00
+3              Mutant fitness         S     set to input 1.000000e+00 1.000000e+00 1.000000e+00
+4       Mutation-supply ratio         S         inferred 4.880225e+00 1.690687e+00 1.179641e+01
+5 Rel. division rate on-cells         S     set to input 0.000000e+00 0.000000e+00 0.000000e+00
+
+[[13]]
+          model selection_result        LL      AIC      BIC
+1 Heterogeneous                - -69.44947 146.8989 153.0044
+
+[[14]]
+                       parameter condition           status          MLE  lower_bound  upper_bound
+1        Mutation rate off-cells      UT+S jointly inferred 1.032809e-09 5.678150e-10 1.681530e-09
+2                 Mutant fitness        UT     set to input 1.000000e+00 1.000000e+00 1.000000e+00
+3                 Mutant fitness         S     set to input 1.000000e+00 1.000000e+00 1.000000e+00
+4          Mutation-supply ratio         S         inferred 4.879880e+00 1.690687e+00 1.179641e+01
+5         Mutation rate on-cells         S calc. from 1,4&6 1.119381e-07 2.160171e-09 8.899343e-09
+6              Fraction on-cells         S         inferred 4.308487e-02 0.000000e+00 1.000000e+00
+7    Rel. division rate on-cells         S         inferred 1.128962e-09 0.000000e+00 9.181609e-01
+8    Rel. mutation rate on-cells         S   calc. from 4&6 1.083822e+02 2.050608e-08 8.423223e+58
+9 Fold change mean mutation rate      S/UT   calc. from 4&6 5.626546e+00 1.062967e+00 8.423223e+58
+```
+
+The first line gives whether there is significant support for stress-induced mutagenesis (SIM), i.e. an increase in mutation rate in the stressed compared to the untreated control condition; in this case yes.\
+If there is support for SIM, the second line gives whether the homogeneous- or the heterogeneous-response model is selected (by default, the AIC is used here).\
+Below, a dataframe with the estimated parameters together with a dataframe with loglikelihood, AIC and BIC values under all models considered in the model selection procedure are printed. In the latter dataframe, the result of the model selection procedure is also given. In this case, the homogeneous-response model with differential mutant fitness set $=1$ is the best homogeneous model version, and the heterogeneous-response model with zero division rate of on-cells is selected overall.
+
+Instead of the AIC, the BIC can be used via
+```
+estimu(mc_UT, Nf_UT, mc_S, Nf_S, plateff, mod="selection", criterion="BIC")
+```
+
+In the example above, neither differential mutant fitness nor fraction of on-cells were passed as input. Therefore, the model versions with default fixed values and with inferred parameters were compared. 
+
+For the null model, these model versions are
+1. Differential mutant fitness set $=1$ for untreated and stressed conditions
+2. Differential mutant fitness inferred as a joint parameter (constrained to be equal under untreated and stressed conditions)
+
+For the homogeneous-response model, the model versions are
+1. Differential mutant fitness set $=1$ for untreated and stressed conditions
+2. Differential mutant fitness inferred as a joint parameter (constrained to be equal under untreated and stressed conditions)
+3. Differential mutant fitness inferred separately for untreated and stressed conditions (unconstrained)
+
+For the heterogeneous-response model, the model versions are
+1. Relative division rate of on-cells set $=0$ and fraction of on-cells not taken into account
+2. Relative division rate and fraction of on-cells both inferred
+
+It is also possible to specify the differential mutant fitness and/or the fraction of on-cells for the model selection procedure, for example
+```
+estimu(mc_UT, Nf_UT, mc_S, Nf_S, plateff, mod="selection", fit_m = 0.8)
+```
+or
+```
+estimu(mc_UT, Nf_UT, mc_S, Nf_S, plateff, mod="selection", fit_m = c(0.8, 0.6))
+```
+or 
+```
+estimu(mc_UT, Nf_UT, mc_S, Nf_S, plateff, mod="selection", f_on = 0.05)
+```
+or any combination of the above
+```
+estimu(mc_UT, Nf_UT, mc_S, Nf_S, plateff, mod="selection", fit_m = 0.8, f_on = 0.05)
+```
+```
+estimu(mc_UT, Nf_UT, mc_S, Nf_S, plateff, mod="selection", fit_m = c(0.8, 0.6), f_on = 0.05)
+```
