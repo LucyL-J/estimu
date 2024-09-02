@@ -7,7 +7,7 @@ for (p in c("StatsBase", "Optim", "DataFrames", "Distributions", "Hypergeometric
 }
 julia_source("estimationfunctions.jl")
 
-check_input <- function(mc, Nf, eff=1, fit_m=1., rel_div_on=FALSE, f_on=0.1){
+check_input <- function(mc, Nf, plateff=1, fit_m=1., rel_div_on=FALSE, f_on=0.1){
   status <- TRUE
   if(is.numeric(mc) && (sum(mc>=0)==length(mc))){
     if(sum(as.integer(mc)!=mc)>0){
@@ -27,12 +27,12 @@ check_input <- function(mc, Nf, eff=1, fit_m=1., rel_div_on=FALSE, f_on=0.1){
     status <- FALSE
     print("Error: Final population sizes must be positive numbers.")
   }
-  if(is.numeric(eff) && (sum(eff>0)==length(eff)) && (sum(eff<=1)==length(eff))){
-    if(length(eff)==1){
-      eff <- c(eff, eff)
+  if(is.numeric(plateff) && (sum(plateff>0)==length(plateff)) && (sum(plateff<=1)==length(plateff))){
+    if(length(plateff)==1){
+      plateff <- c(plateff, plateff)
     }
-    if(length(eff)>2){
-      eff <- eff[1:2]
+    if(length(plateff)>2){
+      plateff <- plateff[1:2]
       print("Note: More than two values for plating efficency given; only the first two (untreated & stressful) will be used in the inference.")
     }
   } else {
@@ -81,10 +81,10 @@ check_input <- function(mc, Nf, eff=1, fit_m=1., rel_div_on=FALSE, f_on=0.1){
       print("Error: Fraction of response-on cells has to be strictly between zero and one.")
     }
   }
-  return(list(status, mc, as.numeric(Nf), eff, fit_m, f_on, rel_div_on))
+  return(list(status, mc, as.numeric(Nf), plateff, fit_m, f_on, rel_div_on))
 }
 
-estimu <- function(mc_UT, Nf_UT, mc_S, Nf_S, eff=1, fit_m=1., f_on=FALSE, rel_div_on=0., mod="selection", criterion="AIC"){
+estimu <- function(mc_UT, Nf_UT, mc_S, Nf_S, plateff=1, fit_m=1., f_on=FALSE, rel_div_on=0., mod="selection", criterion="AIC"){
   res <- "Warning: Model has to be one of the following 'standard', 'null', 'homogeneous', 'heterogeneous', or 'selection' (the default)."
   if(!is.element(criterion, c("AIC", "BIC"))){
     criterion <- "AIC"
@@ -95,7 +95,7 @@ estimu <- function(mc_UT, Nf_UT, mc_S, Nf_S, eff=1, fit_m=1., f_on=FALSE, rel_di
     print("Warning: No mutant counts or final population size under stressful condition given. Using the standard model to infer the mutation rate under permissive conditions.")
   } 
   if(mod == "standard"){
-    conv_input <- check_input(mc_UT, Nf_UT, eff = eff, fit_m = fit_m)
+    conv_input <- check_input(mc_UT, Nf_UT, plateff = plateff, fit_m = fit_m)
     if(conv_input[[1]]){
       res <- julia_call(
         "estimu",
@@ -107,7 +107,7 @@ estimu <- function(mc_UT, Nf_UT, mc_S, Nf_S, eff=1, fit_m=1., f_on=FALSE, rel_di
     }
   }
   if(mod == "null"){
-    conv_input_UT <- check_input(mc_UT, Nf_UT, eff = eff, fit_m = fit_m)
+    conv_input_UT <- check_input(mc_UT, Nf_UT, plateff = plateff, fit_m = fit_m)
     conv_input_S <- check_input(mc_S, Nf_S)
     if(conv_input_UT[[1]]&&conv_input_S[[1]]){
       res <- julia_call(
@@ -120,7 +120,7 @@ estimu <- function(mc_UT, Nf_UT, mc_S, Nf_S, eff=1, fit_m=1., f_on=FALSE, rel_di
     }
   }
   if(mod == "homogeneous"){
-    conv_input_UT <- check_input(mc_UT, Nf_UT, eff = eff, fit_m = fit_m)
+    conv_input_UT <- check_input(mc_UT, Nf_UT, plateff = plateff, fit_m = fit_m)
     conv_input_S <- check_input(mc_S, Nf_S)
     if(conv_input_UT[[1]]&&conv_input_S[[1]]){
       res <- julia_call(
@@ -133,7 +133,7 @@ estimu <- function(mc_UT, Nf_UT, mc_S, Nf_S, eff=1, fit_m=1., f_on=FALSE, rel_di
     }
   }
   if(mod == "heterogeneous"){
-    conv_input_UT <- check_input(mc_UT, Nf_UT, eff = eff, fit_m = fit_m)
+    conv_input_UT <- check_input(mc_UT, Nf_UT, plateff = plateff, fit_m = fit_m)
     conv_input_S <- check_input(mc_S, Nf_S, f_on = f_on, rel_div_on = rel_div_on)
     if(conv_input_UT[[1]]&&conv_input_S[[1]]){
       res <- julia_call(
@@ -146,7 +146,7 @@ estimu <- function(mc_UT, Nf_UT, mc_S, Nf_S, eff=1, fit_m=1., f_on=FALSE, rel_di
     }
   }
   if(mod == "selection"){
-    conv_input_UT <- check_input(mc_UT, Nf_UT, eff = eff, fit_m = fit_m)
+    conv_input_UT <- check_input(mc_UT, Nf_UT, plateff = plateff, fit_m = fit_m)
     conv_input_S <- check_input(mc_S, Nf_S, rel_div_on = rel_div_on)
     if(conv_input_UT[[1]]&&conv_input_S[[1]]){
       if(fit_m[1] != 1. && fit_m[2] != 1.){
@@ -335,17 +335,17 @@ estimu <- function(mc_UT, Nf_UT, mc_S, Nf_S, eff=1, fit_m=1., f_on=FALSE, rel_di
   return(res)
 }
 
-pMudi <- function(mc_max, Nf, mu, eff=1, fit_m=1., S=FALSE, f_on=0., rel_div_on=0.){
+pMudi <- function(mc_max, Nf, mu, plateff=1, fit_m=1., S=FALSE, f_on=0., rel_div_on=0.){
   if(S == FALSE){
     p <- julia_call(
       "p_mudi",
-      as.integer(mc_max), Nf, mu, fit_m, eff,
+      as.integer(mc_max), Nf, mu, fit_m, plateff,
       need_return = "R"
     )
   } else {
     p <- julia_call(
       "p_mudi",
-      as.integer(mc_max), Nf, mu, S, f_on, rel_div_on, fit_m, eff,
+      as.integer(mc_max), Nf, mu, S, f_on, rel_div_on, fit_m, plateff,
       need_return = "R"
     )
   }
