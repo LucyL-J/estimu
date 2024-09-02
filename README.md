@@ -39,6 +39,13 @@ source("setup.R")
 - Install julia separately (instructions and be found here: https://julialang.org/downloads/) and use `julia_setup(JULIA_HOME = "the folder that contains julia binary")`
 - More information on the package JuliaCall can be found here: https://cran.r-project.org/web/packages/JuliaCall/readme/README.html
 2. If there is still an error, try again after installing R version 4.4.1 and julia version 1.10.4 (this tool was written on these specific versions)
+3. It might be necessary to activate the environment and install the packages within julia to avoid errors because of dependencies. For this, install and launch julia in a terminal. Navigate to the folder of the repository via `cd("the folder that contains the file Project.toml")`, then execute,
+```
+using Pkg
+Pkg.activate(".")
+Pkg.resolve()
+Pkg.instantiate()
+```
 
 ## Running estimu
 Estimation of increases in mutation rates is done via the function
