@@ -118,3 +118,98 @@ The second dataframe has the following columns:
 3. `LL` for loglikelihood of the model fit.
 4. `AIC` for the AIC value of the model fit.
 5. `BIC` for the BIC value of the model fit
+
+## Examples
+Input the observed mutant counts, average final population sizes and the plating efficiency
+```
+mc_UT <- c(80, 0, 9, 3, 11, 0, 0, 1, 0, 3, 5, 1, 1, 2, 0, 0, 1)
+Nf_UT <- 1E09
+mc_S <- c(10, 2, 4, 0, 0, 0, 0, 1, 1, 2, 1, 1, 0, 2, 1, 0, 1)
+Nf_S <- 1.6E08
+plateff <- 1
+```
+Note that the plating efficiency can also be set to different values for the untreated and stressed conditions, respectively. For example,
+```
+plateff <- c(1, 0.5)
+```
+Note also that more than one value can be input for the final population sizes. However, only the average values are used in the inference. As an example,
+```
+Nf_UT <- c(1.6E09, 9E08, 9.5E08)
+Nf_S <- c(1.5E08, 1E08, 2E08)
+```
+### Homogeneous-response model
+When estimating under the homogeneous-response model, the differential mutant fitness is set $=1$ by default, and executing the estimation function 
+```
+estimu(mc_UT, Nf_UT, mc_S, Nf_S, plateff, mod="homogeneous")
+```
+returns the following
+```
+[1] "Model used for inference: Homogeneous"
+[[1]]
+                  parameter condition         status          MLE  lower_bound  upper_bound
+1             Mutation rate        UT       inferred 9.964485e-10 5.301000e-10 1.659978e-09
+2            Mutant fitness        UT   set to input 1.000000e+00 1.000000e+00 1.000000e+00
+3             Mutation rate         S       inferred 5.049334e-09 2.663162e-09 8.495935e-09
+4            Mutant fitness         S   set to input 1.000000e+00 1.000000e+00 1.000000e+00
+5      Ratio mutant fitness      S/UT   set to input 1.000000e+00 1.000000e+00 1.000000e+00
+6 Fold change mutation rate      S/UT calc. from 1&3 5.067331e+00 2.234407e+00 1.147827e+01
+
+[[2]]
+        model selection_result        LL      AIC      BIC
+1 Homogeneous                - -71.63627 147.2725 143.2725
+```
+The mutation rate under the untreated condition is estimated as $1.0\cdot 10^{-9}$ between $5.3\cdot 10^{-10}$ and $1.7\cdot 10^{-9}$, and the mutation rate under the stressed condition as $5.0\cdot 10^{-9}$ between $2.7\cdot 10^{-9}$ and $8.5\cdot 10^{-9}$. From these mutation rates the fold change in mutation rate is calculated as $5.1$ between $2.2$ and $14.8$. This means that the mutation rate is estimated to be around $5.1$-fold higher in the stressed as in the untreated control condition. \
+Note that the lower and upper bounds of the fold change are calculated using a profile-likelihood approach and not by simply dividing the lower/upper bounds of the mutation rate estimates S/UT.
+
+The differential mutant fitness can also be set to a different fixed value (for both the untreated and the stressed conditions) in the inference, for example
+```
+estimu(mc_UT, Nf_UT, mc_S, Nf_S, plateff, mod="homogeneous", fit_m = 0.8)
+```
+or as fixed values, but different for the untreated and the stressed conditions, for example
+```
+estimu(mc_UT, Nf_UT, mc_S, Nf_S, plateff, mod="homogeneous", fit_m = c(0.8, 0.6))
+```
+
+It is also possible to infer the differential mutant fitness, either as a joint inference parameter via
+```
+estimu(mc_UT, Nf_UT, mc_S, Nf_S, plateff, mod="homogeneous", fit_m = FALSE)
+```
+which returns the following
+```
+[1] "Model used for inference: Homogeneous (constr. mutant fitness)"
+[[1]]
+                  parameter condition           status          MLE  lower_bound  upper_bound
+1             Mutation rate        UT         inferred 1.050952e-09 5.573958e-10 1.753498e-09
+2            Mutant fitness      UT+S jointly inferred 7.702790e-01 4.627993e-01 1.310349e+00
+3             Mutation rate         S         inferred 5.211676e-09 2.752077e-09 8.753446e-09
+4            Mutant fitness      UT+S jointly inferred 7.702790e-01 4.627993e-01 1.310349e+00
+5      Ratio mutant fitness                    constr. 1.000000e+00 1.000000e+00 1.000000e+00
+6 Fold change mutation rate      S/UT   calc. from 1&3 4.959006e+00 2.205198e+00 1.114531e+01
+
+[[2]]
+                                 model selection_result        LL      AIC      BIC
+1 Homogeneous (constr. mutant fitness)                - -71.15921 148.3184 152.8975
+```
+In this case, the differential mutant fitness is constrained to be equal under untreated and stressed conditions, and is estimated as $0.77$ between $0.46$ and $1.31$.
+
+To infer the differential mutant fitness separately under untreated and stressed conditions, execute
+```
+estimu(mc_UT, Nf_UT, mc_S, Nf_S, plateff, mod="homogeneous", fit_m = c(FALSE, FALSE))
+```
+and see the output
+```
+[1] "Model used for inference: Homogeneous (unconstr. mutant fitness)"
+[[1]]
+                  parameter condition         status          MLE  lower_bound  upper_bound
+1             Mutation rate        UT       inferred 9.867440e-10 5.161329e-10 1.669117e-09
+2            Mutant fitness        UT       inferred 1.050062e+00 5.553820e-01 2.125351e+00
+3             Mutation rate         S       inferred 5.676540e-09 3.008222e-09 9.498186e-09
+4            Mutant fitness         S       inferred 4.010447e-01 1.366183e-01 1.022935e+00
+5      Ratio mutant fitness      S/UT calc. from 2&4 3.819249e-01 1.093237e-01 1.146350e+00
+6 Fold change mutation rate      S/UT calc. from 1&3 5.752799e+00 2.523235e+00 1.310361e+01
+
+[[2]]
+                                   model selection_result        LL      AIC      BIC
+1 Homogeneous (unconstr. mutant fitness)                - -69.79779 147.5956 146.6483
+```
+Now, two different values for the differential mutant fitness are inferred (one for the untreated and one for the stressed condition). Moreover, in addition to the fold change in mutaiton rate, the ratio of mutant fitnesses is calculated; in this case as $0.38$ between $0.11$ and $1.15$.
