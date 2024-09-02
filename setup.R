@@ -1,6 +1,6 @@
 library(JuliaCall)
-#julia_setup()
-julia_setup(JULIA_HOME = "/Applications/Julia-1.10.app/Contents/Resources/julia/bin/")
+julia_setup()
+#julia_setup(JULIA_HOME = "/Applications/Julia-1.10.app/Contents/Resources/julia/bin/")
 
 for (p in c("StatsBase", "Optim", "DataFrames", "Distributions", "HypergeometricFunctions", "Roots")) {
   julia_install_package_if_needed(p)
