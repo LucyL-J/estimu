@@ -165,7 +165,7 @@ The differential mutant fitness can also be set to a different fixed value (for 
 ```
 estimu(mc_UT, Nf_UT, mc_S, Nf_S, plateff, mod="homogeneous", fit_m = 0.8)
 ```
-or as fixed values, but different for the untreated and the stressed conditions, for example
+or as two fixed values, different for the untreated and the stressed conditions, for example
 ```
 estimu(mc_UT, Nf_UT, mc_S, Nf_S, plateff, mod="homogeneous", fit_m = c(0.8, 0.6))
 ```
@@ -213,3 +213,101 @@ and see the output
 1 Homogeneous (unconstr. mutant fitness)                - -69.79779 147.5956 146.6483
 ```
 Now, two different values for the differential mutant fitness are inferred (one for the untreated and one for the stressed condition). Moreover, in addition to the fold change in mutaiton rate, the ratio of mutant fitnesses is calculated; in this case as $0.38$ between $0.11$ and $1.15$.
+
+### Heterogeneous-response model
+When estimating under the heterogeneous-response model, by default it is assumed that the fraction of on-cells is not known and the relative division rate of on-cells is set $=0$. Executing the estimation function 
+```
+estimu(mc_UT, Nf_UT, mc_S, Nf_S, plateff, mod="heterogeneous")
+```
+prints the following output
+```
+[1] "Warning: Fraction of the response-on cells cannot be inferred for zero division rate of response-on cells."
+[1] "Model used for inference: Heterogeneous (zero division rate on-cells)"
+[[1]]
+                    parameter condition           status          MLE  lower_bound  upper_bound
+1     Mutation rate off-cells      UT+S jointly inferred 1.032803e-09 5.678150e-10 1.681530e-09
+2              Mutant fitness        UT     set to input 1.000000e+00 1.000000e+00 1.000000e+00
+3              Mutant fitness         S     set to input 1.000000e+00 1.000000e+00 1.000000e+00
+4       Mutation-supply ratio         S         inferred 4.880225e+00 1.690687e+00 1.179641e+01
+5 Rel. division rate on-cells         S     set to input 0.000000e+00 0.000000e+00 0.000000e+00
+
+[[2]]
+                                        model selection_result        LL      AIC      BIC
+1 Heterogeneous (zero division rate on-cells)                - -69.44947 142.8989 145.9517
+```
+In this case, the mutation rate of off-cells and the mutation-supply ratio are inferred. The latter describes how many mutations arise in the subpopulation of on-cells compared to the rest of the population, and is estimated as $4.9$ between $1.6$ and $11.8$ here. This means that around $4.9$ times more mutations arise in on-cells than in the rest of the population. \
+Note that for unknown fraction of on-cells and relative division rate of on-cells set $=0$, it is not possible to infer the explicit mutation rate of on-cells or the specific increase in mutation rate due to the induction of the stress response.
+
+In principle, it is possible to infer the fraction of on-cells if either the relative division rate of on-cells is set to fixed value $\neq 0$, for example
+```
+estimu(mc_UT, Nf_UT, mc_S, Nf_S, plateff, mod="heterogeneous", f_on = FALSE, rel_div_on = 0.1)
+```
+Or if both fraction and relative division rate of on-cells are inferred via
+```
+estimu(mc_UT, Nf_UT, mc_S, Nf_S, plateff, mod="heterogeneous", f_on = FALSE, rel_div_on = FALSE)
+```
+which returns the following
+```
+[1] "Note: Inference of the fraction and relative division rate of response-on cells together not precise."
+[1] "Model used for inference: Heterogeneous"
+[[1]]
+                       parameter condition           status          MLE  lower_bound  upper_bound
+1        Mutation rate off-cells      UT+S jointly inferred 1.032809e-09 5.678150e-10 1.681530e-09
+2                 Mutant fitness        UT     set to input 1.000000e+00 1.000000e+00 1.000000e+00
+3                 Mutant fitness         S     set to input 1.000000e+00 1.000000e+00 1.000000e+00
+4          Mutation-supply ratio         S         inferred 4.879880e+00 1.690687e+00 1.179641e+01
+5         Mutation rate on-cells         S calc. from 1,4&6 1.119381e-07 2.160171e-09 8.899343e-09
+6              Fraction on-cells         S         inferred 4.308487e-02 0.000000e+00 1.000000e+00
+7    Rel. division rate on-cells         S         inferred 1.128962e-09 0.000000e+00 9.181609e-01
+8    Rel. mutation rate on-cells         S   calc. from 4&6 1.083822e+02 2.050608e-08 8.423223e+58
+9 Fold change mean mutation rate      S/UT   calc. from 4&6 5.626546e+00 1.062967e+00 8.423223e+58
+
+[[2]]
+          model selection_result        LL      AIC      BIC
+1 Heterogeneous                - -69.44947 146.8989 153.0044
+```
+However in these cases, the estimation of the fraction and relative division rate of on-cells, and all other parameters calculated from these two is not precise due to model unidentifiability. 
+
+The fraction of on-cells can also be set to a fixed value in the inference, for example
+```
+estimu(mc_UT, Nf_UT, mc_S, Nf_S, plateff, mod="heterogeneous", f_on = 0.05)
+```
+which results in the following
+```
+[1] "Model used for inference: Heterogeneous (zero division rate on-cells)"
+[[1]]
+                       parameter condition           status          MLE  lower_bound  upper_bound
+1        Mutation rate off-cells      UT+S jointly inferred 1.032803e-09 5.678150e-10 1.681530e-09
+2                 Mutant fitness        UT     set to input 1.000000e+00 1.000000e+00 1.000000e+00
+3                 Mutant fitness         S     set to input 1.000000e+00 1.000000e+00 1.000000e+00
+4          Mutation-supply ratio         S         inferred 4.880225e+00 1.690687e+00 1.179641e+01
+5         Mutation rate on-cells         S calc. from 1,4&6 9.576595e-08 4.129363e-08 1.688635e-07
+6              Fraction on-cells         S     set to input 5.000000e-02 5.000000e-02 5.000000e-02
+7    Rel. division rate on-cells         S     set to input 0.000000e+00 0.000000e+00 0.000000e+00
+8    Rel. mutation rate on-cells         S   calc. from 4&6 9.272428e+01 3.212305e+01 2.241318e+02
+9 Fold change mean mutation rate      S/UT   calc. from 4&6 5.586214e+00 2.556153e+00 1.215659e+01
+
+[[2]]
+                                        model selection_result        LL      AIC      BIC
+1 Heterogeneous (zero division rate on-cells)                - -69.44947 142.8989 145.9517
+```
+Now, the lower and upper bounds on the estimated mutation rate of on-cells ($9.6\cdot 10^{-8}$ between $4.1\cdot 10^{-8}$ and $1.7\cdot 10^{-7}$), and on the estimated relative mutation rate of on-cells, i.e. the specific increase in mutation rate associated with the induction of the stress response, ($92.3$ between $32.1$ and $224.1$) are much tighter than for unknown fraction of on-cells.
+
+The relative division rate of on-cells can also be set to another value $\neq 0$, for example
+```
+estimu(mc_UT, Nf_UT, mc_S, Nf_S, plateff, mod="heterogeneous", f_on = 0.05, rel_div_on = 0.1)
+```
+or it can be inferred via
+```
+estimu(mc_UT, Nf_UT, mc_S, Nf_S, plateff, mod="heterogeneous", f_on = 0.05, rel_div_on = FALSE)
+```
+
+The differential mutant fitness can also be set to a different fixed value (for both the untreated and the stressed conditions) in the inference, for example
+```
+estimu(mc_UT, Nf_UT, mc_S, Nf_S, plateff, mod="heterogeneous", fit_m = 0.8)
+```
+or as two fixed values, different for the untreated and the stressed conditions, for example
+```
+estimu(mc_UT, Nf_UT, mc_S, Nf_S, plateff, mod="heterogeneous", fit_m = c(0.8, 0.6))
+```
+Note however, that the differential mutant fitness cannot be inferred for the heterogeneous-response model.
