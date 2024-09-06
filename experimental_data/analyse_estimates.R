@@ -82,6 +82,8 @@ gmlm <- glmer(SIM ~ of_MIC + plated_fraction + n_cultures_tot + (1|target) + (1|
 summary(gmlm)
 
 print(subset(df, SIM == TRUE)$ID)
+print(c(length(subset(df, SIM == TRUE)$ID), print(length(subset(df, M_wo_fitm.1 > 1)$ID))))
+
 # Further analysis with experiments using E. coli MG1655 and TD2158 (no mutant strains)
 df <- subset(subset(df, species == "E. coli"), is.element(strain, c("MG1655", "TD2158")))
 print(subset(df, SIM == TRUE)$ID)
@@ -106,20 +108,24 @@ median(subset(df_KW, group == "Ribosome")$M_wo_fitm.1)
 p_M_DNA <- ggplot(data = df_KW, aes(x=group, y=M_wo_fitm.1)) + geom_boxplot(aes(fill=group), show.legend = FALSE) + 
   geom_jitter(aes(color = SIM), width = 0.25, alpha = 0.8) + scale_color_manual(values = c("TRUE" = "red", "FALSE" = "darkgrey")) +
   coord_trans(y = "log10", ylim = c(5*10^-2,5*10^2)) + scale_y_continuous(breaks = c(0.1,1,10,100), labels = c(0.1,1,10,100)) +
-  scale_fill_manual(values = c("DNA/DNA gyrase" = "#4E6ADB", "Ribosome" = "#DBE35A")) + 
+  scale_fill_manual(values = c("DNA/DNA gyrase" = "#4E6ADB", "Ribosome" = "#FE9B2D")) + 
+  theme(plot.margin = margin(0.5,0.5,2.5,0.5, "cm")) + 
   ylab("Estimated fold change in population-wide mutation rate") + xlab("Antimicrobial target") +
   stat_compare_means(label.y = 300) + theme(legend.position = "right")
 p_M_DNA
 
+print(chisq.test(df_KW$group, df_KW$SIM))
+
 # Experiments for which SIM was detected
 df_SIM <- subset(df, SIM == TRUE)
+df_SIM$ID <- factor(df_SIM$ID, levels = unique(df_SIM$ID), ordered = TRUE)
 print(c(length(df_SIM$ID), length(subset(df, M_wo_fitm.1>1)$ID)))
 print(c(length(subset(df_SIM, is.element(target, c("DNA", "DNA gyrase")))$ID),length(subset(df_SIM, target=="Ribosome")$ID)))
-p_M_antibiotic <- ggplot(data = df_SIM, aes(x=ID, y=M.1, group=antibiotic)) + 
-  geom_point(aes(color=antibiotic)) +
-  geom_errorbar(aes(ymin=M.2, ymax=M.3, color=antibiotic)) +
+p_M_antibiotic <- ggplot(data = df_SIM, aes(x=ID, y=M.1, group=target)) + 
+  geom_point(aes(color=target)) +
+  geom_errorbar(aes(ymin=M.2, ymax=M.3, color=target)) +
   geom_hline(yintercept = 1) +
-  scale_color_manual(values = subset(antibiotic_classes, is.element(antibiotic_abbr, unique(df_SIM$antibiotic)))$color, name = "Antimicrobial") + 
+  scale_colour_manual(values = turbo(length(unique(df_SIM$target))), name = "Target") +
   scale_y_continuous(trans="log10") + theme(axis.text.x = element_text(angle = 60, vjust = 0.9, hjust = 0.9), plot.margin = margin(3.5,0.5,0.5,0.5, "cm")) +
   ylab("Increase population-wide mutation rate") + xlab("Experiment ID")
 p_M_antibiotic
