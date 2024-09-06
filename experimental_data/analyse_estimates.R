@@ -108,7 +108,8 @@ median(subset(df_KW, group == "Ribosome")$M_wo_fitm.1)
 p_M_DNA <- ggplot(data = df_KW, aes(x=group, y=M_wo_fitm.1)) + geom_boxplot(aes(fill=group), show.legend = FALSE) + 
   geom_jitter(aes(color = SIM), width = 0.25, alpha = 0.8) + scale_color_manual(values = c("TRUE" = "red", "FALSE" = "darkgrey")) +
   coord_trans(y = "log10", ylim = c(5*10^-2,5*10^2)) + scale_y_continuous(breaks = c(0.1,1,10,100), labels = c(0.1,1,10,100)) +
-  scale_fill_manual(values = c("DNA/DNA gyrase" = "#4E6ADB", "Ribosome" = "#DBE35A")) + 
+  scale_fill_manual(values = c("DNA/DNA gyrase" = "#4E6ADB", "Ribosome" = "#FE9B2D")) + 
+  theme(plot.margin = margin(0.5,0.5,2.5,0.5, "cm")) + 
   ylab("Estimated fold change in population-wide mutation rate") + xlab("Antimicrobial target") +
   stat_compare_means(label.y = 300) + theme(legend.position = "right")
 p_M_DNA
