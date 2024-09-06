@@ -1,3 +1,6 @@
+# Calculations of the mutant count distributions are based on 
+# Łazowski, K. (2023). Efficient, robust, and versatile fluctuation data analysis using MLE MUtation Rate calculator (mlemur). Mutation Research - Fundamental and Molecular Mechanisms of Mutagenesis, 826(April). https://doi.org/10.1016/j.mrfmmm.2023.111816
+
 using Distributions, HypergeometricFunctions
 
 # Pre-calculations independent of the inference parameter m
