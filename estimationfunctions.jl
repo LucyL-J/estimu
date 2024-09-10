@@ -259,12 +259,10 @@ function estimu_hom(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
             mc_max_S = maximum(mc_S)
             mc_counts_S = counts(mc_S, 0:mc_max_S)
             if typeof(fit_m) == Vector{Float64}
-                q0_UT, q_UT = coeffs(mc_max_UT, 1/fit_m[1], eff[1])
-                q0_S, q_S = coeffs(mc_max_S, 1/fit_m[2], eff[2])
-                b_M = CI_m(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, est_res_UT.MLE[1]*Nf_UT, est_res_S.MLE[1]*Nf_S, q0_UT, q_UT, q0_S, q_S, -msel_res_UT.LL[1]-msel_res_S.LL[1])
+                b_M = CI_m(est_res_UT.MLE[1]*Nf_UT, est_res_S.MLE[1]*Nf_S, est_res_UT.lower_bound[1]*Nf_UT, est_res_S.lower_bound[1]*Nf_S, est_res_UT.upper_bound[1]*Nf_UT, est_res_S.upper_bound[1]*Nf_S)
                 b = [b_M; fit_m[1]/fit_m[2] fit_m[1]/fit_m[2]]
             else
-                b = CI_m_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, est_res_UT.MLE[1]*Nf_UT, est_res_S.MLE[1]*Nf_S, 1/est_res_UT.MLE[2], 1/est_res_S.MLE[2], eff, -msel_res_UT.LL[1]-msel_res_S.LL[1])
+                b = CI_m_fitm(est_res_UT.MLE[1]*Nf_UT, est_res_S.MLE[1]*Nf_S, est_res_UT.lower_bound[1]*Nf_UT, est_res_S.lower_bound[1]*Nf_S, est_res_UT.upper_bound[1]*Nf_UT, est_res_S.upper_bound[1]*Nf_S, 1/est_res_UT.MLE[2], 1/est_res_S.MLE[2], 1/est_res_UT.upper_bound[2], 1/est_res_S.upper_bound[2], 1/est_res_UT.lower_bound[2], 1/est_res_S.lower_bound[2])
             end
             est_res_UT = vcat(est_res_UT, est_res_S)
             if typeof(fit_m[2]) ==  Bool
