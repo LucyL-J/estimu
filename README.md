@@ -94,8 +94,8 @@ If the fraction of on-cells is not known, then, \
 When the input is set to `mod = "selection"`, parameters are inferred under null, homogeneous- and heterogeneous-response models the best model/model version is selected.
 - If value(s) for the differential mutant fitness are passed, only model versions with fixed differential mutant fitness are compared.
 - If no value for the differential mutant fitness is passed, model versions with differential mutant fitness set $=1$ and versions with it inferred as a joint (and as two separate parameters in the case of the homogeneous-response model) are compared.
-- If no value for the fraction of on-cells is passed, the heterogeneous-response model version with relative division rate of on-cells set $=0$, and the version with both the relative division and the fraction of on-cells inferred are considered in the model selection (and compared with null and homogeneous-response model)
-- If a value for the fraction of on-cells is passed, it is fixed in the inference under the heterogeneous-response. The model version with the relative division rate of on-cells set $=0$, and the version with the relative division rate of on-cells inferred are considered in the model selection.
+- If no value for the relative division rate of on-cells is passed, the heterogeneous-response model version with relative division rate of on-cells set $=0$, and the version with both the relative division and the fraction of on-cells inferred are considered in the model selection (and compared with null and homogeneous-response model).
+- If a value for the relative division of on-cells is passed, the heterogeneous-response model version with fixed relative division rate and inferred fraction of on-cells, and the version with the relative division rate of on-cells set $=0$, are considered in the model selection (and compared with null and homogeneous-response model).
 - Model selection between nested models/model versions is done using likelihood ratio tests (LRTs); and using the AIC/BIC for models that are not nested.
 
 ### Estimation output
@@ -444,12 +444,12 @@ estimu(mc_UT, Nf_UT, mc_S, Nf_S, plateff, mod="selection", fit_m = c(0.8, 0.6))
 ```
 or 
 ```
-estimu(mc_UT, Nf_UT, mc_S, Nf_S, plateff, mod="selection", f_on = 0.05)
+estimu(mc_UT, Nf_UT, mc_S, Nf_S, plateff, mod="selection", rel_div_on = 0.1)
 ```
 or any combination of the above
 ```
-estimu(mc_UT, Nf_UT, mc_S, Nf_S, plateff, mod="selection", fit_m = 0.8, f_on = 0.05)
+estimu(mc_UT, Nf_UT, mc_S, Nf_S, plateff, mod="selection", fit_m = 0.8, rel_div_on = 0.1)
 ```
 ```
-estimu(mc_UT, Nf_UT, mc_S, Nf_S, plateff, mod="selection", fit_m = c(0.8, 0.6), f_on = 0.05)
+estimu(mc_UT, Nf_UT, mc_S, Nf_S, plateff, mod="selection", fit_m = c(0.8, 0.6), rel_div_on = 0.1)
 ```
