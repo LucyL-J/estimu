@@ -94,8 +94,8 @@ If the fraction of on-cells is not known, then, \
 When the input is set to `mod = "selection"`, parameters are inferred under null, homogeneous- and heterogeneous-response models the best model/model version is selected.
 - If value(s) for the differential mutant fitness are passed, only model versions with fixed differential mutant fitness are compared.
 - If no value for the differential mutant fitness is passed, model versions with differential mutant fitness set $=1$ and versions with it inferred as a joint (and as two separate parameters in the case of the homogeneous-response model) are compared.
-- If no value for the fraction of on-cells is passed, the heterogeneous-response model version with relative division rate of on-cells set $=0$, and the version with both the relative division and the fraction of on-cells inferred are considered in the model selection (and compared with null and homogeneous-response model)
-- If a value for the fraction of on-cells is passed, it is fixed in the inference under the heterogeneous-response. The model version with the relative division rate of on-cells set $=0$, and the version with the relative division rate of on-cells inferred are considered in the model selection.
+- If no value for the relative division rate of on-cells is passed, the heterogeneous-response model version with relative division rate of on-cells set $=0$, and the version with both the relative division and the fraction of on-cells inferred are considered in the model selection (and compared with null and homogeneous-response model).
+- If a value for the relative division of on-cells is passed, the heterogeneous-response model version with fixed relative division rate and inferred fraction of on-cells, and the version with the relative division rate of on-cells set $=0$, are considered in the model selection (and compared with null and homogeneous-response model).
 - Model selection between nested models/model versions is done using likelihood ratio tests (LRTs); and using the AIC/BIC for models that are not nested.
 
 ### Estimation output
@@ -152,7 +152,7 @@ returns the following
 3             Mutation rate         S       inferred 5.049334e-09 2.663162e-09 8.495935e-09
 4            Mutant fitness         S   set to input 1.000000e+00 1.000000e+00 1.000000e+00
 5      Ratio mutant fitness      S/UT   set to input 1.000000e+00 1.000000e+00 1.000000e+00
-6 Fold change mutation rate      S/UT calc. from 1&3 5.067331e+00 2.234407e+00 1.147827e+01
+6 Fold change mutation rate      S/UT calc. from 1&3 5.067331e+00 2.672654e+00 9.525249e+00
 
 [[2]]
         model selection_result        LL      AIC      BIC
@@ -184,7 +184,7 @@ which returns the following
 3             Mutation rate         S         inferred 5.211676e-09 2.752077e-09 8.753446e-09
 4            Mutant fitness      UT+S jointly inferred 7.702790e-01 4.627993e-01 1.310349e+00
 5      Ratio mutant fitness                    constr. 1.000000e+00 1.000000e+00 1.000000e+00
-6 Fold change mutation rate      S/UT   calc. from 1&3 4.959006e+00 2.205198e+00 1.114531e+01
+6 Fold change mutation rate      S/UT   calc. from 1&3 4.959006e+00 2.618652e+00 9.350046e+00
 
 [[2]]
                                  model selection_result        LL      AIC      BIC
@@ -205,8 +205,8 @@ and see the output
 2            Mutant fitness        UT       inferred 1.050062e+00 5.553820e-01 2.125351e+00
 3             Mutation rate         S       inferred 5.676540e-09 3.008222e-09 9.498186e-09
 4            Mutant fitness         S       inferred 4.010447e-01 1.366183e-01 1.022935e+00
-5      Ratio mutant fitness      S/UT calc. from 2&4 3.819249e-01 1.093237e-01 1.146350e+00
-6 Fold change mutation rate      S/UT calc. from 1&3 5.752799e+00 2.523235e+00 1.310361e+01
+5      Ratio mutant fitness      S/UT calc. from 2&4 3.819249e-01 1.301051e-01 9.741662e-01
+6 Fold change mutation rate      S/UT calc. from 1&3 5.752799e+00 3.048635e+00 1.099821e+01
 
 [[2]]
                                    model selection_result        LL      AIC      BIC
@@ -256,11 +256,11 @@ which returns the following
 2                 Mutant fitness        UT     set to input 1.000000e+00 1.000000e+00 1.000000e+00
 3                 Mutant fitness         S     set to input 1.000000e+00 1.000000e+00 1.000000e+00
 4          Mutation-supply ratio         S         inferred 4.879880e+00 1.690687e+00 1.179641e+01
-5         Mutation rate on-cells         S calc. from 1,4&6 1.119381e-07 2.160171e-09 8.899343e-09
+5         Mutation rate on-cells         S calc. from 1,4&6 1.119381e-07 4.084794e-19          Inf
 6              Fraction on-cells         S         inferred 4.308487e-02 0.000000e+00 1.000000e+00
 7    Rel. division rate on-cells         S         inferred 1.128962e-09 0.000000e+00 9.181609e-01
-8    Rel. mutation rate on-cells         S   calc. from 4&6 1.083822e+02 2.050608e-08 8.423223e+58
-9 Fold change mean mutation rate      S/UT   calc. from 4&6 5.626546e+00 1.062967e+00 8.423223e+58
+8    Rel. mutation rate on-cells         S   calc. from 4&6 1.083822e+02 3.955032e-10          Inf
+9 Fold change mean mutation rate      S/UT   calc. from 4&6 5.626546e+00 4.765509e-10 1.128816e+01
 
 [[2]]
           model selection_result        LL      AIC      BIC
@@ -281,7 +281,7 @@ which results in the following
 2                 Mutant fitness        UT     set to input 1.000000e+00 1.000000e+00 1.000000e+00
 3                 Mutant fitness         S     set to input 1.000000e+00 1.000000e+00 1.000000e+00
 4          Mutation-supply ratio         S         inferred 4.880225e+00 1.690687e+00 1.179641e+01
-5         Mutation rate on-cells         S calc. from 1,4&6 9.576595e-08 4.129363e-08 1.688635e-07
+5         Mutation rate on-cells         S calc. from 1,4&6 9.576595e-08 3.317680e-08 2.314841e-07
 6              Fraction on-cells         S     set to input 5.000000e-02 5.000000e-02 5.000000e-02
 7    Rel. division rate on-cells         S     set to input 0.000000e+00 0.000000e+00 0.000000e+00
 8    Rel. mutation rate on-cells         S   calc. from 4&6 9.272428e+01 3.212305e+01 2.241318e+02
@@ -353,7 +353,7 @@ which prints the following
 3             Mutation rate         S       inferred 5.049334e-09 2.663162e-09 8.495935e-09
 4            Mutant fitness         S   set to input 1.000000e+00 1.000000e+00 1.000000e+00
 5      Ratio mutant fitness      S/UT   set to input 1.000000e+00 1.000000e+00 1.000000e+00
-6 Fold change mutation rate      S/UT calc. from 1&3 5.067331e+00 2.234407e+00 1.147827e+01
+6 Fold change mutation rate      S/UT calc. from 1&3 5.067331e+00 2.672654e+00 9.525249e+00
 
 [[7]]
                                  model selection_result        LL      AIC      BIC
@@ -366,7 +366,7 @@ which prints the following
 3             Mutation rate         S         inferred 5.211676e-09 2.752077e-09 8.753446e-09
 4            Mutant fitness      UT+S jointly inferred 7.702790e-01 4.627993e-01 1.310349e+00
 5      Ratio mutant fitness                    constr. 1.000000e+00 1.000000e+00 1.000000e+00
-6 Fold change mutation rate      S/UT   calc. from 1&3 4.959006e+00 2.205198e+00 1.114531e+01
+6 Fold change mutation rate      S/UT   calc. from 1&3 4.959006e+00 2.618652e+00 9.350046e+00
 
 [[9]]
                                    model selection_result        LL      AIC      BIC
@@ -378,8 +378,8 @@ which prints the following
 2            Mutant fitness        UT       inferred 1.050062e+00 5.553820e-01 2.125351e+00
 3             Mutation rate         S       inferred 5.676540e-09 3.008222e-09 9.498186e-09
 4            Mutant fitness         S       inferred 4.010447e-01 1.366183e-01 1.022935e+00
-5      Ratio mutant fitness      S/UT calc. from 2&4 3.819249e-01 1.093237e-01 1.146350e+00
-6 Fold change mutation rate      S/UT calc. from 1&3 5.752799e+00 2.523235e+00 1.310361e+01
+5      Ratio mutant fitness      S/UT calc. from 2&4 3.819249e-01 1.301051e-01 9.741662e-01
+6 Fold change mutation rate      S/UT calc. from 1&3 5.752799e+00 3.048635e+00 1.099821e+01
 
 [[11]]
                                         model selection_result        LL      AIC      BIC
@@ -403,11 +403,11 @@ which prints the following
 2                 Mutant fitness        UT     set to input 1.000000e+00 1.000000e+00 1.000000e+00
 3                 Mutant fitness         S     set to input 1.000000e+00 1.000000e+00 1.000000e+00
 4          Mutation-supply ratio         S         inferred 4.879880e+00 1.690687e+00 1.179641e+01
-5         Mutation rate on-cells         S calc. from 1,4&6 1.119381e-07 2.160171e-09 8.899343e-09
+5         Mutation rate on-cells         S calc. from 1,4&6 1.119381e-07 4.084794e-19          Inf
 6              Fraction on-cells         S         inferred 4.308487e-02 0.000000e+00 1.000000e+00
 7    Rel. division rate on-cells         S         inferred 1.128962e-09 0.000000e+00 9.181609e-01
-8    Rel. mutation rate on-cells         S   calc. from 4&6 1.083822e+02 2.050608e-08 8.423223e+58
-9 Fold change mean mutation rate      S/UT   calc. from 4&6 5.626546e+00 1.062967e+00 8.423223e+58
+8    Rel. mutation rate on-cells         S   calc. from 4&6 1.083822e+02 3.955032e-10          Inf
+9 Fold change mean mutation rate      S/UT   calc. from 4&6 5.626546e+00 4.765509e-10 1.128816e+01
 ```
 
 The first line gives whether there is significant support for stress-induced mutagenesis (SIM), i.e. an increase in mutation rate in the stressed compared to the untreated control condition; in this case yes.\
@@ -444,12 +444,12 @@ estimu(mc_UT, Nf_UT, mc_S, Nf_S, plateff, mod="selection", fit_m = c(0.8, 0.6))
 ```
 or 
 ```
-estimu(mc_UT, Nf_UT, mc_S, Nf_S, plateff, mod="selection", f_on = 0.05)
+estimu(mc_UT, Nf_UT, mc_S, Nf_S, plateff, mod="selection", rel_div_on = 0.1)
 ```
 or any combination of the above
 ```
-estimu(mc_UT, Nf_UT, mc_S, Nf_S, plateff, mod="selection", fit_m = 0.8, f_on = 0.05)
+estimu(mc_UT, Nf_UT, mc_S, Nf_S, plateff, mod="selection", fit_m = 0.8, rel_div_on = 0.1)
 ```
 ```
-estimu(mc_UT, Nf_UT, mc_S, Nf_S, plateff, mod="selection", fit_m = c(0.8, 0.6), f_on = 0.05)
+estimu(mc_UT, Nf_UT, mc_S, Nf_S, plateff, mod="selection", fit_m = c(0.8, 0.6), rel_div_on = 0.1)
 ```
