@@ -118,6 +118,7 @@ print(chisq.test(df_KW$group, df_KW$SIM))
 
 # Experiments for which SIM was detected
 df_SIM <- subset(df, SIM == TRUE)
+df_SIM <- arrange(df_SIM, target)
 df_SIM$ID <- factor(df_SIM$ID, levels = unique(df_SIM$ID), ordered = TRUE)
 print(c(length(df_SIM$ID), length(subset(df, M_wo_fitm.1>1)$ID)))
 print(c(length(subset(df_SIM, is.element(target, c("DNA", "DNA gyrase")))$ID),length(subset(df_SIM, target=="Ribosome")$ID)))
