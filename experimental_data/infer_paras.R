@@ -36,7 +36,7 @@ for (i in 1:length(meta_data$ID)) {
       }
     }
     if(st){
-      res <- estimu(mc_UT, Nf_UT, mc_S, Nf_S, eff = c(eff_UT, eff_S), fit_m = fit_m[[m]], rel_div_on = rel_div_on[[m]], f_on = f_on, mod = mod[[m]]) 
+      res <- estimu(mc_UT, Nf_UT, mc_S, Nf_S, plateff = c(eff_UT, eff_S), fit_m = fit_m[[m]], rel_div_on = rel_div_on[[m]], f_on = f_on, mod = mod[[m]]) 
       if (is.data.frame(res[[2]]) && res[[2]]$LL != -Inf) {
         if (mod[m] == "null"){
           if (m == "no_SIM_wo_fitm") {
