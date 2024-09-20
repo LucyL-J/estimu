@@ -50,6 +50,20 @@ p_M_antibiotic <- ggplot(data = df, aes(x=ID, y=M_wo_fitm.1, group=antibiotic)) 
   theme(axis.text.x = element_text(vjust = 0.5))
 p_M_antibiotic
 
+df_sel <- df
+df_sel$M.1[is.na(df_sel$M.1)] <- 1.
+df_sel$M.2[is.na(df_sel$M.2)] <- 1.
+df_sel$M.3[is.na(df_sel$M.3)] <- 1.
+p_M_antibiotic <- ggplot(data = df_sel, aes(x=ID, y=M.1, group=antibiotic)) + 
+  geom_point(aes(color=antibiotic)) +
+  geom_errorbar(aes(ymin=M.2, ymax=M.3, color=antibiotic)) +
+  geom_hline(yintercept = 1) +
+  scale_color_manual(values = subset(antibiotic_classes, is.element(antibiotic_abbr, unique(df$antibiotic)))$color, name = "Antibiotic (abbr)") + 
+  scale_y_continuous(trans="log10") + theme(axis.text.x = element_text(angle = 90), plot.margin = margin(3.5,0.5,0.5,0.5, "cm")) +
+  ylab("Fold-change population-wide mutation rate") + xlab("Experiment ID") +
+  theme(axis.text.x = element_text(vjust = 0.5))
+p_M_antibiotic
+
 # Plating efficiency/number of parallel cultures and width of confidence intervals
 
 length(subset(df, plated_fraction < 1)$ID)
