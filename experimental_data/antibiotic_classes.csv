@@ -9,7 +9,7 @@
 "8","Hydrogen_peroxide","H2O2",NA,NA,"Oxidative_damage","Oxi","cidal","Multiple_via_reactive_oxygen_species","Multiple (via TRS)"
 "9","Metronidazole","Met","Nitroimidazole","Nitroi","Nucleic_acid_synthesis","DNA","cidal","Multiple_via_reactive_nitrogen_species","Multiple (via TRS)"
 "10","Nitrofurantoin","Nitro","Nitrofuran","Nitrof","Nucleic_acid_synthesis","DNA","cidal","Multiple_via_reactive_nitrogen_species","Multiple (via TRS)"
-"11","Rifampicin","Rif","Rifampicin","Rifs","RNA_synthesis","RNA","cidal","RNA_RNA polymerase","RNA polymerase"
+"11","Rifampicin","Rif","Rifamycin","Rifs","RNA_synthesis","RNA","cidal","RNA_RNA polymerase","RNA polymerase"
 "12","Chloramphenicol","Cm","Amphenicol","Amph","Protein_synthesis","Pro","static","50S_ribosomal_subunit","Ribosome"
 "13","Erythromycin","Ery","Macrolide","Mac","Protein_synthesis","Pro","static","50S_ribosomal_subunit","Ribosome"
 "14","Gentamicin","Genta","Aminoglycoside","Amgl","Protein_synthesis","Pro","cidal","30S_ribosomal_subunit","Ribosome"
