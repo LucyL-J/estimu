@@ -156,7 +156,7 @@ print(c(length(subset(df_SIM, is.element(target, c("DNA", "Gyrase")))$ID),length
 selected_models <- data.frame(antibiotic=rep(unique(df_SIM$antibiotic), each=3))
 selected_models$target <- mapvalues(selected_models$antibiotic, from = antibiotic_classes$antibiotic_abbr, to = as.character(antibiotic_classes$target_group))
 selected_models$m <- rep(c("hom","none","het"), length(unique(df_SIM$antibiotic)))
-criterion <- "by_AIC"
+criterion <- "by_BIC"
 n <- match(criterion, names(df_SIM))
 v <- numeric(length(selected_models$antibiotic))
 for (i in 1:length(unique(df_SIM$antibiotic))) {
@@ -177,11 +177,11 @@ p_msel_t <- ggplot(data = selected_models, aes(x=factor(m, c("hom","none","het")
 p_msel_t
 
 # Difference in AIC between homogeneous and heterogeneous-response model
-p_Delta_AIC <- ggplot(data = df_SIM, aes(x=ID, y=Delta_AIC, group=antibiotic)) + geom_point(aes(color=antibiotic)) +
+p_Delta_AIC <- ggplot(data = df_SIM, aes(x=ID, y=Delta_BIC, group=antibiotic)) + geom_point(aes(color=antibiotic)) +
   scale_color_manual(values = subset(antibiotic_classes, is.element(antibiotic_abbr, unique(df_SIM$antibiotic)))$color, name = "Antimicrobial") +
   theme(axis.text.x = element_text(angle = 60, vjust = 0.9, hjust = 0.9), plot.margin = margin(3.5,0.5,0.5,0.5, "cm")) +
-  geom_hline(yintercept = 4, linetype = "dashed") + geom_hline(yintercept = -4, linetype = "dashed") +
-  ylab("Difference in AIC") + xlab("Experiment ID")
+  geom_hline(yintercept = 6, linetype = "dashed") + geom_hline(yintercept = -6, linetype = "dashed") +
+  ylab("Difference in BIC") + xlab("Experiment ID")
 p_Delta_AIC
 
 # Experiments, for which a heterogeneous stress response is selected or homogeneous/heterogeneous response cannot be distinguished clearly
