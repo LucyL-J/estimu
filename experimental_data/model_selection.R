@@ -33,7 +33,7 @@ for (i in 1:length(IDs)) {
   s <- LRT(df_SIM$LL)
   df_null <- subset(subset(est_paras, is.element(model, c("no_SIM_wo_fitm", "no_SIM_fitm"))), ID == IDs[i])
   s_null <- LRT(df_null$LL)
-  if ((s >= s_null) && (df_SIM$AIC[s] - df_null$AIC[s_null] < -2) && (M_wo_fitm[i,1] > 1)) {
+  if ((s >= s_null) && (df_SIM$AIC[s] - df_null$AIC[s_null] < -4) && (M_wo_fitm[i,1] > 1)) {
     SIM[i] <- TRUE
     df_hom <- subset(subset(est_paras, is.element(model, c("hom_wo_fitm", "hom_fitm", "hom_fitm_unconstr"))), ID == IDs[i])
     s <- LRT(df_hom$LL)
@@ -88,37 +88,37 @@ for (i in 1:length(IDs)) {
       Delta_BIC[i] <- BIC_het - BIC_hom
       Delta_AIC_constr[i] <- AIC_het - AIC_hom_constr
       Delta_BIC_constr[i] <- BIC_het - BIC_hom_constr
-      if (AIC_het - AIC_hom < -2){
+      if (AIC_het - AIC_hom < -4){
         by_AIC[i] <- "het"
       } else {
-        if (AIC_het - AIC_hom > 2){
+        if (AIC_het - AIC_hom > 4){
           by_AIC[i] <- "hom"
         } else {
           by_AIC[i] <- "none"
         }
       }
-      if (BIC_het - BIC_hom < -2){
+      if (BIC_het - BIC_hom < -4){
         by_BIC[i] <- "het"
       } else {
-        if (BIC_het - BIC_hom > 2){
+        if (BIC_het - BIC_hom > 4){
           by_BIC[i] <- "hom"
         } else {
           by_BIC[i] <- "none"
         }
       }
-      if (AIC_het - AIC_hom_constr > 2){
+      if (AIC_het - AIC_hom_constr > 4){
         by_AIC_constr[i] <- "hom"
       } else {
-        if (AIC_het - AIC_hom_constr < -2){
+        if (AIC_het - AIC_hom_constr < -4){
           by_AIC_constr[i] <- "het"
         } else {
           by_AIC_constr[i] <- "none"
         }
       }
-      if (BIC_het - BIC_hom_constr > 2){
+      if (BIC_het - BIC_hom_constr > 4){
         by_BIC_constr[i] <- "hom"
       } else {
-        if (BIC_het - BIC_hom_constr < -2){
+        if (BIC_het - BIC_hom_constr < -4){
           by_BIC_constr[i] <- "het"
         } else {
           by_BIC_constr[i] <- "none"

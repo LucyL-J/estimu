@@ -180,13 +180,14 @@ p_msel_t
 p_Delta_AIC <- ggplot(data = df_SIM, aes(x=ID, y=Delta_AIC, group=antibiotic)) + geom_point(aes(color=antibiotic)) +
   scale_color_manual(values = subset(antibiotic_classes, is.element(antibiotic_abbr, unique(df_SIM$antibiotic)))$color, name = "Antimicrobial") +
   theme(axis.text.x = element_text(angle = 60, vjust = 0.9, hjust = 0.9), plot.margin = margin(3.5,0.5,0.5,0.5, "cm")) +
-  geom_hline(yintercept = 2, linetype = "dashed") + geom_hline(yintercept = -2, linetype = "dashed") +
+  geom_hline(yintercept = 4, linetype = "dashed") + geom_hline(yintercept = -4, linetype = "dashed") +
   ylab("Difference in AIC") + xlab("Experiment ID")
 p_Delta_AIC
 
 # Experiments, for which a heterogeneous stress response is selected or homogeneous/heterogeneous response cannot be distinguished clearly
 df_het <- subset(df_SIM, is.element(by_AIC, c("het")))
 df_none <- subset(df_SIM, is.element(by_AIC, c("none")))
+df_hom <- subset(df_SIM, is.element(by_AIC, c("hom")))
 
 # Frenoy et al. 2018 Norfloxacin
 df_Nor <- subset(est_paras, ID == "Frenoy_Nor")
