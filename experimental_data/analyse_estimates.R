@@ -105,7 +105,7 @@ kruskal.test(df_KW$M_wo_fitm.1, df_KW$group)
 wilcox.test(M_wo_fitm.1 ~ group, data = df_KW)
 median(subset(df_KW, group == "DNA/DNA gyrase")$M_wo_fitm.1)
 median(subset(df_KW, group == "Ribosome")$M_wo_fitm.1)
-p_M_DNA <- ggplot(data = df_KW, aes(x=group, y=M_wo_fitm.1)) + geom_boxplot(aes(fill=group), show.legend = FALSE) + 
+p_M_DNA <- ggplot(data = df_KW, aes(x=group, y=M_wo_fitm.1)) + geom_boxplot(aes(fill=group), show.legend = FALSE, outlier.shape = NA) + 
   geom_jitter(aes(color = SIM), width = 0.25, alpha = 0.8) + scale_color_manual(values = c("TRUE" = "red", "FALSE" = "darkgrey")) +
   coord_trans(y = "log10", ylim = c(5*10^-2,5*10^2)) + scale_y_continuous(breaks = c(0.1,1,10,100), labels = c(0.1,1,10,100)) +
   scale_fill_manual(values = c("DNA/DNA gyrase" = "#4E6ADB", "Ribosome" = "#FE9B2D")) + 
