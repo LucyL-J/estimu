@@ -101,7 +101,7 @@ p_CI_M <- ggplot(data = df, aes(x=M_wo_fitm.1, y=width_CI)) +
 p_CI_M
 
 df_glmm <- subset(df, !is.na(of_MIC))
-glmm <- glmer(SIM ~ of_MIC + plated_fraction + n_cultures_tot + target + (1|species), data = df, family=binomial)
+glmm <- glmer(SIM ~ of_MIC + plated_fraction + n_cultures_tot + target + (1|author), data = df, family=binomial)
 check_singularity(glmm, tolerance=10^-7)
 summary(glmm)
 check_model(glmm)
