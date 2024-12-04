@@ -3,6 +3,7 @@ library("ggplot2")
 library("viridisLite")
 library("ggpubr")
 library("lme4")
+library("performance")
 
 # Read data frames
 antibiotic_classes <- read.csv("experimental_data/antibiotic_classes.csv")[,-1]
@@ -70,8 +71,9 @@ length(subset(df, plated_fraction < 1)$ID)
 df$width_CI <- (df$M_wo_fitm.3-df$M_wo_fitm.2)/df$M_wo_fitm.1
 reg <- lm(formula = log10(width_CI) ~ log10(plated_fraction*n_cultures_tot), data = df)
 summary(reg)
-mlm <- lmer(log10(width_CI) ~ log10(plated_fraction) + log10(n_cultures_tot) + (1|author), data = df)
+mlm <- lmer(log10(width_CI) ~ log10(plated_fraction) + log10(n_cultures_tot) + (1|author) + (1|strain), data = df)
 summary(mlm)
+check_model(mlm)
 p_CI <- ggplot(data = df, aes(x=log10(plated_fraction*n_cultures_tot), y=log10(width_CI))) + 
   geom_point() + geom_smooth(method = lm)
 p_CI
@@ -92,8 +94,22 @@ p_CI_corr_n <- ggplot(data = df, aes(x=n_cultures_tot, y=width_CI)) +
   labs(x="Total number of parallel cultures", y="Normalised width of 95% CI around MLE estimate", color="log(E)")
 p_CI_corr_n
 
-gmlm <- glmer(SIM ~ of_MIC + plated_fraction + n_cultures_tot + (1|target) + (1|strain), data = df, family=binomial)
-summary(gmlm)
+p_CI_M <- ggplot(data = df, aes(x=M_wo_fitm.1, y=width_CI)) + 
+  geom_point(aes(color=log10(plated_fraction*n_cultures_tot))) + 
+  scale_y_continuous(trans="log10") + scale_x_continuous(trans = "log10") +
+  labs(x="Fold-change population-wide mutation rate", y="Normalised width of 95% CI around MLE estimate", color="log(E*c)")
+p_CI_M
+
+df_glmm <- subset(df, !is.na(of_MIC))
+glmm <- glmer(SIM ~ of_MIC + plated_fraction + n_cultures_tot + target + (1|species), data = df, family=binomial)
+check_singularity(glmm, tolerance=10^-7)
+summary(glmm)
+check_model(glmm)
+model_performance(glmm)
+
+my_glm <- glm(SIM ~ of_MIC + plated_fraction + n_cultures_tot + target, data = df, family=binomial)
+summary(my_glm)
+check_model(my_glm)
 
 print(subset(df, SIM == TRUE)$ID)
 print(c(length(subset(df, SIM == TRUE)$ID), print(length(subset(df, M_wo_fitm.1 > 1)$ID))))
