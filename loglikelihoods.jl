@@ -79,7 +79,7 @@ end
 # Pair of fluctuation assays: untreated and stressful
 # Plating efficiency same for untreated and stressful -> q0, q coeffs. only calculated once and then subsampled
 function log_likelihood_joint_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, N_ratio, m, inv_fit_m, eff::Bool)
-    # Number of mutations m jointly inferred
+    # Number of mutations m, and inverse mutant fitness inv_fit_m jointly inferred each
     if m <= 0. || inv_fit_m <= 0.
         return -Inf
     else
@@ -142,6 +142,62 @@ function log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_ma
         q = q_coeffs(mc_max, inv_fit_m, eff)
         @views p_UT = mudi(mc_max_UT, m_UT, q0, q[1:mc_max_UT])
         @views p_S = mudi(mc_max_S, m_S, q0, q[1:mc_max_S])
+        ll  = sum(mc_counts_UT .* log.(p_UT)) + sum(mc_counts_S .* log.(p_S))
+        if !isnan(ll) && ll < 0.
+            return ll
+        else
+            return -Inf
+        end
+    end
+end
+# Mutant fitness untreated/stressful inferred separately -> q0, q coeffs. need to be calculated separately
+function log_likelihood_joint_m_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, x, N_ratio, m, inv_fit_m_UT, inv_fit_m_S, eff::Bool)
+    if m <= 0. || inv_fit_m_UT <= 0. || inv_fit_m_S <= 0.
+        return -Inf
+    else
+        # Plating efficiency = 1
+        q0 = -1
+        q_UT = q_coeffs(mc_max_UT, inv_fit_m_UT)
+        q_S = q_coeffs(mc_max_S, inv_fit_m_S)
+        p_UT = mudi(mc_max_UT, m, q0, q_UT)
+        p_S = mudi(mc_max_S, m*N_ratio, q0, q_S)
+        ll  = sum(mc_counts_UT .* log.(p_UT)) + sum(mc_counts_S .* log.(p_S))
+        if !isnan(ll) && ll < 0.
+            return ll
+        else
+            return -Inf
+        end
+    end
+end
+function log_likelihood_joint_m_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, x, N_ratio, m, inv_fit_m_UT, inv_fit_m_S, eff::Union{Float64,Tuple{Float64,Bool}})
+    if m <= 0. || inv_fit_m_UT <= 0. || inv_fit_m_S <= 0.
+        return -Inf
+    else
+        # Plating efficiency < 1
+        q0 = q0_coeff(inv_fit_m, eff[1])
+        q_UT = q_coeffs(mc_max_UT, inv_fit_m_UT, eff)
+        q_S = q_coeffs(mc_max_S, inv_fit_m_S, eff)
+        p_UT = mudi(mc_max_UT, m, q0, q_UT)
+        p_S = mudi(mc_max_S, m*N_ratio, q0, q_S)
+        ll  = sum(mc_counts_UT .* log.(p_UT)) + sum(mc_counts_S .* log.(p_S))
+        if !isnan(ll) && ll < 0.
+            return ll
+        else
+            return -Inf
+        end
+    end
+end
+function log_likelihood_joint_m_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, x, m, inv_fit_m_UT, inv_fit_m_S, eff)
+    if m <= 0. || inv_fit_m_UT <= 0. || inv_fit_m_S <= 0.
+        return -Inf
+    else
+        # Plating efficiency different untreated/stressful
+        q0_UT = q0_coeff(inv_fit_m_UT, eff[1][1])
+        q0_S = q0_coeff(inv_fit_m_S, eff[2][1])
+        q_UT = q_coeffs(mc_max_UT, inv_fit_m_UT, eff[1])
+        q_S = q_coeffs(mc_max_S, inv_fit_m_S, eff[2])
+        p_UT = mudi(mc_max_UT, m, q0_UT, q_UT)
+        p_S = mudi(mc_max_S, m*N_ratio, q0_S, q_S)
         ll  = sum(mc_counts_UT .* log.(p_UT)) + sum(mc_counts_S .* log.(p_S))
         if !isnan(ll) && ll < 0.
             return ll
