@@ -117,7 +117,7 @@ function estimu_0(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vecto
     if fit_m[1] ==  fit_m[2] == 1.                                         
         M = "No SIM"
     else                              
-        M = "No SIM (diff. mutant fitness)"
+        M = "No SIM (constr. mutant fitness)"
     end
     N_ratio = Nf_S/Nf_UT
     est_res = DataFrame(parameter=["Mutation rate", "Mutant fitness", "Mutant fitness"], condition=["UT+"*cond_S, "UT", cond_S])       
@@ -170,7 +170,7 @@ end
 function estimu_0(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vector{<:Number}, fit_m::Bool; cond_S="S") 
     N_ratio = Nf_S/Nf_UT
     est_res = DataFrame(parameter=["Mutation rate", "Mutant fitness", "Mutant fitness"], condition=["UT+"*cond_S, "UT+"*cond_S, "UT+"*cond_S])       
-    msel_res = DataFrame(model=["No SIM (diff. mutant fitness)"], selection_result=["-"])                            
+    msel_res = DataFrame(model=["No SIM (constr. mutant fitness)"], selection_result=["-"])                            
     mc_max_UT = maximum(mc_UT)
     mc_counts_UT = counts(mc_UT, 0:mc_max_UT)
     mc_max_S = maximum(mc_S)
@@ -213,6 +213,61 @@ function estimu_0(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vecto
         msel_res.LL = [-MLL]
         msel_res.AIC = [4 + 2*MLL]
         msel_res.BIC = [2*log(length(mc_UT)+length(mc_S)) + 2*MLL] 
+	else
+		est_res.status = fill("failed", length(est_res.parameter))
+        msel_res.LL = [-Inf]
+        msel_res.AIC = [Inf]
+        msel_res.BIC = [Inf]
+	end
+	return est_res, msel_res
+end
+# Mutant fitness inferred separately
+function estimu_0(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vector{<:Number}, fit_m::Union{Tuple{Bool,Bool},BitVector}; cond_S="S") 
+    N_ratio = Nf_S/Nf_UT
+    est_res = DataFrame(parameter=["Mutation rate", "Mutant fitness", "Mutant fitness"], condition=["UT+"*cond_S, "UT", cond_S])       
+    msel_res = DataFrame(model=["No SIM (unconstr. mutant fitness)"], selection_result=["-"])                            
+    mc_max_UT = maximum(mc_UT)
+    mc_counts_UT = counts(mc_UT, 0:mc_max_UT)
+    mc_max_S = maximum(mc_S)
+    mc_counts_S = counts(mc_S, 0:mc_max_S)
+    mc_max = max(mc_max_UT, mc_max_S)
+    if eff[1] == eff[2] == 1
+        eff = false
+    elseif eff[1] == eff[2]
+        if eff[1] < 0.5
+            eff = (eff[1], true)
+        else
+            eff = eff[1]
+        end
+    else
+        eff_UT, eff_S = eff
+        if eff[1] < 0.5
+            eff_UT = (eff[1], true)
+        end
+        if eff[2] < 0.5
+            eff_S = (eff[2], true)
+        end
+        eff = (eff_UT, eff_S)
+    end
+    # 3 inference parameters: Number of mutations, mutant fitness under untreated/stressful cond.
+    LL(para) = -log_likelihood_joint_m_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, N_ratio, para[1], para[2], para[3], eff)
+    res = Optim.optimize(LL, [max(1.,median(mc_UT),median(mc_S)), 1., 1.], iterations=10^4) 
+	if Optim.converged(res) == true
+        est_res.status = ["jointly inferred", "inferred", "inferred"]
+        p = Optim.minimizer(res)
+        MLL = Optim.minimum(res)
+        est_res.MLE = [p[1]/Nf_UT, 1/p[2], 1/p[3]]   
+        try
+            b = CI_joint_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, N_ratio, p[1], p[2], eff, MLL)
+            est_res.lower_bound = [b[1,1]/Nf_UT, 1/b[2,2], 1/b[2,2]]
+            est_res.upper_bound = [b[1,2]/Nf_UT, 1/b[2,1], 1/b[2,1]]
+        catch
+            est_res.lower_bound = [0., 0., 0.]
+            est_res.upper_bound = [Inf, Inf, Inf]
+        end
+        msel_res.LL = [-MLL]
+        msel_res.AIC = [6 + 2*MLL]
+        msel_res.BIC = [3*log(length(mc_UT)+length(mc_S)) + 2*MLL] 
 	else
 		est_res.status = fill("failed", length(est_res.parameter))
         msel_res.LL = [-Inf]
