@@ -174,11 +174,12 @@ function log_likelihood_joint_m_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_ma
         return -Inf
     else
         # Plating efficiency < 1
-        q0 = q0_coeff(inv_fit_m, eff[1])
+        q0_UT = q0_coeff(inv_fit_m_UT, eff[1])
+        q0_S = q0_coeff(inv_fit_m_S, eff[1])
         q_UT = q_coeffs(mc_max_UT, inv_fit_m_UT, eff)
         q_S = q_coeffs(mc_max_S, inv_fit_m_S, eff)
-        p_UT = mudi(mc_max_UT, m, q0, q_UT)
-        p_S = mudi(mc_max_S, m*N_ratio, q0, q_S)
+        p_UT = mudi(mc_max_UT, m, q0_UT, q_UT)
+        p_S = mudi(mc_max_S, m*N_ratio, q0_S, q_S)
         ll  = sum(mc_counts_UT .* log.(p_UT)) + sum(mc_counts_S .* log.(p_S))
         if !isnan(ll) && ll < 0.
             return ll
