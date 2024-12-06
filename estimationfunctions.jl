@@ -116,11 +116,13 @@ end
 function estimu_0(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vector{<:Number}, fit_m::Vector{Float64}=[1., 1.]; cond_S="S") 
     if fit_m[1] ==  fit_m[2] == 1.                                         
         M = "No SIM"
-    else                              
+    elseif fit_m[1] == fit_m[2]
         M = "No SIM (constr. mutant fitness)"
+    else                              
+        M = "No SIM (unconstr. mutant fitness)"
     end
     N_ratio = Nf_S/Nf_UT
-    est_res = DataFrame(parameter=["Mutation rate", "Mutant fitness", "Mutant fitness"], condition=["UT+"*cond_S, "UT", cond_S])       
+    est_res = DataFrame(parameter=["Mutation rate", "Mutant fitness", "Mutant fitness", "Ratio mutant fitness"], condition=["UT+"*cond_S, "UT", cond_S, cond_S*"/UT"])       
     msel_res = DataFrame(model=[M], selection_result=["-"])   
     mc_max_UT = maximum(mc_UT)
     mc_counts_UT = counts(mc_UT, 0:mc_max_UT)
@@ -142,17 +144,17 @@ function estimu_0(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vecto
     # Maximum mutant count observed overall, used as an upper bound for the inference parameter
     res = Optim.optimize(LL, 0., mc_max, iterations=10^4)                                      
     if Optim.converged(res) == true
-        est_res.status = ["jointly inferred", "set to input", "set to input"]
+        est_res.status = ["jointly inferred", "set to input", "set to input", "set to input"]
         m = Optim.minimizer(res)
         MLL = Optim.minimum(res)
-        est_res.MLE = [m/Nf_UT, fit_m[1], fit_m[2]]   
+        est_res.MLE = [m/Nf_UT, fit_m[1], fit_m[2], fit_m[2]/fit_m[1]]   
         try
             b = CI_joint_m(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, N_ratio, m, q0_UT, q_UT, q0_S, q_S, eff, MLL)        
-            est_res.lower_bound = [b[1]/Nf_UT, fit_m[1], fit_m[2]]
-            est_res.upper_bound = [b[2]/Nf_UT, fit_m[1], fit_m[2]]
+            est_res.lower_bound = [b[1]/Nf_UT, fit_m[1], fit_m[2], fit_m[2]/fit_m[1]]
+            est_res.upper_bound = [b[2]/Nf_UT, fit_m[1], fit_m[2], fit_m[2]/fit_m[1]]
         catch
-            est_res.lower_bound = [0., fit_m[1], fit_m[2]]
-            est_res.upper_bound = [Inf, fit_m[1], fit_m[2]]
+            est_res.lower_bound = [0., fit_m[1], fit_m[2], fit_m[2]/fit_m[1]]
+            est_res.upper_bound = [Inf, fit_m[1], fit_m[2], fit_m[2]/fit_m[1]]
         end
         msel_res.LL = [-MLL]
         msel_res.AIC = [2 + 2*MLL]
@@ -169,7 +171,7 @@ end
 # Mutant fitness jointly inferred
 function estimu_0(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vector{<:Number}, fit_m::Bool; cond_S="S") 
     N_ratio = Nf_S/Nf_UT
-    est_res = DataFrame(parameter=["Mutation rate", "Mutant fitness", "Mutant fitness"], condition=["UT+"*cond_S, "UT+"*cond_S, "UT+"*cond_S])       
+    est_res = DataFrame(parameter=["Mutation rate", "Mutant fitness", "Mutant fitness", "Ratio mutant fitness"], condition=["UT+"*cond_S, "UT+"*cond_S, "UT+"*cond_S, ""])       
     msel_res = DataFrame(model=["No SIM (constr. mutant fitness)"], selection_result=["-"])                            
     mc_max_UT = maximum(mc_UT)
     mc_counts_UT = counts(mc_UT, 0:mc_max_UT)
@@ -198,17 +200,17 @@ function estimu_0(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vecto
     LL(para) = -log_likelihood_joint_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, N_ratio, para[1], para[2], eff)
     res = Optim.optimize(LL, [max(1.,median(mc_UT),median(mc_S)), 1.], iterations=10^4) 
 	if Optim.converged(res) == true
-        est_res.status = ["jointly inferred", "jointly inferred", "jointly inferred"]
+        est_res.status = ["jointly inferred", "jointly inferred", "jointly inferred", "constr."]
         p = Optim.minimizer(res)
         MLL = Optim.minimum(res)
-        est_res.MLE = [p[1]/Nf_UT, 1/p[2], 1/p[2]]   
+        est_res.MLE = [p[1]/Nf_UT, 1/p[2], 1/p[2], 1.]   
         try
             b = CI_joint_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, N_ratio, p[1], p[2], eff, MLL)
-            est_res.lower_bound = [b[1,1]/Nf_UT, 1/b[2,2], 1/b[2,2]]
-            est_res.upper_bound = [b[1,2]/Nf_UT, 1/b[2,1], 1/b[2,1]]
+            est_res.lower_bound = [b[1,1]/Nf_UT, 1/b[2,2], 1/b[2,2], 1.]
+            est_res.upper_bound = [b[1,2]/Nf_UT, 1/b[2,1], 1/b[2,1], 1.]
         catch
-            est_res.lower_bound = [0., 0., 0.]
-            est_res.upper_bound = [Inf, Inf, Inf]
+            est_res.lower_bound = [0., 0., 0., 1.]
+            est_res.upper_bound = [Inf, Inf, Inf, 1.]
         end
         msel_res.LL = [-MLL]
         msel_res.AIC = [4 + 2*MLL]
@@ -224,7 +226,7 @@ end
 # Mutant fitness inferred separately
 function estimu_0(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vector{<:Number}, fit_m::Union{Tuple{Bool,Bool},BitVector}; cond_S="S") 
     N_ratio = Nf_S/Nf_UT
-    est_res = DataFrame(parameter=["Mutation rate", "Mutant fitness", "Mutant fitness"], condition=["UT+"*cond_S, "UT", cond_S])       
+    est_res = DataFrame(parameter=["Mutation rate", "Mutant fitness", "Mutant fitness", "Ratio mutant fitness"], condition=["UT+"*cond_S, "UT", cond_S, cond_S*"/UT"])       
     msel_res = DataFrame(model=["No SIM (unconstr. mutant fitness)"], selection_result=["-"])                            
     mc_max_UT = maximum(mc_UT)
     mc_counts_UT = counts(mc_UT, 0:mc_max_UT)
@@ -253,18 +255,18 @@ function estimu_0(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vecto
     LL(para) = -log_likelihood_joint_m_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, N_ratio, para[1], para[2], para[3], eff)
     res = Optim.optimize(LL, [max(1.,median(mc_UT),median(mc_S)), 1., 1.], iterations=10^4) 
 	if Optim.converged(res) == true
-        est_res.status = ["jointly inferred", "inferred", "inferred"]
+        est_res.status = ["jointly inferred", "inferred", "inferred", "calculated from 2&3"]
         p = Optim.minimizer(res)
         MLL = Optim.minimum(res)
-        est_res.MLE = [p[1]/Nf_UT, 1/p[2], 1/p[3]]
+        est_res.MLE = [p[1]/Nf_UT, 1/p[2], 1/p[3], p[2]/p[3]]
         CI_joint_m_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, N_ratio, p[1], p[2], p[3], eff, MLL)   
         try
             b = CI_joint_m_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, N_ratio, p[1], p[2], p[3], eff, MLL)
-            est_res.lower_bound = [b[1,1]/Nf_UT, 1/b[2,2], 1/b[3,2]]
-            est_res.upper_bound = [b[1,2]/Nf_UT, 1/b[2,1], 1/b[3,1]]
+            est_res.lower_bound = [b[1,1]/Nf_UT, 1/b[2,2], 1/b[3,2], 1/b[4,2]]
+            est_res.upper_bound = [b[1,2]/Nf_UT, 1/b[2,1], 1/b[3,1], 1/b[4,1]]
         catch
-            est_res.lower_bound = [0., 0., 0.]
-            est_res.upper_bound = [Inf, Inf, Inf]
+            est_res.lower_bound = [0., 0., 0., 0.]
+            est_res.upper_bound = [Inf, Inf, Inf, Inf]
         end
         msel_res.LL = [-MLL]
         msel_res.AIC = [6 + 2*MLL]

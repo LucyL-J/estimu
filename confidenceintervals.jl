@@ -140,8 +140,10 @@ function CI_joint_m_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max,
         u_3 = find_zero(LL_ratio_3, (inv_fit_m_S, Inf))
     catch err
     end
-    return [l_1 u_1; l_2 u_2; l_3 u_3]
+    l_4, u_4 = CI_fitm(inv_fit_m_UT, inv_fit_m_S, l_2, l_3, u_2, u_3)
+    return [l_1 u_1; l_2 u_2; l_3 u_3; l_4 u_4]
 end
+CI_fitm(inv_fit_m_UT, inv_fit_m_S, min_inv_fit_m_UT, min_inv_fit_m_S, max_inv_fit_m_UT, max_inv_fit_m_S) = [min(inv_fit_m_S/max_inv_fit_m_UT, min_inv_fit_m_S/inv_fit_m_UT), max(max_inv_fit_m_S/inv_fit_m_UT, inv_fit_m_S/min_inv_fit_m_UT)]
 # Homogeneous response (fixed mutant fitness)
 CI_m(m_UT, m_S, min_m_UT, min_m_S, max_m_UT, max_m_S) = [min(m_S/max_m_UT, min_m_S/m_UT) max(max_m_S/m_UT, m_S/min_m_UT)]
 # Homogeneous response (mutant fitness inferred separately)
