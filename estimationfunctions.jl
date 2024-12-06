@@ -256,11 +256,12 @@ function estimu_0(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vecto
         est_res.status = ["jointly inferred", "inferred", "inferred"]
         p = Optim.minimizer(res)
         MLL = Optim.minimum(res)
-        est_res.MLE = [p[1]/Nf_UT, 1/p[2], 1/p[3]]   
+        est_res.MLE = [p[1]/Nf_UT, 1/p[2], 1/p[3]]
+        CI_joint_m_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, N_ratio, p[1], p[2], p[3], eff, MLL)   
         try
-            b = CI_joint_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, N_ratio, p[1], p[2], eff, MLL)
-            est_res.lower_bound = [b[1,1]/Nf_UT, 1/b[2,2], 1/b[2,2]]
-            est_res.upper_bound = [b[1,2]/Nf_UT, 1/b[2,1], 1/b[2,1]]
+            b = CI_joint_m_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, N_ratio, p[1], p[2], p[3], eff, MLL)
+            est_res.lower_bound = [b[1,1]/Nf_UT, 1/b[2,2], 1/b[3,2]]
+            est_res.upper_bound = [b[1,2]/Nf_UT, 1/b[2,1], 1/b[3,1]]
         catch
             est_res.lower_bound = [0., 0., 0.]
             est_res.upper_bound = [Inf, Inf, Inf]

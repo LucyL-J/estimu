@@ -94,6 +94,54 @@ function CI_joint_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, m
     end
     return [l_1 u_1; l_2 u_2]
 end
+# Without change in mutation rate (mutant fitness inferred separately)
+function CI_joint_m_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, N_ratio, m, inv_fit_m_UT, inv_fit_m_S, eff, MLL)
+    function LL_ratio_1(para)
+        if para == m
+            return -chisq_1_95/2
+        else
+            log_likelihood_1(P) = -log_likelihood_joint_m_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, N_ratio, para, P[1], P[2], eff)
+            res = Optim.optimize(log_likelihood_1, [inv_fit_m_UT, inv_fit_m_S])
+            P_res = Optim.minimizer(res)
+            return -log_likelihood_joint_m_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, N_ratio, para, P_res[1], P_res[2], eff) - MLL - chisq_1_95/2
+        end
+    end
+    l_1 = find_zero(LL_ratio_1, (0., m))
+    u_1 = find_zero(LL_ratio_1, (m, m_max(mc_max,eff)))
+    function LL_ratio_2(para)
+        if para == inv_fit_m_UT
+            return -chisq_1_95/2
+        else
+            log_likelihood_2(P) = -log_likelihood_joint_m_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, N_ratio, P[1], para, P[2], eff)
+            res = Optim.optimize(log_likelihood_2, [m, inv_fit_m_S])
+            P_res = Optim.minimizer(res)
+            return -log_likelihood_joint_m_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, N_ratio, P_res[1], para, P_res[2], eff) - MLL - chisq_1_95/2
+        end
+    end
+    l_2 = find_zero(LL_ratio_2, (0., inv_fit_m_UT))
+    u_2 = Inf
+    try
+        u_2 = find_zero(LL_ratio_2, (inv_fit_m_UT, Inf))
+    catch err
+    end
+    function LL_ratio_3(para)
+        if para == inv_fit_m_S
+            return -chisq_1_95/2
+        else
+            log_likelihood_3(P) = -log_likelihood_joint_m_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, N_ratio, P[1], P[2], para, eff)
+            res = Optim.optimize(log_likelihood_3, [m, inv_fit_m_UT])
+            P_res = Optim.minimizer(res)
+            return -log_likelihood_joint_m_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, N_ratio, P_res[1], P_res[2], para, eff) - MLL - chisq_1_95/2
+        end
+    end
+    l_3 = find_zero(LL_ratio_3, (0., inv_fit_m_S))
+    u_3 = Inf
+    try
+        u_3 = find_zero(LL_ratio_3, (inv_fit_m_S, Inf))
+    catch err
+    end
+    return [l_1 u_1; l_2 u_2; l_3 u_3]
+end
 # Homogeneous response (fixed mutant fitness)
 CI_m(m_UT, m_S, min_m_UT, min_m_S, max_m_UT, max_m_S) = [min(m_S/max_m_UT, min_m_S/m_UT) max(max_m_S/m_UT, m_S/min_m_UT)]
 # Homogeneous response (mutant fitness inferred separately)
