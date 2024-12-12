@@ -19,7 +19,7 @@ function r_mudi(K::Int, N, mu, fit_m, eff)
         end
         random_draws[j] = k-1
     end
-    return random_draws
+    return random_draws, probs[1:k]
 end
 
 function r_mudi(K::Int, N, mu_off, S, f_on, rel_div_on, fit_m, eff)
@@ -41,29 +41,26 @@ function r_mudi(K::Int, N, mu_off, S, f_on, rel_div_on, fit_m, eff)
         end
         random_draws[j] = k-1
     end
-    return random_draws
+    return random_draws, probs[1:k]
 end
 
-#mc_total = r_mudi(R*c, N, mu, fit_m, eff)
-#probs = p_mudi(maximum(mc_total), N, mu, fit_m, eff)
-#mc_total = r_mudi(R*c, N, mu_off, S, f_on, rel_div_on, fit_m, eff)
-#probs = p_mudi(maximum(mc_total), N, mu_off, S, f_on, rel_div_on, fit_m, eff)
-function Hellinger_dist(R, c, mc_total, probs)
+function Hellinger_dist(R::Int, num_c::Int, mc_draws, probs)
     H = Vector{Float64}(undef, R)
-    s = randperm(R * c) 
-    c_indices = reshape(s, c, R)
+    s = randperm(R * num_c) 
+    c_indices = reshape(s, num_c, R)
     for i in eachindex(H)
-        mc_sample = mc_total[c_indices[:, i]]
-        p_sample = counts(mc_sample, 0:maximum(mc_sample)) ./ c
-        p = probs[collect(1:maximum(mc_sample)+1)]
+        mc_sample = mc_draws[c_indices[:, i]]
+        p_sample = counts(mc_sample, 0:maximum(mc_sample)) ./ num_c
+        p = probs[1:maximum(mc_sample)+1]
         norm_factor = sqrt(sum(p_sample) * sum(p))
         H[i] = sqrt(1 - sum(sqrt.(p_sample .* p)) / norm_factor)
     end
     return H
 end
 
-function gof_measure(mc_sample, p, H)
-    p_sample = counts(mc_sample, 0:maximum(mc_sample)) ./ length(mc_sample)
+function gof(mc_counts, p, R::Int, num_c, mc_draws, probs)
+    H = Hellinger_dist(R, num_c, mc_draws, probs)
+    p_sample = mc_counts ./ num_c
     norm_factor = sqrt(sum(p_sample) * sum(p))
     H_sample = sqrt(1 - sum(sqrt.(p_sample .* p)) / norm_factor)
     return H_sample, ecdf(H)(H_sample)
