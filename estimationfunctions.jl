@@ -1,6 +1,7 @@
 include("mutantcountdistributions.jl")
 include("loglikelihoods.jl")
 include("confidenceintervals.jl")
+include("goodnessoffit.jl")
 using StatsBase, DataFrames, Optim
 
 # Mutation rate estimation algorithms
@@ -30,6 +31,7 @@ function estimu(mc::Vector{Int}, Nf, eff, fit_m::Float64=1.; cond="UT")
     msel_res = DataFrame(model=[M], selection_result=["-"])   
     # Pre-inference calculations
     mc_max = maximum(mc)
+    num_c = length(mc)
     mc_counts = counts(mc, 0:mc_max)
     q0, q = coeffs(mc_max, 1/fit_m, eff)
     # 1 inference parameter: Number of mutations 
@@ -51,12 +53,19 @@ function estimu(mc::Vector{Int}, Nf, eff, fit_m::Float64=1.; cond="UT")
         end
         msel_res.LL = [-MLL]
         msel_res.AIC = [2 + 2*MLL]
-        msel_res.BIC = [log(length(mc)) + 2*MLL]                         
+        msel_res.BIC = [log(length(mc)) + 2*MLL]    
+        mc_draws, probs = r_mudi(100*num_c, Nf, m/Nf, fit_m, eff)
+        p_counts = p_mudi(mc_max, Nf, m/Nf, fit_m, eff)
+        H, H_quant = gof(mc_counts, p_counts, 100, num_c, mc_draws, probs)
+        msel_res.H = [H]
+        msel_res.H_quant = [H_quant]
     else
         est_res.status = fill("failed", length(est_res.parameter))                                                      
         msel_res.LL = [-Inf]
         msel_res.AIC = [Inf]
         msel_res.BIC = [Inf]
+        msel_res.H = [1]
+        msel_res.H_quant = [1]
     end 
     return est_res, msel_res
 end
@@ -68,12 +77,12 @@ function estimu(mc::Vector{Int}, Nf, eff, fit_m::Bool; cond="UT")
     mc_counts = counts(mc, 0:mc_max)
     # Different cases regarding partial plating
     if eff == 1
-        eff = false
+        eff_input = false
     elseif eff < 0.5
-        eff = (eff, true)
+        eff_input = (eff, true)
     end
     # 2 inference parameters: Number of mutations, mutant fitness
-    LL(para) = -log_likelihood_m_fitm(mc_counts, mc_max, para[1], para[2], eff)
+    LL(para) = -log_likelihood_m_fitm(mc_counts, mc_max, para[1], para[2], eff_input)
     res = Optim.optimize(LL, [max(1.,median(mc)), 1.], iterations=10^4) 
     if Optim.converged(res) == true
         p = Optim.minimizer(res)
@@ -81,7 +90,7 @@ function estimu(mc::Vector{Int}, Nf, eff, fit_m::Bool; cond="UT")
         est_res.status = ["inferred", "inferred"]
 		est_res.MLE = [p[1]/Nf, 1/p[2]]   
         try
-            b = CI_m_fitm(mc_counts, mc_max, p[1], p[2], eff, MLL)
+            b = CI_m_fitm(mc_counts, mc_max, p[1], p[2], eff_input, MLL)
             est_res.lower_bound = [b[1,1]/Nf, 1/b[2,2]]
             est_res.upper_bound = [b[1,2]/Nf, 1/b[2,1]]
         catch
@@ -90,7 +99,12 @@ function estimu(mc::Vector{Int}, Nf, eff, fit_m::Bool; cond="UT")
         end
         msel_res.LL = [-MLL]
         msel_res.AIC = [4 + 2*MLL]         
-        msel_res.BIC = [2*log(length(mc)) + 2*MLL]                       
+        msel_res.BIC = [2*log(length(mc)) + 2*MLL]    
+        mc_draws, probs = r_mudi(100*num_c, Nf, m/Nf, fit_m, eff)
+        p = p_mudi(mc_max, Nf, m/Nf, fit_m, eff)
+        H, H_quant = gof(mc_counts, p, 100, num_c, mc_draws, probs)
+        msel_res.H = [H]
+        msel_res.H_quant = [H_quant]                   
 	else
         est_res.status = fill("failed", length(est_res.parameter))
 		msel_res.LL = [-Inf]
