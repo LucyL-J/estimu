@@ -4,7 +4,7 @@ function log_likelihood_m(mc_counts, mc_max, m, q0, q)
     if m <= 0.
         return -Inf
     else
-        p = mudi(mc_max, m, q0, q)
+        p = mudi_K(mc_max, m, q0, q)
         ll = sum(mc_counts .* log.(p))
         if !isnan(ll) && ll < 0.
             return ll
@@ -18,8 +18,8 @@ function log_likelihood_joint_m(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, 
     if m <= 0.
         return -Inf
     else
-        p_UT = mudi(mc_max_UT, m, q0_UT, q_UT)
-        p_S = mudi(mc_max_S, m*N_ratio, q0_S, q_S)
+        p_UT = mudi_K(mc_max_UT, m, q0_UT, q_UT)
+        p_S = mudi_K(mc_max_S, m*N_ratio, q0_S, q_S)
         ll = sum(mc_counts_UT .* log.(p_UT)) + sum(mc_counts_S .* log.(p_S))
         if !isnan(ll) && ll < 0.
             return ll
@@ -37,7 +37,7 @@ function log_likelihood_m_fitm(mc_counts, mc_max, m, inv_fit_m, eff::Bool)
         # Plating efficiency = 1 
         q0 = -1
         q = q_coeffs(mc_max, inv_fit_m)
-        p = mudi(mc_max, m, q0, q)
+        p = mudi_K(mc_max, m, q0, q)
         ll = sum(mc_counts .* log.(p))
         if !isnan(ll) && ll < 0.
             return ll
@@ -53,7 +53,7 @@ function log_likelihood_m_fitm(mc_counts, mc_max, m, inv_fit_m, eff)
         # Plating efficiency < 1
         q0 = q0_coeff(inv_fit_m, eff[1])
         q = q_coeffs(mc_max, inv_fit_m, eff)
-        p = mudi(mc_max, m, q0, q)
+        p = mudi_K(mc_max, m, q0, q)
         ll = sum(mc_counts .* log.(p))
         if !isnan(ll) && ll < 0.
             return ll
@@ -67,7 +67,7 @@ function log_likelihood_m_fitm(mc_counts, mc_max, m_eff)
     if m_eff <= 0.
         return -Inf
     else
-        p = mudi(mc_max, m_eff)
+        p = mudi_K(mc_max, m_eff)
         ll = sum(mc_counts .* log.(p))
         if !isnan(ll) && ll < 0.
             return ll
@@ -86,8 +86,8 @@ function log_likelihood_joint_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S,
         # Plating efficiency = 1
         q0 = -1
         q = q_coeffs(mc_max, inv_fit_m)
-        @views p_UT = mudi(mc_max_UT, m, q0, q[1:mc_max_UT])
-        @views p_S = mudi(mc_max_S, m*N_ratio, q0, q[1:mc_max_S])
+        @views p_UT = mudi_K(mc_max_UT, m, q0, q[1:mc_max_UT])
+        @views p_S = mudi_K(mc_max_S, m*N_ratio, q0, q[1:mc_max_S])
         ll  = sum(mc_counts_UT .* log.(p_UT)) + sum(mc_counts_S .* log.(p_S))
         if !isnan(ll) && ll < 0.
             return ll
@@ -104,8 +104,8 @@ function log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_ma
         # Plating efficiency = 1
         q0 = -1
         q = q_coeffs(mc_max, inv_fit_m)
-        @views p_UT = mudi(mc_max_UT, m_UT, q0, q[1:mc_max_UT])
-        @views p_S = mudi(mc_max_S, m_S, q0, q[1:mc_max_S])
+        @views p_UT = mudi_K(mc_max_UT, m_UT, q0, q[1:mc_max_UT])
+        @views p_S = mudi_K(mc_max_S, m_S, q0, q[1:mc_max_S])
         ll  = sum(mc_counts_UT .* log.(p_UT)) + sum(mc_counts_S .* log.(p_S))
         if !isnan(ll) && ll < 0.
             return ll
@@ -122,8 +122,8 @@ function log_likelihood_joint_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S,
         # Plating efficiency < 1
         q0 = q0_coeff(inv_fit_m, eff[1])
         q = q_coeffs(mc_max, inv_fit_m, eff)
-        @views p_UT = mudi(mc_max_UT, m, q0, q[1:mc_max_UT])
-        @views p_S = mudi(mc_max_S, m*N_ratio, q0, q[1:mc_max_S])
+        @views p_UT = mudi_K(mc_max_UT, m, q0, q[1:mc_max_UT])
+        @views p_S = mudi_K(mc_max_S, m*N_ratio, q0, q[1:mc_max_S])
         ll  = sum(mc_counts_UT .* log.(p_UT)) + sum(mc_counts_S .* log.(p_S))
         if !isnan(ll) && ll < 0.
             return ll
@@ -140,8 +140,8 @@ function log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_ma
         # Plating efficiency < 1
         q0 = q0_coeff(inv_fit_m, eff[1])
         q = q_coeffs(mc_max, inv_fit_m, eff)
-        @views p_UT = mudi(mc_max_UT, m_UT, q0, q[1:mc_max_UT])
-        @views p_S = mudi(mc_max_S, m_S, q0, q[1:mc_max_S])
+        @views p_UT = mudi_K(mc_max_UT, m_UT, q0, q[1:mc_max_UT])
+        @views p_S = mudi_K(mc_max_S, m_S, q0, q[1:mc_max_S])
         ll  = sum(mc_counts_UT .* log.(p_UT)) + sum(mc_counts_S .* log.(p_S))
         if !isnan(ll) && ll < 0.
             return ll
@@ -159,8 +159,8 @@ function log_likelihood_joint_m_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_ma
         q0 = -1
         q_UT = q_coeffs(mc_max_UT, inv_fit_m_UT)
         q_S = q_coeffs(mc_max_S, inv_fit_m_S)
-        p_UT = mudi(mc_max_UT, m, q0, q_UT)
-        p_S = mudi(mc_max_S, m*N_ratio, q0, q_S)
+        p_UT = mudi_K(mc_max_UT, m, q0, q_UT)
+        p_S = mudi_K(mc_max_S, m*N_ratio, q0, q_S)
         ll  = sum(mc_counts_UT .* log.(p_UT)) + sum(mc_counts_S .* log.(p_S))
         if !isnan(ll) && ll < 0.
             return ll
@@ -178,8 +178,8 @@ function log_likelihood_joint_m_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_ma
         q0_S = q0_coeff(inv_fit_m_S, eff[1])
         q_UT = q_coeffs(mc_max_UT, inv_fit_m_UT, eff)
         q_S = q_coeffs(mc_max_S, inv_fit_m_S, eff)
-        p_UT = mudi(mc_max_UT, m, q0_UT, q_UT)
-        p_S = mudi(mc_max_S, m*N_ratio, q0_S, q_S)
+        p_UT = mudi_K(mc_max_UT, m, q0_UT, q_UT)
+        p_S = mudi_K(mc_max_S, m*N_ratio, q0_S, q_S)
         ll  = sum(mc_counts_UT .* log.(p_UT)) + sum(mc_counts_S .* log.(p_S))
         if !isnan(ll) && ll < 0.
             return ll
@@ -197,8 +197,8 @@ function log_likelihood_joint_m_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_ma
         q0_S = q0_coeff(inv_fit_m_S, eff[2][1])
         q_UT = q_coeffs(mc_max_UT, inv_fit_m_UT, eff[1])
         q_S = q_coeffs(mc_max_S, inv_fit_m_S, eff[2])
-        p_UT = mudi(mc_max_UT, m, q0_UT, q_UT)
-        p_S = mudi(mc_max_S, m*N_ratio, q0_S, q_S)
+        p_UT = mudi_K(mc_max_UT, m, q0_UT, q_UT)
+        p_S = mudi_K(mc_max_S, m*N_ratio, q0_S, q_S)
         ll  = sum(mc_counts_UT .* log.(p_UT)) + sum(mc_counts_S .* log.(p_S))
         if !isnan(ll) && ll < 0.
             return ll
@@ -216,8 +216,8 @@ function log_likelihood_joint_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S,
         q0_S = q0_coeff(inv_fit_m, eff[2][1])
         q_UT = q_coeffs(mc_max_UT, inv_fit_m, eff[1])
         q_S = q_coeffs(mc_max_S, inv_fit_m, eff[2])
-        p_UT = mudi(mc_max_UT, m, q0_UT, q_UT)
-        p_S = mudi(mc_max_S, m*N_ratio, q0_S, q_S)
+        p_UT = mudi_K(mc_max_UT, m, q0_UT, q_UT)
+        p_S = mudi_K(mc_max_S, m*N_ratio, q0_S, q_S)
         ll  = sum(mc_counts_UT .* log.(p_UT)) + sum(mc_counts_S .* log.(p_S))
         if !isnan(ll) && ll < 0.
             return ll
@@ -234,8 +234,8 @@ function log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_ma
         q0_S = q0_coeff(inv_fit_m, eff[2][1])
         q_UT = q_coeffs(mc_max_UT, inv_fit_m, eff[1])
         q_S = q_coeffs(mc_max_S, inv_fit_m, eff[2])
-        p_UT = mudi(mc_max_UT, m_UT, q0_UT, q_UT)
-        p_S = mudi(mc_max_S, m_S, q0_S, q_S)
+        p_UT = mudi_K(mc_max_UT, m_UT, q0_UT, q_UT)
+        p_S = mudi_K(mc_max_S, m_S, q0_S, q_S)
         ll  = sum(mc_counts_UT .* log.(p_UT)) + sum(mc_counts_S .* log.(p_S))
         if !isnan(ll) && ll < 0.
             return ll
@@ -249,8 +249,8 @@ function log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_ma
     if m_eff_UT <= 0. || m_eff_S <= 0.
         return -Inf
     else
-        p_UT = mudi(mc_max_UT, m_eff_UT)
-        p_S = mudi(mc_max_S, m_eff_S)
+        p_UT = mudi_K(mc_max_UT, m_eff_UT)
+        p_S = mudi_K(mc_max_S, m_eff_S)
         ll  = sum(mc_counts_UT .* log.(p_UT)) + sum(mc_counts_S .* log.(p_S))
         if !isnan(ll) && ll < 0.
             return ll
@@ -265,8 +265,8 @@ function log_likelihood_joint_m_S(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S
     if m_off <= 0. || S < 0.
         return -Inf
     else
-        p_UT = mudi(mc_max_UT, m_off, q0_UT, q_UT)
-        p_S = mudi(mc_max_S, m_off*N_ratio, q0_S_off, q_S_off, S*m_off*N_ratio, q0_S_on, q_S_on)
+        p_UT = mudi_K(mc_max_UT, m_off, q0_UT, q_UT)
+        p_S = mudi_K(mc_max_S, m_off*N_ratio, q0_S_off, q_S_off, S*m_off*N_ratio, q0_S_on, q_S_on)
         ll  = sum(mc_counts_UT .* log.(p_UT)) + sum(mc_counts_S .* log.(p_S))
         if !isnan(ll) && ll < 0.
             return ll
@@ -280,13 +280,13 @@ function log_likelihood_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc
     if m_off <= 0. || S < 0. || rel_div_on <= 0. || f_on < 0. || f_on >= 1. 
         return -Inf
     else
-        p_UT = mudi(mc_max_UT, m_off, q0_UT, q_UT)
+        p_UT = mudi_K(mc_max_UT, m_off, q0_UT, q_UT)
         N_ratio *= scale_f(f_on, rel_div_on)
         ifit = inverse_fit_on(f_on, rel_div_on)*inv_fit_m
         # Plating efficiency = 1
         q0_S_on = -1
         q_S_on = q_coeffs(mc_max_S, ifit)
-        p_S = mudi(mc_max_S, m_off*N_ratio, q0_S_off, q_S_off, S*m_off*N_ratio, q0_S_on, q_S_on)
+        p_S = mudi_K(mc_max_S, m_off*N_ratio, q0_S_off, q_S_off, S*m_off*N_ratio, q0_S_on, q_S_on)
         ll  = sum(mc_counts_UT .* log.(p_UT)) + sum(mc_counts_S .* log.(p_S))
         if !isnan(ll) && ll < 0.
             return ll
@@ -299,13 +299,13 @@ function log_likelihood_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc
     if m_off <= 0. || S < 0. || rel_div_on <= 0. || f_on < 0. || f_on >= 1. 
         return -Inf
     else
-        p_UT = mudi(mc_max_UT, m_off, q0_UT, q_UT)
+        p_UT = mudi_K(mc_max_UT, m_off, q0_UT, q_UT)
         N_ratio *= scale_f(f_on, rel_div_on)
         ifit = inverse_fit_on(f_on, rel_div_on)*inv_fit_m
         # Plating efficiency < 1
         q0_S_on = q0_coeff(ifit, eff[1])
         q_S_on = q_coeffs(mc_max_S, ifit, eff)
-        p_S = mudi(mc_max_S, m_off*N_ratio, q0_S_off, q_S_off, S*m_off*N_ratio, q0_S_on, q_S_on)
+        p_S = mudi_K(mc_max_S, m_off*N_ratio, q0_S_off, q_S_off, S*m_off*N_ratio, q0_S_on, q_S_on)
         ll  = sum(mc_counts_UT .* log.(p_UT)) + sum(mc_counts_S .* log.(p_S))
         if !isnan(ll) && ll < 0.
             return ll

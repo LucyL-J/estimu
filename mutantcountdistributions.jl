@@ -1,12 +1,15 @@
 # Calculations of the mutant count distributions are based on 
 # Łazowski, K. (2023). Efficient, robust, and versatile fluctuation data analysis using MLE MUtation Rate calculator (mlemur). Mutation Research - Fundamental and Molecular Mechanisms of Mutagenesis, 826(April). https://doi.org/10.1016/j.mrfmmm.2023.111816
 
-using Distributions, HypergeometricFunctions
+using Distributions, HypergeometricFunctions, Random
 
 # Pre-calculations independent of the inference parameter m
 
 # Plating efficiency = 1 without differential mutant fitness (= 1)
 q_coeffs(K::Int) = 1 ./ [k*(k+1) for k in 1:K]
+function q_coeffs!(q, k)
+    push!(q, 1/(k*(k+1)))
+end
 # Plating efficiency = 1 with differential mutant fitness
 function q_coeffs(K::Int, inv_fit_m)
     q = zeros(Float64, K)
@@ -16,6 +19,9 @@ function q_coeffs(K::Int, inv_fit_m)
     end
     return q
 end   
+function q_coeffs!(q, k, inv_fit_m)
+    push!(q, (k-1)/(k+inv_fit_m) * q[k-1])
+end
 # Partial plating with efficiency < 1
 q0_coeff(inv_fit_m, eff) = -1 + inv_fit_m*(1-eff)/(inv_fit_m+1) * pFq((1,1), (inv_fit_m+2,), 1-eff)
 function beta_f(K::Int, inv_fit_m)
@@ -37,6 +43,9 @@ function q_coeffs(K::Int, inv_fit_m, eff::Float64)
     end
     B = beta_f(K, inv_fit_m)
     return @. eff^inv_fit_m * B * F
+end
+function q_coeffs!(q, k, b, inv_fit_m, eff)
+    push!(q, eff^inv_fit_m * b * pFq((inv_fit_m, inv_fit_m+1), (inv_fit_m+1+k, ), 1 - eff))
 end
 # For efficiency < 0.5, calculate hypergeometric functions from 1:K
 function q_coeffs(K::Int, inv_fit_m, eff::Tuple{Float64,Bool})
@@ -77,7 +86,7 @@ scale_f(f_on, rel_div_on) = (1-f_on)/(1-f_on*(1-rel_div_on))
 inverse_fit_on(f_on, rel_div_on) = (1-f_on*(1-rel_div_on))/rel_div_on
 
 # Mutant count distributions (probabilities to obverse 0:K mutant colonies)
-function mudi(K::Int, m, q0, q)
+function mudi_K(K::Int, m, q0, q)
     p = zeros(Float64, K+1)
     p[1] = exp(m*q0)
     # Recursive calculation of probabilities
@@ -88,10 +97,10 @@ function mudi(K::Int, m, q0, q)
     return max.(p, 0.)
 end
 # Zero differential mutant fitness
-mudi(K::Int, m) = pdf(Poisson(m), 0:K)
-mudi(K::Int, m, eff) = pdf(Poisson(m*eff), 0:K)
+mudi_K(K::Int, m) = pdf(Poisson(m), 0:K)
+mudi_K(K::Int, m, eff) = pdf(Poisson(m*eff), 0:K)
 # With subpopulation of on-cells
-function mudi(K::Int, m_off, q0_off, q_off, m_on, q0_on, q_on)
+function mudi_K(K::Int, m_off, q0_off, q_off, m_on, q0_on, q_on)
     p = zeros(Float64, K+1)
     p[1] = exp(m_off*q0_off + m_on*q0_on)
     for k = 1:K
@@ -105,7 +114,7 @@ end
 # Poisson (fit_m=0), Luria-Dellbrueck (fit_m=1) or Mandelbrot-Koch else
 function p_mudi(K::Int, N, mu, fit_m, eff=1.)
     if fit_m == 0.
-        p = mudi(K, mu*N, eff)
+        p = mudi_K(K, mu*N, eff)
     else
         if eff == 1.
             q0 = -1
@@ -118,7 +127,7 @@ function p_mudi(K::Int, N, mu, fit_m, eff=1.)
                 q = q_coeffs(K, 1/fit_m, eff)
             end
         end
-        p = mudi(K, mu*N, q0, q)
+        p = mudi_K(K, mu*N, q0, q)
     end
     return p
 end
@@ -160,7 +169,182 @@ function p_mudi(K::Int, N, mu_off, S, f_on, rel_div_on, fit_m, eff=1.)
             end
         end
     end
-    return mudi(K, N*mu_off, q0_off, q_off, N*mu_off*S, q0_on, q_on)
+    return mudi_K(K, N*mu_off, q0_off, q_off, N*mu_off*S, q0_on, q_on)
 end
 pmf_mudi(k::Int, N, mu_off, S, f_on, rel_div_on, fit_m, eff=1.) = p_mudi(max(2,k), N, mu_off, S, f_on, rel_div_on, fit_m, eff)[k+1]
 cdf_mudi(k::Int, N, mu_off, S, f_on, rel_div_on, fit_m, eff=1.) = sum(p_mudi(max(2,k), N, mu_off, S, f_on, rel_div_on, fit_m, eff)[1:k+1])
+
+# Mutant count distributions until given threshold of the cdf
+
+# Adding the probability of observing k mutants to the vector of probabilities 0:k-1
+# For a homogeneous population
+function add_p!(p, q, m, k)
+    @views S = sum((1:k) .* q[1:k] .* reverse(p[1:k]))
+    push!(p, max(m*S/k, 0.))
+end
+# For a heterogeneous population
+function add_p!(p, q_off, q_on, m_off, m_on, k)
+    @views S = sum((1:k) .* (m_off.*q_off[1:k] .+ m_on.*q_on[1:k]) .* reverse(p[1:k]))
+    push!(p, max(S/k, 0.))
+end
+
+function mudi_threshold(p_threshold, m) # Homogeneous population
+    p_cumulative = exp(-m)
+    q = Vector{Float64}(undef, 0)
+    p = [p_cumulative]
+    k = 1
+    while p_threshold > p_cumulative
+        q_coeffs!(q, k)
+        add_p!(p, q, m, k)
+        k += 1
+        p_cumulative += p[k]
+    end
+    return p
+end
+function mudi_threshold(p_threshold, m, inv_fit_m) # With diff. mutant fitness
+    p_cumulative = exp(-m)
+    q = [inv_fit_m/(inv_fit_m+1)]
+    p = [p_cumulative]
+    k = 1
+    while p_threshold > p_cumulative
+        add_p!(p, q, m, k)
+        k += 1
+        p_cumulative += p[k]
+        q_coeffs!(q, k, inv_fit_m)
+    end
+    return p
+end
+function mudi_threshold(p_threshold, m, inv_fit_m, eff) # Plating efficiency < 1
+    p_cumulative = exp(m*(-1 + inv_fit_m*(1-eff)/(inv_fit_m+1) * pFq((1,1), (inv_fit_m+2,), 1-eff)))
+    b = inv_fit_m/(inv_fit_m+1)
+    q = Vector{Float64}(undef, 0)
+    p = [p_cumulative]
+    k = 1
+    while p_threshold > p_cumulative
+        q_coeffs!(q, k, b, inv_fit_m, eff)
+        add_p!(p, q, m, k)
+        k += 1
+        b *= (k-1)/(k+inv_fit_m)
+        p_cumulative += p[k]
+    end
+    return p
+end
+
+function mudi_threshold_het_0(p_threshold, m_off, m_on) # Heterogeneous population, zero division rate of response-on subpopulation
+    p_cumulative = exp(-(m_off + m_on))
+    q_off = Vector{Float64}(undef, 0)
+    q_on = [1.]
+    p = [p_cumulative]
+    k = 1
+    while p_threshold > p_cumulative
+        q_coeffs!(q_off, k)
+        add_p!(p, q_off, q_on, m_off, m_on, k)
+        k += 1
+        p_cumulative += p[k]
+        push!(q_on, 0.)
+    end
+    return p
+end
+function mudi_threshold_het_0(p_threshold, m_off, m_on, inv_fit_m) # With diff. mutant fitness in response-off subpopulation
+    p_cumulative = exp(-(m_off + m_on))
+    q_off = [inv_fit_m/(inv_fit_m+1)]
+    q_on = [1.]
+    p = [p_cumulative]
+    k = 1
+    while p_threshold > p_cumulative
+        add_p!(p, q_off, q_on, m_off, m_on, k)
+        k += 1
+        p_cumulative += p[k]
+        push!(q_on, 0.)
+        q_coeffs!(q_off, k, inv_fit_m)
+    end
+    return p
+end
+function mudi_threshold_het_0(p_threshold, m_off, m_on, inv_fit_m, eff) # Plating efficiency < 1
+    p_cumulative = exp(m_off*(-1 + inv_fit_m*(1-eff)/(inv_fit_m+1) * pFq((1,1), (inv_fit_m+2,), 1-eff)) - eff)
+    b = inv_fit_m/(inv_fit_m+1)
+    q_off = Vector{Float64}(undef, 0)
+    q_on = [eff]
+    p = [p_cumulative]
+    k = 1
+    while p_threshold > p_cumulative
+        q_coeffs!(q_off, k, b, inv_fit_m, eff)
+        add_p!(p, q_off, q_on, m_off, m_on, k)
+        k += 1
+        b *= (k-1)/(k+inv_fit_m)
+        p_cumulative += p[k]
+        push!(q_on, 0.)
+    end
+    return p
+end
+function mudi_threshold_het(p_threshold, m_off, m_on, ifit) # None-zero relative division rate of response-on subpopulation
+    p_cumulative = exp(-(m_off + m_on))
+    q_off = Vector{Float64}(undef, 0)
+    q_on = [ifit/(ifit+1)]
+    p = [p_cumulative]
+    k = 1
+    while p_threshold > p_cumulative
+        q_coeffs!(q_off, k)
+        add_p!(p, q_off, q_on, m_off, m_on, k)
+        k += 1
+        p_cumulative += p[k]
+        q_coeffs!(q_on, k, ifit)
+    end
+    return p
+end
+function mudi_threshold_het(p_threshold, m_off, m_on, inv_fit_m, ifit) # Diff. mutant fitness in response-off subpopulation
+    p_cumulative = exp(-(m_off + m_on))
+    q_off = [inv_fit_m/(inv_fit_m+1)]
+    q_on = [ifit/(ifit+1)]
+    p = [p_cumulative]
+    k = 1
+    while p_threshold > p_cumulative
+        add_p!(p, q_off, q_on, m_off, m_on, k)
+        k += 1
+        p_cumulative += p[k]
+        q_coeffs!(q_off, k, inv_fit_m)
+        q_coeffs!(q_on, k, ifit)
+    end
+    return p
+end
+function mudi_threshold_het(p_threshold, m_off, m_on, inv_fit_m, ifit, eff) # Plating efficiency < 1
+    p_cumulative = exp(m_off*(-1 + inv_fit_m*(1-eff)/(inv_fit_m+1) * pFq((1,1), (inv_fit_m+2,), 1-eff)) + m_on*(-1 + ifit*(1-eff)/(ifit+1) * pFq((1,1), (ifit+2,), 1-eff)))
+    b_off = inv_fit_m/(inv_fit_m+1)
+    b_on = ifit/(ifit+1)
+    q_off = Vector{Float64}(undef, 0)
+    q_on = Vector{Float64}(undef, 0)
+    p = [p_cumulative]
+    k = 1
+    while p_threshold > p_cumulative
+        q_coeffs!(q_off, k, b_off, inv_fit_m, eff)
+        q_coeffs!(q_on, k, b_on, ifit, eff)
+        add_p!(p, q_off, q_on, m_off, m_on, k)
+        k += 1
+        b_off *= (k-1)/(k+inv_fit_m)
+        b_on *= (k-1)/(k+ifit)
+        p_cumulative += p[k]
+    end
+    return p
+end
+
+function r_mudi(K::Int, N, mu, fit_m, eff)
+    random_draws = Vector{Int}(undef, K)
+    k = 1
+    cumulative_p = 0.
+    uni_draws = sort(rand(K))
+    p_threshold = uni_draws[K]
+    
+    for j in eachindex(uni_draws)
+        r = uni_draws[j]
+        while r > cumulative_p
+            k += 1
+            if k > mc_max_guess
+                mc_max_guess *= 10
+                p_draws = p_mudi(mc_max_guess, N, mu, fit_m, eff)
+            end
+            cumulative_p += p_draws[k]
+        end
+        random_draws[j] = k-1
+    end
+    return random_draws, p_draws[1:k]
+end
