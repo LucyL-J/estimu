@@ -54,9 +54,9 @@ function estimu(mc::Vector{Int}, Nf, eff, fit_m::Float64=1.; cond="UT")
         msel_res.LL = [-MLL]
         msel_res.AIC = [2 + 2*MLL]
         msel_res.BIC = [log(length(mc)) + 2*MLL]    
-        mc_draws, probs = r_mudi(100*num_c, Nf, m/Nf, fit_m, eff)
+        mc_draws, probs = r_mudi(1000*num_c, Nf, m/Nf, fit_m, eff)
         p_counts = p_mudi(mc_max, Nf, m/Nf, fit_m, eff)
-        H, H_quant = gof(mc_counts, p_counts, 100, num_c, mc_draws, probs)
+        H, H_quant = gof(mc_counts, p_counts, 1000, num_c, mc_draws, probs)
         msel_res.H = [H]
         msel_res.H_quant = [H_quant]
     else
@@ -100,9 +100,9 @@ function estimu(mc::Vector{Int}, Nf, eff, fit_m::Bool; cond="UT")
         msel_res.LL = [-MLL]
         msel_res.AIC = [4 + 2*MLL]         
         msel_res.BIC = [2*log(length(mc)) + 2*MLL]    
-        mc_draws, probs = r_mudi(100*num_c, Nf, m/Nf, fit_m, eff)
+        mc_draws, probs = r_mudi(1000*num_c, Nf, m/Nf, fit_m, eff)
         p = p_mudi(mc_max, Nf, m/Nf, fit_m, eff)
-        H, H_quant = gof(mc_counts, p, 100, num_c, mc_draws, probs)
+        H, H_quant = gof(mc_counts, p, 1000, num_c, mc_draws, probs)
         msel_res.H = [H]
         msel_res.H_quant = [H_quant]                   
 	else
