@@ -330,18 +330,62 @@ end
 function r_mudi(K::Int, N, mu, fit_m, eff)
     random_draws = Vector{Int}(undef, K)
     k = 1
-    cumulative_p = 0.
     uni_draws = sort(rand(K))
-    p_threshold = uni_draws[K]
-    
+    p_threshold = uni_draws[end]
+    if eff == 1.
+        if fit_m == 1.
+            p_draws = mudi_threshold(p_threshold, N*mu)
+        else
+            p_draws = mudi_threshold(p_threshold, N*mu, 1/fit_m)
+        end
+    else
+        p_draws = mudi_threshold(p_threshold, N*mu, 1/fit_m, eff)
+    end
+    cumulative_p = p_draws[1]
     for j in eachindex(uni_draws)
         r = uni_draws[j]
         while r > cumulative_p
             k += 1
-            if k > mc_max_guess
-                mc_max_guess *= 10
-                p_draws = p_mudi(mc_max_guess, N, mu, fit_m, eff)
+            cumulative_p += p_draws[k]
+        end
+        random_draws[j] = k-1
+    end
+    return random_draws, p_draws
+end
+
+function r_mudi(K::Int, N, mu_off, S, f_on, rel_div_on, fit_m, eff)
+    random_draws = Vector{Int}(undef, K)
+    k = 1
+    uni_draws = sort(rand(K))
+    p_threshold = uni_draws[K]
+    if rel_div_on == 0.
+        if eff == 1.
+            if fit_m == 1.
+                p_draws = mudi_threshold_het_0(p_threshold, N*mu_off, N*mu_off*S)
+            else
+                p_draws = mudi_threshold_het_0(p_threshold, N*mu_off, N*mu_off*S, 1/fit_m)
             end
+        else
+            p_draws = mudi_threshold_het_0(p_threshold, N*mu_off, N*mu_off*S, 1/fit_m, eff)
+        end
+    else
+        N *= scale_f(f_on, rel_div_on)
+        ifit = inverse_fit_on(f_on, rel_div_on)/fit_m
+        if eff == 1.
+            if fit_m == 1.
+                p_draws = mudi_threshold_het(p_threshold, N*mu_off, N*mu_off*S, ifit)
+            else
+                p_draws = mudi_threshold_het(p_threshold, N*mu_off, N*mu_off*S, 1/fit_m, ifit)
+            end
+        else
+            p_draws = mudi_threshold_het(p_threshold, N*mu_off, N*mu_off*S, 1/fit_m, ifit, eff)
+        end
+    end
+    cumulative_p = p_draws[1]
+    for j in eachindex(uni_draws)
+        r = uni_draws[j]
+        while r > cumulative_p
+            k += 1
             cumulative_p += p_draws[k]
         end
         random_draws[j] = k-1
