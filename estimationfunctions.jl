@@ -74,6 +74,7 @@ function estimu(mc::Vector{Int}, Nf, eff, fit_m::Bool; cond="UT")
     est_res = DataFrame(parameter=["Mutation rate", "Mutant fitness"], condition=[cond, cond])
     msel_res = DataFrame(model=["Standard (diff. mutant fitness)"], selection_result=["-"])                                                        
 	mc_max = maximum(mc)
+    num_c = length(mc)
     mc_counts = counts(mc, 0:mc_max)
     # Different cases regarding partial plating
     if eff == 1
@@ -100,8 +101,8 @@ function estimu(mc::Vector{Int}, Nf, eff, fit_m::Bool; cond="UT")
         msel_res.LL = [-MLL]
         msel_res.AIC = [4 + 2*MLL]         
         msel_res.BIC = [2*log(length(mc)) + 2*MLL]    
-        mc_draws, probs = r_mudi(1000*num_c, Nf, m/Nf, fit_m, eff)
-        p = p_mudi(mc_max, Nf, m/Nf, fit_m, eff)
+        mc_draws, probs = r_mudi(1000*num_c, Nf, p[1]/Nf, 1/p[2], eff)
+        p = p_mudi(mc_max, Nf, p[1]/Nf, 1/p[2], eff)
         H, H_quant = gof(mc_counts, p, 1000, num_c, mc_draws, probs)
         msel_res.H = [H]
         msel_res.H_quant = [H_quant]                   
