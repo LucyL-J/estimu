@@ -35,7 +35,7 @@ p_antibiotic <- ggplot(data = antibiotic_classes, aes(x=target_group, y=prevalen
 p_antibiotic
 
 # Sort by bacterial species
-df <- arrange(df, species)
+df <- arrange(df, species, target)
 df$ID <- factor(df$ID, levels = unique(df$ID), ordered = TRUE)
 
 # Estimated increase in population-wide mutation rate by antibiotic
@@ -92,8 +92,10 @@ p_CI_corr_n <- ggplot(data = df, aes(x=n_cultures_tot, y=width_CI)) +
   labs(x="Total number of parallel cultures", y="Normalised width of 95% CI around MLE estimate", color="log(E)")
 p_CI_corr_n
 
-gmlm <- glmer(SIM ~ of_MIC + plated_fraction + n_cultures_tot + (1|target) + (1|strain), data = df, family=binomial)
-summary(gmlm)
+df_MIC <- subset(df, !is.na(of_MIC))
+#df_MIC <- subset(df_MIC, !is.element(strain, c("MG1655_DeltaSulA", "PA01_LexAd")))
+glmm <- glmer(SIM ~ of_MIC + plated_fraction + n_cultures_tot + (1|baseline_ID), data = df_MIC, family=binomial)
+summary(glmm)
 
 print(subset(df, SIM == TRUE)$ID)
 print(c(length(subset(df, SIM == TRUE)$ID), print(length(subset(df, M_wo_fitm.1 > 1)$ID))))
@@ -119,7 +121,7 @@ kruskal.test(df_KW$M_wo_fitm.1, df_KW$group)
 wilcox.test(M_wo_fitm.1 ~ group, data = df_KW)
 median(subset(df_KW, group == "DNA/DNA gyrase")$M_wo_fitm.1)
 median(subset(df_KW, group == "Ribosome")$M_wo_fitm.1)
-p_M_DNA <- ggplot(data = df_KW, aes(x=group, y=M_wo_fitm.1)) + geom_boxplot(aes(fill=group), show.legend = FALSE) + 
+p_M_DNA <- ggplot(data = df_KW, aes(x=group, y=M_wo_fitm.1)) + geom_boxplot(aes(fill=group), show.legend = FALSE, outlier.shape = NA) + 
   geom_jitter(aes(color = SIM), width = 0.25, alpha = 0.8) + scale_color_manual(values = c("TRUE" = "red", "FALSE" = "darkgrey")) +
   coord_trans(y = "log10", ylim = c(5*10^-2,5*10^2)) + scale_y_continuous(breaks = c(0.1,1,10,100), labels = c(0.1,1,10,100)) +
   scale_fill_manual(values = c("DNA/DNA gyrase" = "#4E6ADB", "Ribosome" = "#FE9B2D")) + 
