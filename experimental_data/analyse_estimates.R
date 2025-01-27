@@ -36,7 +36,7 @@ p_antibiotic <- ggplot(data = antibiotic_classes, aes(x=target_group, y=prevalen
 p_antibiotic
 
 # Sort by bacterial species
-df <- arrange(df, species)
+df <- arrange(df, species, target)
 df$ID <- factor(df$ID, levels = unique(df$ID), ordered = TRUE)
 
 # Estimated increase in population-wide mutation rate by antibiotic
@@ -101,15 +101,11 @@ p_CI_M <- ggplot(data = df, aes(x=M_wo_fitm.1, y=width_CI)) +
 p_CI_M
 
 df_glmm <- subset(df, !is.na(of_MIC))
-glmm <- glmer(SIM ~ of_MIC + plated_fraction + n_cultures_tot + target + (1|author), data = df, family=binomial)
+glmm <- glmer(SIM ~ of_MIC + plated_fraction + n_cultures_tot + (1|baseline_ID), data = df_glmm, family=binomial)
 check_singularity(glmm, tolerance=10^-7)
 summary(glmm)
 check_model(glmm)
 model_performance(glmm)
-
-my_glm <- glm(SIM ~ of_MIC + plated_fraction + n_cultures_tot + target, data = df, family=binomial)
-summary(my_glm)
-check_model(my_glm)
 
 print(subset(df, SIM == TRUE)$ID)
 print(c(length(subset(df, SIM == TRUE)$ID), print(length(subset(df, M_wo_fitm.1 > 1)$ID))))
