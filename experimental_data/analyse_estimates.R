@@ -105,7 +105,6 @@ glmm <- glmer(SIM ~ of_MIC + plated_fraction + n_cultures_tot + (1|baseline_ID),
 check_singularity(glmm, tolerance=10^-7)
 summary(glmm)
 check_model(glmm)
-model_performance(glmm)
 
 print(subset(df, SIM == TRUE)$ID)
 print(c(length(subset(df, SIM == TRUE)$ID), print(length(subset(df, M_wo_fitm.1 > 1)$ID))))
@@ -168,7 +167,7 @@ print(c(length(subset(df_SIM, is.element(target, c("DNA", "Gyrase")))$ID),length
 selected_models <- data.frame(antibiotic=rep(unique(df_SIM$antibiotic), each=3))
 selected_models$target <- mapvalues(selected_models$antibiotic, from = antibiotic_classes$antibiotic_abbr, to = as.character(antibiotic_classes$target_group))
 selected_models$m <- rep(c("hom","none","het"), length(unique(df_SIM$antibiotic)))
-criterion <- "by_BIC"
+criterion <- "by_AIC"
 n <- match(criterion, names(df_SIM))
 v <- numeric(length(selected_models$antibiotic))
 for (i in 1:length(unique(df_SIM$antibiotic))) {
