@@ -1,6 +1,7 @@
 library(JuliaCall)
 julia_setup()
-#julia_setup(JULIA_HOME = "/Applications/Julia-1.10.app/Contents/Resources/julia/bin/")
+# Run Sys.BINDIR in julia to get the full path to the directory containing the julia binary
+#julia_setup(JULIA_HOME = "/Users/lucylansch-justen/.julia/juliaup/julia-1.11.3+0.aarch64.apple.darwin14/bin")
 
 for (p in c("StatsBase", "Optim", "DataFrames", "Distributions", "HypergeometricFunctions", "Roots")) {
   julia_install_package_if_needed(p)
