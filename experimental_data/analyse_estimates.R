@@ -3,7 +3,6 @@ library("ggplot2")
 library("viridisLite")
 library("ggpubr")
 library("lme4")
-library("performance")
 
 # Read data frames
 antibiotic_classes <- read.csv("experimental_data/antibiotic_classes.csv")[,-1]
@@ -69,42 +68,21 @@ p_M_antibiotic
 
 length(subset(df, plated_fraction < 1)$ID)
 df$width_CI <- (df$M_wo_fitm.3-df$M_wo_fitm.2)/df$M_wo_fitm.1
-reg <- lm(formula = log10(width_CI) ~ log10(plated_fraction*n_cultures_tot), data = df)
-summary(reg)
-mlm <- lmer(log10(width_CI) ~ log10(plated_fraction) + log10(n_cultures_tot) + (1|author) + (1|strain), data = df)
-summary(mlm)
-check_model(mlm)
-p_CI <- ggplot(data = df, aes(x=log10(plated_fraction*n_cultures_tot), y=log10(width_CI))) + 
-  geom_point() + geom_smooth(method = lm)
+lm <- lm(log10(width_CI) ~ log10(plated_fraction) + log10(n_cultures), data = df)
+summary(lm)
+p_CI <- ggplot(data = df, aes(x=log10(plated_fraction*n_cultures), y=log10(width_CI))) + 
+  geom_point() + geom_smooth(method = "lm")
 p_CI
 
-cor(df[, c("width_CI", "plated_fraction", "n_cultures_tot")], method = "kendall")
-cor.test(df$width_CI, df$plated_fraction, method = "kendall")
-cor.test(df$width_CI, df$n_cultures_tot, method = "kendall")
-cor.test(df$plated_fraction, df$n_cultures_tot, method = "kendall")
-p_CI_corr_p <- ggplot(data = df, aes(x=plated_fraction, y=width_CI)) + 
-  geom_point(aes(color=log10(n_cultures_tot))) + scale_x_continuous(trans = "log10") +
-  scale_y_continuous(trans="log10") + stat_cor(label.y.npc = "bottom", method = "kendall") +
-  labs(x="Plated fraction", y="Normalised width of 95% CI around MLE estimate", color="log(c)")
-p_CI_corr_p
-
-p_CI_corr_n <- ggplot(data = df, aes(x=n_cultures_tot, y=width_CI)) + 
-  geom_point(aes(color=log10(plated_fraction))) + 
-  scale_y_continuous(trans="log10") + scale_x_continuous(trans = "log10") + stat_cor(label.y.npc = "top", label.x.npc = "centre", method = "kendall") +
-  labs(x="Total number of parallel cultures", y="Normalised width of 95% CI around MLE estimate", color="log(E)")
-p_CI_corr_n
-
-p_CI_M <- ggplot(data = df, aes(x=M_wo_fitm.1, y=width_CI)) + 
-  geom_point(aes(color=log10(plated_fraction*n_cultures_tot))) + 
-  scale_y_continuous(trans="log10") + scale_x_continuous(trans = "log10") +
-  labs(x="Fold-change population-wide mutation rate", y="Normalised width of 95% CI around MLE estimate", color="log(E*c)")
-p_CI_M
+cor.test(df$plated_fraction, df$n_cultures, method = "kendall")
 
 df_glmm <- subset(df, !is.na(of_MIC))
-glmm <- glmer(SIM ~ of_MIC + plated_fraction + n_cultures_tot + (1|baseline_ID), data = df_glmm, family=binomial)
-check_singularity(glmm, tolerance=10^-7)
+df_glmm$group <- character(length(df_glmm$target))
+df_glmm$group[is.element(df_glmm$target, c("DNA", "DNA gyrase"))] <- "DNA/DNA gyrase"
+df_glmm$group[df_glmm$target == "Ribosome"] <- "Ribosome"
+df_glmm$group[!is.element(df_glmm$target, c("DNA", "DNA gyrase", "Ribosome"))] <- "Other"
+glmm <- glmer(SIM ~ of_MIC + log10(plated_fraction) + log10(n_cultures_tot) + group + (1|antibiotic) + (1|baseline_ID), data = df_glmm, family=binomial)
 summary(glmm)
-check_model(glmm)
 
 print(subset(df, SIM == TRUE)$ID)
 print(c(length(subset(df, SIM == TRUE)$ID), print(length(subset(df, M_wo_fitm.1 > 1)$ID))))
