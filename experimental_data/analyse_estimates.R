@@ -3,6 +3,7 @@ library("ggplot2")
 library("viridisLite")
 library("ggpubr")
 library("lme4")
+library("latex2exp")
 
 # Read data frames
 antibiotic_classes <- read.csv("experimental_data/antibiotic_classes.csv")[,-1]
@@ -70,8 +71,10 @@ length(subset(df, plated_fraction < 1)$ID)
 df$width_CI <- (df$M_wo_fitm.3-df$M_wo_fitm.2)/df$M_wo_fitm.1
 lm <- lm(log10(width_CI) ~ log10(plated_fraction) + log10(n_cultures), data = df)
 summary(lm)
-p_CI <- ggplot(data = df, aes(x=log10(plated_fraction*n_cultures), y=log10(width_CI))) + 
-  geom_point() + geom_smooth(method = "lm")
+p_CI <- ggplot(data = df, aes(x=(plated_fraction), y=(width_CI))) + #+log10(n_cultures)
+  geom_point(aes(color=log10(n_cultures))) + geom_smooth(method = "lm") + 
+  scale_x_continuous(trans = "log10") + scale_y_continuous(trans="log10") +
+  labs(x="Plated fraction", y="Normalised width of 95% CI around MLE estimate", color=TeX("$log_{10}(c_s)$"))
 p_CI
 
 cor.test(df$plated_fraction, df$n_cultures, method = "kendall")
@@ -81,7 +84,7 @@ df_glmm$group <- character(length(df_glmm$target))
 df_glmm$group[is.element(df_glmm$target, c("DNA", "DNA gyrase"))] <- "DNA/DNA gyrase"
 df_glmm$group[df_glmm$target == "Ribosome"] <- "Ribosome"
 df_glmm$group[!is.element(df_glmm$target, c("DNA", "DNA gyrase", "Ribosome"))] <- "Other"
-glmm <- glmer(SIM ~ of_MIC + log10(plated_fraction) + log10(n_cultures_tot) + group + (1|antibiotic) + (1|baseline_ID), data = df_glmm, family=binomial)
+glmm <- glmer(SIM ~ of_MIC + group + log10(plated_fraction) + log10(n_cultures) + (1|baseline_ID) + (1|antibiotic), data = df_glmm, family=binomial)
 summary(glmm)
 
 print(subset(df, SIM == TRUE)$ID)
