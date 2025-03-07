@@ -189,32 +189,32 @@ mc_data <- read.table(paste0("experimental_data/raw_counts/Frenoy_LB.txt"), head
 mc_UT <- read_counts(mc_data[2,])
 Nf_UT <- mean(read_counts(mc_data[3,]))
 eff_UT <- as.numeric(mc_data[4,1])
-p_mc_hom_UT <- pMudi(max(mc_UT), Nf_UT, df_Nor$mu_UT_MLE[5], plateff=eff_UT, fit_m=df_Nor$fitm_UT_MLE[5]) * length(mc_UT)
-p_mc_hom_constr_UT <- pMudi(max(mc_UT), Nf_UT, df_Nor$mu_UT_MLE[3], plateff=eff_UT) * length(mc_UT)
-p_mc_het_UT <- pMudi(max(mc_UT), Nf_UT, df_Nor$mu_off_MLE[7], plateff=eff_UT) * length(mc_UT)
-print(c(df_Nor$mu_UT_MLE[5], df_Nor$fitm_UT_MLE[5], df_Nor$mu_UT_MLE[3]))
-print(df_Nor$mu_off_MLE[7])
-p_mc_UT <- ggplot() + geom_histogram(aes(mc_UT, y=..density.. * length(mc_UT)), fill="#1C458A", bins = 50) + 
+p_mc_hom_UT <- pMudi(max(mc_UT), Nf_UT, df_Nor$mu_UT_MLE[6], plateff=eff_UT, fit_m=df_Nor$fitm_UT_MLE[6]) * length(mc_UT)
+p_mc_hom_constr_UT <- pMudi(max(mc_UT), Nf_UT, df_Nor$mu_UT_MLE[4], plateff=eff_UT) * length(mc_UT)
+p_mc_het_UT <- pMudi(max(mc_UT), Nf_UT, df_Nor$mu_off_MLE[8], plateff=eff_UT) * length(mc_UT)
+print(c(df_Nor$mu_UT_MLE[6], df_Nor$fitm_UT_MLE[6], df_Nor$mu_UT_MLE[4]))
+print(df_Nor$mu_off_MLE[8])
+p_mc_UT <- ggplot() + geom_histogram(aes(mc_UT, y=after_stat(density) * length(mc_UT)), fill="#1C458A", bins = 50) + 
   geom_line(aes(x=0:max(mc_UT), y=p_mc_hom_UT), color="#8F3F8C", linewidth = 1.) + 
   geom_line(aes(x=0:max(mc_UT), y=p_mc_hom_constr_UT), color="#E0B0FF", linewidth = 1.) + 
   geom_line(aes(x=0:max(mc_UT), y=p_mc_het_UT), color="#FFD300", linewidth = 1., linetype = "dashed") + 
-  ggtitle("Untreated experiments") + xlab("Number of colonies") + ylab("Number of plates")
+  ggtitle("Untreated experiments") + xlab("Number of colonies") + ylab("Number of plates") + ylim(-0.1, 7.1)
 p_mc_UT
 # Stressful condition: 0.05 mug/mL Norfloxacin
 mc_data <- read.table(paste0("experimental_data/raw_counts/Frenoy_Nor.txt"), header = FALSE, sep = ",", fill = TRUE)
 mc_S <- read_counts(mc_data[2,])
 Nf_S <- mean(read_counts(mc_data[3,]))
 eff_S <- as.numeric(mc_data[4,1])
-p_mc_hom_S <- pMudi(max(mc_S), Nf_S, df_Nor$mu_S_MLE[5], plateff=eff_S, fit_m=df_Nor$fitm_S_MLE[5]) * length(mc_S)
-p_mc_hom_constr_S <- pMudi(max(mc_S), Nf_S, df_Nor$mu_S_MLE[3], plateff=eff_S) * length(mc_S)
-p_mc_het_S <- pMudi(max(mc_S), Nf_S, df_Nor$mu_off_MLE[7], plateff=eff_S, S=df_Nor$S_MLE[7], f_on=df_Nor$f_on_MLE[7], rel_div_on=df_Nor$rel_div_on_MLE[7]) * length(mc_S)
-print(c(df_Nor$mu_S_MLE[5], df_Nor$fitm_S_MLE[5], df_Nor$mu_S_MLE[3]))
-print(c(df_Nor$mu_off_MLE[7], df_Nor$S_MLE[7], df_Nor$f_on_MLE[7], df_Nor$rel_div_on_MLE[7]))
+p_mc_hom_S <- pMudi(max(mc_S), Nf_S, df_Nor$mu_S_MLE[6], plateff=eff_S, fit_m=df_Nor$fitm_S_MLE[6]) * length(mc_S)
+p_mc_hom_constr_S <- pMudi(max(mc_S), Nf_S, df_Nor$mu_S_MLE[4], plateff=eff_S) * length(mc_S)
+p_mc_het_S <- pMudi(max(mc_S), Nf_S, df_Nor$mu_off_MLE[8], plateff=eff_S, S=df_Nor$S_MLE[8], f_on=df_Nor$f_on_MLE[8], rel_div_on=df_Nor$rel_div_on_MLE[8]) * length(mc_S)
+print(c(df_Nor$mu_S_MLE[6], df_Nor$fitm_S_MLE[6], df_Nor$mu_S_MLE[4]))
+print(c(df_Nor$mu_off_MLE[8], df_Nor$S_MLE[8], df_Nor$f_on_MLE[8], df_Nor$rel_div_on_MLE[8]))
 p_mc_s <- ggplot() + geom_histogram(aes(mc_S, y=..density.. *length(mc_S)), fill="#8EC44F", bins = 20) + 
   geom_line(aes(x=0:max(mc_S), y=p_mc_hom_S), color="#8F3F8C", linewidth = 1.) + 
   geom_line(aes(x=0:max(mc_S), y=p_mc_hom_constr_S), color="#E0B0FF", linewidth = 1.) + 
   geom_line(aes(x=0:max(mc_S), y=p_mc_het_S), color="#FFD300", linewidth = 1., linetype = "dashed") +
-  xlab("Number of colonies") + ylab("Number of plates") + ggtitle("Experiments with norfloxacin")
+  xlab("Number of colonies") + ylab("Number of plates") + ggtitle("Experiments with norfloxacin") + ylim(-0.5,34)
 p_mc_s
 
 # Dose-dependence
