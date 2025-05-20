@@ -54,9 +54,9 @@ function estimu(mc::Vector{Int}, Nf, eff, fit_m::Float64=1.; cond="UT")
         msel_res.LL = [-MLL]
         msel_res.AIC = [2 + 2*MLL]
         msel_res.BIC = [log(length(mc)) + 2*MLL]    
-        mc_draws, probs = r_mudi(1000*num_c, Nf, m/Nf, fit_m, eff)
+        mc_rdraws, probs = r_mudi(1000*num_c, Nf, m/Nf, fit_m, eff)
         p_counts = p_mudi(mc_max, Nf, m/Nf, fit_m, eff)
-        H, H_quant = gof(mc_counts, p_counts, 1000, num_c, mc_draws, probs)
+        H, H_quant = gof(mc_counts, p_counts, 1000, num_c, mc_rdraws, probs)
         msel_res.H = [H]
         msel_res.H_quant = [H_quant]
     else
@@ -77,13 +77,14 @@ function estimu(mc::Vector{Int}, Nf, eff, fit_m::Bool; cond="UT")
     num_c = length(mc)
     mc_counts = counts(mc, 0:mc_max)
     # Different cases regarding partial plating
+    eff_conv = eff
     if eff == 1
-        eff_input = false
+        eff_conv = false
     elseif eff < 0.5
-        eff_input = (eff, true)
+        eff_conv = (eff, true)
     end
     # 2 inference parameters: Number of mutations, mutant fitness
-    LL(para) = -log_likelihood_m_fitm(mc_counts, mc_max, para[1], para[2], eff_input)
+    LL(para) = -log_likelihood_m_fitm(mc_counts, mc_max, para[1], para[2], eff_conv)
     res = Optim.optimize(LL, [max(1.,median(mc)), 1.], iterations=10^4) 
     if Optim.converged(res) == true
         p = Optim.minimizer(res)
@@ -91,7 +92,7 @@ function estimu(mc::Vector{Int}, Nf, eff, fit_m::Bool; cond="UT")
         est_res.status = ["inferred", "inferred"]
 		est_res.MLE = [p[1]/Nf, 1/p[2]]   
         try
-            b = CI_m_fitm(mc_counts, mc_max, p[1], p[2], eff_input, MLL)
+            b = CI_m_fitm(mc_counts, mc_max, p[1], p[2], eff_conv, MLL)
             est_res.lower_bound = [b[1,1]/Nf, 1/b[2,2]]
             est_res.upper_bound = [b[1,2]/Nf, 1/b[2,1]]
         catch
@@ -101,9 +102,9 @@ function estimu(mc::Vector{Int}, Nf, eff, fit_m::Bool; cond="UT")
         msel_res.LL = [-MLL]
         msel_res.AIC = [4 + 2*MLL]         
         msel_res.BIC = [2*log(length(mc)) + 2*MLL]    
-        mc_draws, probs = r_mudi(1000*num_c, Nf, p[1]/Nf, 1/p[2], eff)
+        mc_rdraws, probs = r_mudi(1000*num_c, Nf, p[1]/Nf, 1/p[2], eff)
         p = p_mudi(mc_max, Nf, p[1]/Nf, 1/p[2], eff)
-        H, H_quant = gof(mc_counts, p, 1000, num_c, mc_draws, probs)
+        H, H_quant = gof(mc_counts, p, 1000, num_c, mc_rdraws, probs)
         msel_res.H = [H]
         msel_res.H_quant = [H_quant]                   
 	else
