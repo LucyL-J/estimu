@@ -180,12 +180,12 @@ cdf_mudi(k::Int, N, mu_off, S, f_on, rel_div_on, fit_m, eff=1.) = sum(p_mudi(max
 # For a homogeneous population
 function add_p!(p, q, m, k)
     @views S = sum((1:k) .* q[1:k] .* reverse(p[1:k]))
-    push!(p, max(m*S/k, 0.))
+    push!(p, isnan(m*S/k) ? 0 : max(m*S/k, 0.))
 end
 # For a heterogeneous population
 function add_p!(p, q_off, q_on, m_off, m_on, k)
     @views S = sum((1:k) .* (m_off.*q_off[1:k] .+ m_on.*q_on[1:k]) .* reverse(p[1:k]))
-    push!(p, max(S/k, 0.))
+    push!(p, isnan(m*S/k) ? 0 : max(m*S/k, 0.))
 end
 
 function mudi_threshold(p_threshold, m) # Homogeneous population
