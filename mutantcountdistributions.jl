@@ -193,7 +193,7 @@ function mudi_threshold(p_threshold, m) # Homogeneous population
     q = Vector{Float64}(undef, 0)
     p = [p_cumulative]
     k = 1
-    while p_threshold > p_cumulative
+    while p_threshold > p_cumulative && k <= 1000
         q_coeffs!(q, k)
         add_p!(p, q, m, k)
         k += 1
@@ -206,7 +206,7 @@ function mudi_threshold(p_threshold, m, inv_fit_m) # With diff. mutant fitness
     q = [inv_fit_m/(inv_fit_m+1)]
     p = [p_cumulative]
     k = 1
-    while p_threshold > p_cumulative
+    while p_threshold > p_cumulative && k <= 1000
         add_p!(p, q, m, k)
         k += 1
         p_cumulative += p[k]
@@ -220,7 +220,7 @@ function mudi_threshold(p_threshold, m, inv_fit_m, eff) # Plating efficiency < 1
     q = Vector{Float64}(undef, 0)
     p = [p_cumulative]
     k = 1
-    while p_threshold > p_cumulative
+    while p_threshold > p_cumulative && k <= 1000
         q_coeffs!(q, k, b, inv_fit_m, eff)
         add_p!(p, q, m, k)
         k += 1
@@ -236,7 +236,7 @@ function mudi_threshold_het_0(p_threshold, m_off, m_on) # Heterogeneous populati
     q_on = [1.]
     p = [p_cumulative]
     k = 1
-    while p_threshold > p_cumulative
+    while p_threshold > p_cumulative && k <= 1000
         q_coeffs!(q_off, k)
         add_p!(p, q_off, q_on, m_off, m_on, k)
         k += 1
@@ -251,7 +251,7 @@ function mudi_threshold_het_0(p_threshold, m_off, m_on, inv_fit_m) # With diff. 
     q_on = [1.]
     p = [p_cumulative]
     k = 1
-    while p_threshold > p_cumulative
+    while p_threshold > p_cumulative && k <= 1000
         add_p!(p, q_off, q_on, m_off, m_on, k)
         k += 1
         p_cumulative += p[k]
@@ -267,7 +267,7 @@ function mudi_threshold_het_0(p_threshold, m_off, m_on, inv_fit_m, eff) # Platin
     q_on = [eff]
     p = [p_cumulative]
     k = 1
-    while p_threshold > p_cumulative
+    while p_threshold > p_cumulative && k <= 1000
         q_coeffs!(q_off, k, b, inv_fit_m, eff)
         add_p!(p, q_off, q_on, m_off, m_on, k)
         k += 1
@@ -283,7 +283,7 @@ function mudi_threshold_het(p_threshold, m_off, m_on, ifit) # None-zero relative
     q_on = [ifit/(ifit+1)]
     p = [p_cumulative]
     k = 1
-    while p_threshold > p_cumulative
+    while p_threshold > p_cumulative && k <= 1000
         q_coeffs!(q_off, k)
         add_p!(p, q_off, q_on, m_off, m_on, k)
         k += 1
@@ -298,7 +298,7 @@ function mudi_threshold_het(p_threshold, m_off, m_on, inv_fit_m, ifit) # Diff. m
     q_on = [ifit/(ifit+1)]
     p = [p_cumulative]
     k = 1
-    while p_threshold > p_cumulative
+    while p_threshold > p_cumulative && k <= 1000
         add_p!(p, q_off, q_on, m_off, m_on, k)
         k += 1
         p_cumulative += p[k]
@@ -315,7 +315,7 @@ function mudi_threshold_het(p_threshold, m_off, m_on, inv_fit_m, ifit, eff) # Pl
     q_on = Vector{Float64}(undef, 0)
     p = [p_cumulative]
     k = 1
-    while p_threshold > p_cumulative
+    while p_threshold > p_cumulative && k <= 1000
         q_coeffs!(q_off, k, b_off, inv_fit_m, eff)
         q_coeffs!(q_on, k, b_on, ifit, eff)
         add_p!(p, q_off, q_on, m_off, m_on, k)
@@ -344,7 +344,7 @@ function r_mudi(K::Int, N, mu, fit_m, eff)
     cumulative_p = p_draws[1]
     for j in eachindex(uni_draws)
         r = uni_draws[j]
-        while r > cumulative_p
+        while r > cumulative_p && k <= 1000
             k += 1
             cumulative_p += p_draws[k]
         end
@@ -384,7 +384,7 @@ function r_mudi(K::Int, N, mu_off, S, f_on, rel_div_on, fit_m, eff)
     cumulative_p = p_draws[1]
     for j in eachindex(uni_draws)
         r = uni_draws[j]
-        while r > cumulative_p
+        while r > cumulative_p && k <= 1000
             k += 1
             cumulative_p += p_draws[k]
         end
