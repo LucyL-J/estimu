@@ -8,7 +8,7 @@ Nf_S = 1.6*10^8;
 for eff_UT in [1, 0.9, 0.1]
     for fit_m in (1., 0.8, false)
         println(eff_UT)
-        println(estimu(mc_UT, Nf_UT/eff_UT, eff_UT, fit_m))
+        println(estimu(mc_UT, Nf_UT/eff_UT, eff_UT, fit_m)[1:2])
     end
 end
 
