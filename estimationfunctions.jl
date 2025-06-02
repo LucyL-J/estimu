@@ -51,17 +51,17 @@ function estimu(mc::Vector{Int}, Nf, eff, fit_m::Float64=1.; cond="UT")
             est_res.lower_bound = [0., fit_m]
             est_res.upper_bound = [Inf, fit_m] 
         end
+        msel_res.AIC = [2 + 2*MLL]
+        msel_res.BIC = [log(length(mc)) + 2*MLL] 
         msel_res.LL = [-MLL]
         LLs = LL_dist(R_gof, num_c, Nf, m/Nf, fit_m, eff)
-        msel_res.p_value = [1 - ecdf(LLs)(MLL)]
-        msel_res.AIC = [2 + 2*MLL]
-        msel_res.BIC = [log(length(mc)) + 2*MLL]    
+        msel_res.p_value = [1 - ecdf(LLs)(MLL)]   
     else
-        est_res.status = fill("failed", length(est_res.parameter))                                                      
-        msel_res.LL = [-Inf]
-        msel_res.p_value = [0]
+        est_res.status = fill("failed", length(est_res.parameter))
         msel_res.AIC = [Inf]
         msel_res.BIC = [Inf]
+        msel_res.LL = [-Inf]
+        msel_res.p_value = [0]
     end 
     return est_res, msel_res, LLs
 end
@@ -93,17 +93,17 @@ function estimu(mc::Vector{Int}, Nf, eff, fit_m::Bool; cond="UT")
             est_res.lower_bound = [0., 0.]
             est_res.upper_bound = [Inf, Inf]
         end
+        msel_res.AIC = [4 + 2*MLL]         
+        msel_res.BIC = [2*log(length(mc)) + 2*MLL]    
         msel_res.LL = [-MLL]
         LLs = LL_dist(R_gof, num_c, Nf, p[1]/Nf, 1/p[2], eff)
-        msel_res.p_value = [1 - ecdf(LLs)(MLL)]
-        msel_res.AIC = [4 + 2*MLL]         
-        msel_res.BIC = [2*log(length(mc)) + 2*MLL]                    
+        msel_res.p_value = [1 - ecdf(LLs)(MLL)]                
 	else
         est_res.status = fill("failed", length(est_res.parameter))
-		msel_res.LL = [-Inf]
-        msel_res.p_value = [0]
         msel_res.AIC = [Inf]
         msel_res.BIC = [Inf]
+		msel_res.LL = [-Inf]
+        msel_res.p_value = [0]
 	end
 	return est_res, msel_res, LLs                                                
 end 
@@ -131,7 +131,7 @@ function estimu_0(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vecto
     end
     N_ratio = Nf_S/Nf_UT
     est_res = DataFrame(parameter=["Mutation rate", "Mutant fitness", "Mutant fitness", "Ratio mutant fitness"], condition=["UT+"*cond_S, "UT", cond_S, cond_S*"/UT"])       
-    msel_res = DataFrame(model=[M, M, M], condition=["UT", cond_S, "UT+"*cond_S])   
+    msel_res = DataFrame(model=[M, M, M], condition=["UT+"*cond_S, "UT", cond_S])   
     mc_max_UT, mc_counts_UT, num_c_UT = extract_mc(mc_UT)
     mc_max_S, mc_counts_S, num_c_S = extract_mc(mc_S)
     mc_max = max(mc_max_UT, mc_max_S)
@@ -164,19 +164,19 @@ function estimu_0(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vecto
         end
         LL_UT = log_likelihood_m(mc_counts_UT, mc_max_UT, m, q0_UT, q_UT)
         LL_S = log_likelihood_m(mc_counts_S, mc_max_S, m*N_ratio, q0_S, q_S)
-        msel_res.LL = [LL_UT, LL_S, -MLL]
+        msel_res.AIC = [2 + 2*MLL, 1 - 2*LL_UT, 1 - 2*LL_S]
+        # Number of data points = total number of parallel cultures
+        msel_res.BIC = [1*log(num_c_UT+num_c_S) + 2*MLL, 0.5*log(num_c_UT) - 2*LL_UT, 0.5*log(num_c_S) - 2*LL_S] 
+        msel_res.LL = [-MLL, LL_UT, LL_S]
         LLs_UT = LL_dist(R_gof, num_c_UT, Nf_UT, m/Nf_UT, fit_m[1], eff[1])
         LLs_S = LL_dist(R_gof, num_c_S, Nf_S, m/Nf_UT, fit_m[2], eff[2])
-        msel_res.p_value = 1 .- [ecdf(LLs_UT)(-LL_UT), ecdf(LLs_S)(-LL_S), ecdf(LLs_UT.+LLs_S)(MLL)]
-        msel_res.AIC = [1 - 2*LL_UT, 1 - 2*LL_S, 2 + 2*MLL]
-        # Number of data points = total number of parallel cultures
-        msel_res.BIC = [0.5*log(num_c_UT) - 2*LL_UT, 0.5*log(num_c_S) - 2*LL_S, 1*log(num_c_UT+num_c_S) + 2*MLL] 
+        msel_res.p_value = 1 .- [ecdf(LLs_UT.+LLs_S)(MLL), ecdf(LLs_UT)(-LL_UT), ecdf(LLs_S)(-LL_S)]
     else
         est_res.status = fill("failed", length(est_res.parameter))
-        msel_res.LL = [-Inf, -Inf, -Inf]
-        msel_res.p_value = [0, 0, 0]
         msel_res.AIC = [Inf, Inf, Inf]
         msel_res.BIC = [Inf, Inf, Inf]
+        msel_res.LL = [-Inf, -Inf, -Inf]
+        msel_res.p_value = [0, 0, 0]
     end
     return est_res, msel_res
 end
@@ -185,7 +185,7 @@ function estimu_0(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vecto
     N_ratio = Nf_S/Nf_UT
     est_res = DataFrame(parameter=["Mutation rate", "Mutant fitness", "Mutant fitness", "Ratio mutant fitness"], condition=["UT+"*cond_S, "UT+"*cond_S, "UT+"*cond_S, ""])       
     M = "No SIM (constr. mutant fitness)"    
-    msel_res = DataFrame(model=[M, M, M], condition=["UT", cond_S, "UT+"*cond_S])                          
+    msel_res = DataFrame(model=[M, M, M], condition=["UT+"*cond_S, "UT", cond_S])                          
     mc_max_UT, mc_counts_UT, num_c_UT = extract_mc(mc_UT)
     mc_max_S, mc_counts_S, num_c_S = extract_mc(mc_S)
     mc_max = max(mc_max_UT, mc_max_S)
@@ -211,18 +211,18 @@ function estimu_0(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vecto
         end
         LL_UT = log_likelihood_m_fitm(mc_counts_UT, mc_max_UT, p[1], p[2], eff_conv[1])
         LL_S = log_likelihood_m_fitm(mc_counts_S, mc_max_S, p[1]*N_ratio, p[2], eff_conv[2])
-        msel_res.LL = [LL_UT, LL_S, -MLL]
+        msel_res.AIC = [4 + 2*MLL, 2 - 2*LL_UT, 2 - 2*LL_S]
+        msel_res.BIC = [2*log(length(mc_UT)+length(mc_S)) + 2*MLL, 1*log(num_c_UT) - 2*LL_UT, 1*log(num_c_S) - 2*LL_S] 
+        msel_res.LL = [-MLL, LL_UT, LL_S]
         LLs_UT = LL_dist(R_gof, num_c_UT, Nf_UT, p[1]/Nf_UT, 1/p[2], eff[1])
         LLs_S = LL_dist(R_gof, num_c_S, Nf_S, p[1]/Nf_UT, 1/p[2], eff[2])
-        msel_res.p_value = 1 .- [ecdf(LLs_UT)(-LL_UT), ecdf(LLs_S)(-LL_S), ecdf(LLs_UT.+LLs_S)(MLL)]
-        msel_res.AIC = [2 - 2*LL_UT, 2 - 2*LL_S, 4 + 2*MLL]
-        msel_res.BIC = [1*log(num_c_UT) - 2*LL_UT, 1*log(num_c_S) - 2*LL_S, 2*log(length(mc_UT)+length(mc_S)) + 2*MLL] 
+        msel_res.p_value = 1 .- [ecdf(LLs_UT.+LLs_S)(MLL), ecdf(LLs_UT)(-LL_UT), ecdf(LLs_S)(-LL_S)]
 	else
 		est_res.status = fill("failed", length(est_res.parameter))
-        msel_res.LL = [-Inf, -Inf, -Inf]
-        msel_res.p_value = [0, 0, 0]
         msel_res.AIC = [Inf, Inf, Inf]
         msel_res.BIC = [Inf, Inf, Inf]
+        msel_res.LL = [-Inf, -Inf, -Inf]
+        msel_res.p_value = [0, 0, 0]
 	end
 	return est_res, msel_res
 end
@@ -231,7 +231,7 @@ function estimu_0(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vecto
     N_ratio = Nf_S/Nf_UT
     est_res = DataFrame(parameter=["Mutation rate", "Mutant fitness", "Mutant fitness", "Ratio mutant fitness"], condition=["UT+"*cond_S, "UT", cond_S, cond_S*"/UT"])       
     M = "No SIM (unconstr. mutant fitness)"
-    msel_res = DataFrame(model=[M, M, M], condition=["UT", cond_S, "UT+"*cond_S])                         
+    msel_res = DataFrame(model=[M, M, M], condition=["UT+"*cond_S, "UT", cond_S])                         
     mc_max_UT, mc_counts_UT, num_c_UT = extract_mc(mc_UT)
     mc_max_S, mc_counts_S, num_c_S = extract_mc(mc_S)
     mc_max = max(mc_max_UT, mc_max_S)
@@ -258,18 +258,18 @@ function estimu_0(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vecto
         end
         LL_UT = log_likelihood_m_fitm(mc_counts_UT, mc_max_UT, p[1], p[2], eff_conv[1])
         LL_S = log_likelihood_m_fitm(mc_counts_S, mc_max_S, p[1]*N_ratio, p[3], eff_conv[2])
-        msel_res.LL = [LL_UT, LL_S, -MLL]
+        msel_res.AIC = [6 + 2*MLL, 3 - 2*LL_UT, 3 - 2*LL_S]
+        msel_res.BIC = [3*log(length(mc_UT)+length(mc_S)) + 2*MLL, 1.5*log(num_c_UT) - 2*LL_UT, 1.5*log(num_c_S) - 2*LL_S]
+        msel_res.LL = [-MLL, LL_UT, LL_S]
         LLs_UT = LL_dist(R_gof, num_c_UT, Nf_UT, p[1]/Nf_UT, 1/p[2], eff[1])
         LLs_S = LL_dist(R_gof, num_c_S, Nf_S, p[1]/Nf_UT, 1/p[3], eff[2])
-        msel_res.p_value = 1 .- [ecdf(LLs_UT)(-LL_UT), ecdf(LLs_S)(-LL_S), ecdf(LLs_UT.+LLs_S)(MLL)]
-        msel_res.AIC = [3 - 2*LL_UT, 3 - 2*LL_S, 6 + 2*MLL]
-        msel_res.BIC = [1.5*log(num_c_UT) - 2*LL_UT, 1.5*log(num_c_S) - 2*LL_S, 3*log(length(mc_UT)+length(mc_S)) + 2*MLL]
+        msel_res.p_value = 1 .- [ecdf(LLs_UT.+LLs_S)(MLL), ecdf(LLs_UT)(-LL_UT), ecdf(LLs_S)(-LL_S)]
 	else
 		est_res.status = fill("failed", length(est_res.parameter))
-        msel_res.LL = [-Inf, -Inf, -Inf]
-        msel_res.p_value = [0, 0, 0]
         msel_res.AIC = [Inf, Inf, Inf]
         msel_res.BIC = [Inf, Inf, Inf]
+        msel_res.LL = [-Inf, -Inf, -Inf]
+        msel_res.p_value = [0, 0, 0]
 	end
 	return est_res, msel_res
 end
@@ -303,6 +303,7 @@ function estimu_hom(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
     # Estimation for permissive cond.
 	est_res_UT, msel_res_UT, LLs_UT = estimu(mc_UT, Nf_UT, eff[1], fit_m[1])
     if msel_res_UT.LL[1] != -Inf
+        push!(msel_res_UT, msel_res_UT[1, :])
         # Estimation for stressful cond.
         est_res_S, msel_res_S, LLs_S = estimu(mc_S, Nf_S, eff[2], fit_m[2], cond=cond_S)
         if msel_res_S.LL[1] != -Inf
@@ -325,16 +326,17 @@ function estimu_hom(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
             end
             push!(est_res_UT, ["Ratio mutant fitness", cond_S*"/UT", s, est_res_S.MLE[2]/est_res_UT.MLE[2], 1/b[2,2], 1/b[2,1]])
             push!(est_res_UT, ["Fold change mutation rate", cond_S*"/UT", "calc. from 1&3", est_res_S.MLE[1]/est_res_UT.MLE[1], b[1,1]*Nf_UT/Nf_S, b[1,2]*Nf_UT/Nf_S])
-            push!(msel_res_UT, [M, cond_S, msel_res_S.LL[1], msel_res_S.p_value[1], msel_res_S.AIC[1], msel_res_S.BIC[1]])
-            push!(msel_res_UT, [M, "UT+"*cond_S, msel_res_UT.LL[1]+msel_res_S.LL[1], 1 - ecdf(LLs_UT.+LLs_S)(-msel_res_UT.LL[1]-msel_res_S.LL[1]), msel_res_UT.AIC[1]+msel_res_S.AIC[1], Inf])
-            push!(msel_res_UT, [M, "UT->"*cond_S, LL_S_UT, 1 - ecdf(LLs_S_UT)(-LL_S_UT), -2*LL_S_UT, -2*LL_S_UT])
+            push!(msel_res_UT, [M, cond_S, msel_res_S.AIC[1], msel_res_S.BIC[1], msel_res_S.LL[1], msel_res_S.p_value[1]])
+            msel_res_UT[1, :] = [M, "UT+"*cond_S, msel_res_UT.AIC[1]+msel_res_S.AIC[1], Inf, msel_res_UT.LL[1]+msel_res_S.LL[1], 1 - ecdf(LLs_UT.+LLs_S)(-msel_res_UT.LL[1]-msel_res_S.LL[1])]
+            push!(msel_res_UT, [M, "UT->"*cond_S, -2*LL_S_UT, -2*LL_S_UT, LL_S_UT, 1 - ecdf(LLs_S_UT)(-LL_S_UT)])
         else
             push!(est_res_UT, ["Mutation rate", cond_S, "failed", 0., 0., 0.])
             push!(est_res_UT, ["Mutant fitness", cond_S, "failed", -1., -1., -1.])
-            push!(msel_res_UT, [M, cond_S, -Inf, 1, Inf, Inf])
+            push!(msel_res_UT, [M, cond_S, Inf, Inf, -Inf, 0])
+            msel_res_UT[1, :] = [M, "UT+"*cond_S, Inf, Inf, -Inf, 0]
         end
     end
-    msel_res_UT.BIC[3] = sum((typeof(fit_m[1])==Bool)+(sum(typeof(fit_m[2])==Bool))) * log(length(mc_UT)+length(mc_S)) - 2*msel_res_UT.LL[3]
+    msel_res_UT.BIC[1] = sum((typeof(fit_m[1])==Bool)+(sum(typeof(fit_m[2])==Bool))) * log(length(mc_UT)+length(mc_S)) - 2*msel_res_UT.LL[1]
     msel_res_UT.model = fill(M, length(msel_res_UT.model))   
     return est_res_UT, msel_res_UT
 end
@@ -345,7 +347,7 @@ function estimu_hom(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
     status = ["inferred", "jointly inferred", "inferred", "jointly inferred", "constr.", "calc. from 1&3"]
     est_res = DataFrame(parameter=parameter, condition=condition, status=status)
     M = "Homogeneous (constr. mutant fitness)"
-    msel_res = DataFrame(model=[M, M, M], condition=["UT", cond_S, "UT+"*cond_S])                                 
+    msel_res = DataFrame(model=[M, M, M], condition=["UT+"*cond_S, "UT", cond_S])                                 
     mc_max_UT, mc_counts_UT, num_c_UT = extract_mc(mc_UT)
     mc_max_S, mc_counts_S, num_c_S = extract_mc(mc_S)
     mc_max = max(mc_max_UT, mc_max_S)
@@ -370,18 +372,18 @@ function estimu_hom(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
         end
         LL_UT = log_likelihood_m_fitm(mc_counts_UT, mc_max_UT, p[1], p[3], eff_conv[1])
         LL_S = log_likelihood_m_fitm(mc_counts_S, mc_max_S, p[2], p[3], eff_conv[2])
-        msel_res.LL = [LL_UT, LL_S, -MLL]
+        msel_res.AIC = [6 + 2*MLL, 3 - 2*LL_UT, 3 - 2*LL_S]
+        msel_res.BIC = [3*log(length(mc_UT)+length(mc_S)) + 2*MLL, 1.5*log(num_c_UT) - 2*LL_UT, 1.5*log(num_c_S) - 2*LL_S]
+        msel_res.LL = [-MLL, LL_UT, LL_S]
         LLs_UT = LL_dist(R_gof, num_c_UT, Nf_UT, p[1]/Nf_UT, 1/p[2], eff[1])
         LLs_S = LL_dist(R_gof, num_c_S, Nf_S, p[1]/Nf_UT, 1/p[3], eff[2])
-        msel_res.p_value = 1 .- [ecdf(LLs_UT)(-LL_UT), ecdf(LLs_S)(-LL_S), ecdf(LLs_UT.+LLs_S)(MLL)]
-        msel_res.AIC = [3 - 2*LL_UT, 3 - 2*LL_S, 6 + 2*MLL]
-        msel_res.BIC = [1.5*log(num_c_UT) - 2*LL_UT, 1.5*log(num_c_S) - 2*LL_S, 3*log(length(mc_UT)+length(mc_S)) + 2*MLL]
+        msel_res.p_value = 1 .- [ecdf(LLs_UT.+LLs_S)(MLL), ecdf(LLs_UT)(-LL_UT), ecdf(LLs_S)(-LL_S)]
 	else
 		est_res.status = fill("failed", length(est_res.parameter))
-        msel_res.LL = [-Inf, -Inf, -Inf]
-        msel_res.p_value = [0, 0, 0]
         msel_res.AIC = [Inf, Inf, Inf]
         msel_res.BIC = [Inf, Inf, Inf]
+        msel_res.LL = [-Inf, -Inf, -Inf]
+        msel_res.p_value = [0, 0, 0]
 	end
 	return est_res, msel_res
 end
@@ -409,7 +411,7 @@ function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
 	else
         M = "Heterogeneous"
 	end
-    msel_res = DataFrame(model=[M, M, M], condition=["UT", cond_S, "UT+"*cond_S])
+    msel_res = DataFrame(model=[M, M, M], condition=["UT+"*cond_S, "UT", cond_S])
     mc_max_UT, mc_counts_UT, num_c_UT = extract_mc(mc_UT)
     mc_max_S, mc_counts_S, num_c_S = extract_mc(mc_S)
     N_ratio = Nf_S/Nf_UT
@@ -446,18 +448,18 @@ function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
         eff_conv = convert_eff(eff)
         LL_UT = log_likelihood_m_fitm(mc_counts_UT, mc_max_UT, p[1], 1/fit_m[1], eff_conv[1])
         LL_S = log_likelihood_m_S(mc_counts_S, mc_max_S, p[1]*N_ratio, p[2], q0_S_off, q_S_off, q0_S_on, q_S_on)
-        msel_res.LL = [LL_UT, LL_S, -MLL]
+        msel_res.AIC = [4 + 2*MLL, 2 - 2*LL_UT, 2 - 2*LL_S]
+        msel_res.BIC = [2*log(length(mc_UT)+length(mc_S)) + 2*MLL, 1*log(num_c_UT) - 2*LL_UT, 1*log(num_c_S) - 2*LL_S]
+        msel_res.LL = [-MLL, LL_UT, LL_S]
         LLs_UT = LL_dist(R_gof, num_c_UT, Nf_UT, p[1]/Nf_UT, fit_m[1], eff[1])
         LLs_S = LL_dist(R_gof, num_c_S, Nf_S, p[1]/Nf_UT, p[2], f_on, rel_div_on, fit_m[2], eff[2])
-        msel_res.p_value = 1 .- [ecdf(LLs_UT)(-LL_UT), ecdf(LLs_S)(-LL_S), ecdf(LLs_UT.+LLs_S)(MLL)]
-        msel_res.AIC = [2 - 2*LL_UT, 2 - 2*LL_S, 4 + 2*MLL]
-        msel_res.BIC = [1*log(num_c_UT) - 2*LL_UT, 1*log(num_c_S) - 2*LL_S, 2*log(length(mc_UT)+length(mc_S)) + 2*MLL]
+        msel_res.p_value = 1 .- [ecdf(LLs_UT.+LLs_S)(MLL), ecdf(LLs_UT)(-LL_UT), ecdf(LLs_S)(-LL_S)]
 	else
 		est_res.status = fill("failed", length(est_res.parameter))
-        msel_res.LL = [-Inf, -Inf, -Inf]
-        msel_res.p_value = [0, 0, 0]
         msel_res.AIC = [Inf, Inf, Inf]
         msel_res.BIC = [Inf, Inf, Inf]
+        msel_res.LL = [-Inf, -Inf, -Inf]
+        msel_res.p_value = [0, 0, 0]
     end   
     return est_res, msel_res
 end
@@ -465,7 +467,7 @@ end
 function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vector{<:Number}, f_on::Float64, rel_div_on::Bool, fit_m::Vector{Float64}=[1., 1.]; cond_S="S")
     est_res = DataFrame(parameter=["Mutation rate off-cells", "Mutant fitness", "Mutant fitness", "Mutation-supply ratio", "Mutation rate on-cells", "Fraction on-cells", "Rel. division rate on-cells", "Rel. mutation rate on-cells", "Fold change mean mutation rate"])
 	est_res.condition = [["UT+"*cond_S, "UT"]; fill(cond_S, 6); cond_S*"/UT"]
-    msel_res = DataFrame(model=["Heterogeneous", "Heterogeneous", "Heterogeneous"], condition=["UT", cond_S, "UT+"*cond_S])
+    msel_res = DataFrame(model=["Heterogeneous", "Heterogeneous", "Heterogeneous"], condition=["UT+"*cond_S, "UT", cond_S])
     mc_max_UT, mc_counts_UT, num_c_UT = extract_mc(mc_UT)
     mc_max_S, mc_counts_S, num_c_S = extract_mc(mc_S)
     N_ratio = Nf_S/Nf_UT
@@ -497,18 +499,18 @@ function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
         end
         LL_UT = log_likelihood_m_fitm(mc_counts_UT, mc_max_UT, p[1], 1/fit_m[1], eff_conv[1])
         LL_S = log_likelihood_m_S_div_f(mc_counts_S, mc_max_S, p[1]*N_ratio, p[2], f_on, p[3], q0_S_off, q_S_off, 1/fit_m[2], eff_conv[2])
-        msel_res.LL = [LL_UT, LL_S, -MLL]
+        msel_res.AIC = [6 + 2*MLL, 3 - 2*LL_UT, 3 - 2*LL_S]
+        msel_res.BIC = [3*log(length(mc_UT)+length(mc_S)) + 2*MLL, 1.5*log(num_c_UT) - 2*LL_UT, 1.5*log(num_c_S) - 2*LL_S]
+        msel_res.LL = [-MLL, LL_UT, LL_S]
         LLs_UT = LL_dist(R_gof, num_c_UT, Nf_UT, p[1]/Nf_UT, fit_m[1], eff[1])
         LLs_S = LL_dist(R_gof, num_c_S, Nf_S, p[1]/Nf_UT, p[2], f_on, p[3], fit_m[2], eff[2])
-        msel_res.p_value = 1 .- [ecdf(LLs_UT)(-LL_UT), ecdf(LLs_S)(-LL_S), ecdf(LLs_UT.+LLs_S)(MLL)]
-        msel_res.AIC = [3 - 2*LL_UT, 3 - 2*LL_S, 6 + 2*MLL]
-        msel_res.BIC = [1.5*log(num_c_UT) - 2*LL_UT, 1.5*log(num_c_S) - 2*LL_S, 3*log(length(mc_UT)+length(mc_S)) + 2*MLL]
+        msel_res.p_value = 1 .- [ecdf(LLs_UT.+LLs_S)(MLL), ecdf(LLs_UT)(-LL_UT), ecdf(LLs_S)(-LL_S)]
 	else
 		est_res.status = fill("failed", length(est_res.parameter))
-        msel_res.LL = [-Inf, -Inf, -Inf]
-        msel_res.p_value = [0, 0, 0]
         msel_res.AIC = [Inf, Inf, Inf]
         msel_res.BIC = [Inf, Inf, Inf]
+        msel_res.LL = [-Inf, -Inf, -Inf]
+        msel_res.p_value = [0, 0, 0]
     end
     return est_res, msel_res
 end
@@ -533,7 +535,7 @@ function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
         status = [status; ["inferred", "set to input"]]
         est_res = DataFrame(parameter=parameter, condition=condition, status=status)
         M = "Heterogeneous (zero division rate on-cells)"
-        msel_res = DataFrame(model=[M, M, M], condition=["UT", cond_S, "UT+"*cond_S])
+        msel_res = DataFrame(model=[M, M, M], condition=["UT+"*cond_S, "UT", cond_S])
         # 2 inference parameters: Number of mutations in off-cells under permissive cond., mutation-supply ratio  
         LL_0(para) = -log_likelihood_joint_m_S(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, para[1], para[2], q0_UT, q_UT, q0_S_off, q_S_off, q0_S_on, q_S_on)
         res = Optim.optimize(LL_0, [m, S], iterations=10^4)                     
@@ -553,18 +555,18 @@ function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
             eff_conv = convert_eff(eff)
             LL_UT = log_likelihood_m_fitm(mc_counts_UT, mc_max_UT, p[1], 1/fit_m[1], eff_conv[1])
             LL_S = log_likelihood_m_S(mc_counts_S, mc_max_S, p[1]*N_ratio, p[2], q0_S_off, q_S_off, q0_S_on, q_S_on)
-            msel_res.LL = [LL_UT, LL_S, -MLL]
+            msel_res.AIC = [4 + 2*MLL, 2 - 2*LL_UT, 2 - 2*LL_S]
+            msel_res.BIC = [2*log(length(mc_UT)+length(mc_S)) + 2*MLL, 1*log(num_c_UT) - 2*LL_UT, 1*log(num_c_S) - 2*LL_S]
+            msel_res.LL = [-MLL, LL_UT, LL_S]
             LLs_UT = LL_dist(R_gof, num_c_UT, Nf_UT, p[1]/Nf_UT, fit_m[1], eff[1])
             LLs_S = LL_dist(R_gof, num_c_S, Nf_S, p[1]/Nf_UT, p[2], f_on, rel_div_on, fit_m[2], eff[2])
-            msel_res.p_value = 1 .- [ecdf(LLs_UT)(-LL_UT), ecdf(LLs_S)(-LL_S), ecdf(LLs_UT.+LLs_S)(MLL)]
-            msel_res.AIC = [2 - 2*LL_UT, 2 - 2*LL_S, 4 + 2*MLL]
-            msel_res.BIC = [1*log(num_c_UT) - 2*LL_UT, 1*log(num_c_S) - 2*LL_S, 2*log(length(mc_UT)+length(mc_S)) + 2*MLL]
+            msel_res.p_value = 1 .- [ecdf(LLs_UT.+LLs_S)(MLL), ecdf(LLs_UT)(-LL_UT), ecdf(LLs_S)(-LL_S)]
         else
             est_res.status = fill("failed", length(est_res.parameter))
-            msel_res.LL = [-Inf, -Inf, -Inf]
-            msel_res.p_value = [0, 0, 0]
             msel_res.AIC = [Inf, Inf, Inf]
             msel_res.BIC = [Inf, Inf, Inf]
+            msel_res.LL = [-Inf, -Inf, -Inf]
+            msel_res.p_value = [0, 0, 0]
         end
     # For non-zero rel. division rate on-cells -> Fraction of on-cells inferred
     else
@@ -574,7 +576,7 @@ function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
         # Calculate the initial value for optimisation
         f_on = initial_f(mc_S, N_ratio, Nf_S, m, S, rel_div_on)
         est_res = DataFrame(parameter=parameter, condition=condition, status=status)
-        msel_res = DataFrame(model=["Heterogeneous", "Heterogeneous", "Heterogeneous"], condition=["UT", cond_S, "UT+"*cond_S])
+        msel_res = DataFrame(model=["Heterogeneous", "Heterogeneous", "Heterogeneous"], condition=["UT+"*cond_S, "UT", cond_S])
         eff_conv = convert_eff(eff)
         if eff[1] == eff[2]
             eff_conv = (eff_conv, eff_conv)
@@ -597,18 +599,18 @@ function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
             end
             LL_UT = log_likelihood_m_fitm(mc_counts_UT, mc_max_UT, p[1], 1/fit_m[1], eff_conv[1])
             LL_S = log_likelihood_m_S_div_f(mc_counts_S, mc_max_S, p[1]*N_ratio, p[2], p[3], rel_div_on, q0_S_off, q_S_off, 1/fit_m[2], eff_conv[2])
-            msel_res.LL = [LL_UT, LL_S, -MLL]
+            msel_res.AIC = [6 + 2*MLL, 3 - 2*LL_UT, 3 - 2*LL_S]
+            msel_res.BIC = [3*log(length(mc_UT)+length(mc_S)) + 2*MLL, 1.5*log(num_c_UT) - 2*LL_UT, 1.5*log(num_c_S) - 2*LL_S]
+            msel_res.LL = [-MLL, LL_UT, LL_S]
             LLs_UT = LL_dist(R_gof, num_c_UT, Nf_UT, p[1]/Nf_UT, fit_m[1], eff[1])
             LLs_S = LL_dist(R_gof, num_c_S, Nf_S, p[1]/Nf_UT, p[2], p[3], rel_div_on, fit_m[2], eff[2])
-            msel_res.p_value = 1 .- [ecdf(LLs_UT)(-LL_UT), ecdf(LLs_S)(-LL_S), ecdf(LLs_UT.+LLs_S)(MLL)]
-            msel_res.AIC = [3 - 2*LL_UT, 3 - 2*LL_S, 6 + 2*MLL]
-            msel_res.BIC = [1.5*log(num_c_UT) - 2*LL_UT, 1.5*log(num_c_S) - 2*LL_S, 3*log(length(mc_UT)+length(mc_S)) + 2*MLL]
+            msel_res.p_value = 1 .- [ecdf(LLs_UT.+LLs_S)(MLL), ecdf(LLs_UT)(-LL_UT), ecdf(LLs_S)(-LL_S)]
         else
             est_res.status = fill("failed", length(est_res.parameter))
-            msel_res.LL = [-Inf, -Inf, -Inf]
-            msel_res.p_value = [0, 0, 0]
             msel_res.AIC = [Inf, Inf, Inf]
             msel_res.BIC = [Inf, Inf, Inf]
+            msel_res.LL = [-Inf, -Inf, -Inf]
+            msel_res.p_value = [0, 0, 0]
             end   
         end
     return est_res, msel_res 
@@ -617,7 +619,7 @@ end
 function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vector{<:Number}, f_on::Bool, rel_div_on::Bool, fit_m::Vector{Float64}=[1., 1.]; cond_S="S")
     est_res = DataFrame(parameter=["Mutation rate off-cells", "Mutant fitness", "Mutant fitness", "Mutation-supply ratio", "Mutation rate on-cells", "Fraction on-cells", "Rel. division rate on-cells", "Rel. mutation rate on-cells", "Fold change mean mutation rate"])
 	est_res.condition = [["UT+"*cond_S, "UT"]; fill(cond_S, 6); cond_S*"/UT"]
-    msel_res = DataFrame(model=["Heterogeneous", "Heterogeneous", "Heterogeneous"], condition=["UT", cond_S, "UT+"*cond_S])
+    msel_res = DataFrame(model=["Heterogeneous", "Heterogeneous", "Heterogeneous"], condition=["UT+"*cond_S, "UT", cond_S])
     mc_max_UT, mc_counts_UT, num_c_UT = extract_mc(mc_UT)
     mc_max_S, mc_counts_S, num_c_S = extract_mc(mc_S)
     N_ratio = Nf_S/Nf_UT
@@ -650,18 +652,18 @@ function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
         end
         LL_UT = log_likelihood_m_fitm(mc_counts_UT, mc_max_UT, p[1], 1/fit_m[1], eff_conv[1])
         LL_S = log_likelihood_m_S_div_f(mc_counts_S, mc_max_S, p[1]*N_ratio, p[2], p[3], p[4], q0_S_off, q_S_off, 1/fit_m[2], eff_conv[2])
-        msel_res.LL = [LL_UT, LL_S, -MLL]
+        msel_res.AIC = [8 + 2*MLL, 4 - 2*LL_UT, 4 - 2*LL_S]
+        msel_res.BIC = [4*log(length(mc_UT)+length(mc_S)) + 2*MLL, 2*log(num_c_UT) - 2*LL_UT, 2*log(num_c_S) - 2*LL_S]
+        msel_res.LL = [-MLL, LL_UT, LL_S]
         LLs_UT = LL_dist(R_gof, num_c_UT, Nf_UT, p[1]/Nf_UT, fit_m[1], eff[1])
         LLs_S = LL_dist(R_gof, num_c_S, Nf_S, p[1]/Nf_UT, p[2], p[3], p[4], fit_m[2], eff[2])
-        msel_res.p_value = 1 .- [ecdf(LLs_UT)(-LL_UT), ecdf(LLs_S)(-LL_S), ecdf(LLs_UT.+LLs_S)(MLL)]
-        msel_res.AIC = [4 - 2*LL_UT, 4 - 2*LL_S, 8 + 2*MLL]
-        msel_res.BIC = [2*log(num_c_UT) - 2*LL_UT, 2*log(num_c_S) - 2*LL_S, 4*log(length(mc_UT)+length(mc_S)) + 2*MLL]
+        msel_res.p_value = 1 .- [ecdf(LLs_UT.+LLs_S)(MLL), ecdf(LLs_UT)(-LL_UT), ecdf(LLs_S)(-LL_S)]
     else
         est_res.status = fill("failed", length(est_res.parameter))
-        msel_res.LL = [-Inf, -Inf, -Inf]
-        msel_res.p_value = [0, 0, 0]
         msel_res.AIC = [Inf, Inf, Inf]
         msel_res.BIC = [Inf, Inf, Inf]
+        msel_res.LL = [-Inf, -Inf, -Inf]
+        msel_res.p_value = [0, 0, 0]
     end
     return est_res, msel_res
 end
