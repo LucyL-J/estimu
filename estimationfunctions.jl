@@ -405,9 +405,9 @@ function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
     est_res = DataFrame(parameter=["Mutation rate off-cells", "Mutant fitness", "Mutant fitness", "Mutation-supply ratio", "Mutation rate on-cells", "Fraction on-cells", "Rel. division rate on-cells", "Rel. mutation rate on-cells", "Fold change mean mutation rate"])
 	est_res.condition = [["UT+"*cond_S, "UT"]; fill(cond_S, 6); cond_S*"/UT"]
     if rel_div_on == 0.
-        M = ["Heterogeneous (zero division rate on-cells)"]
+        M = "Heterogeneous (zero division rate on-cells)"
 	else
-        M = ["Heterogeneous"]
+        M = "Heterogeneous"
 	end
     msel_res = DataFrame(model=[M, M, M], condition=["UT", cond_S, "UT+"*cond_S])
     mc_max_UT, mc_counts_UT, num_c_UT = extract_mc(mc_UT)
