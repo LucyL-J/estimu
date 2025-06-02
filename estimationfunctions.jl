@@ -104,6 +104,7 @@ function estimu(mc::Vector{Int}, Nf, eff, fit_m::Bool; cond="UT")
         msel_res.BIC = [Inf]
 		msel_res.LL = [-Inf]
         msel_res.p_value = [0]
+        LLs = zeros(Float64, R_gof)
 	end
 	return est_res, msel_res, LLs                                                
 end 
