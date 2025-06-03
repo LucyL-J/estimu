@@ -15,9 +15,11 @@ function LL_dist(R::Int, num_c::Int, N, mu, fit_m, eff)
         end
         LL[i] = -sum(mc_counts_obs .* log.(p)) 
         if isnan(LL[i])
-            println("Warning: NaN in LL calculation at index $i")
             LL[i] = Inf  # Assign a large value to avoid NaN
         end
+    end
+    if any(isnan.(LL))
+        println("Warning: NaN values found in LL, homogeneous case")
     end
     return LL
 end
@@ -37,9 +39,11 @@ function LL_dist(R::Int, num_c::Int, N, mu_off, S, f_on, rel_div_on, fit_m, eff)
         end
         LL[i] = -sum(mc_counts_obs .* log.(p)) 
         if isnan(LL[i])
-            println("Warning: NaN in LL calculation at index $i")
             LL[i] = Inf  # Assign a large value to avoid NaN
         end
+    end
+    if any(isnan.(LL))
+        println("Warning: NaN values found in LL, heterogeneous case")
     end
     return LL
 end
