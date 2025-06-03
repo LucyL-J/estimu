@@ -310,7 +310,8 @@ function estimu_hom(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
         if msel_res_S.LL[1] != -Inf
             mc_max_S, mc_counts_S, num_c_S = extract_mc(mc_S)
             if typeof(fit_m) == Vector{Float64}
-                LL_S_UT = log_likelihood_m_fitm(mc_counts_S, mc_max_S, est_res_UT.MLE[1]*Nf_UT, 1/fit_m[2], eff[2]) 
+                q0_S, q_S = coeffs(mc_max_S, 1/fit_m[2], eff[2])
+                LL_S_UT = log_likelihood_m(mc_counts_S, mc_max_S, est_res_UT.MLE[1]*Nf_UT, q0_S, q_S)
                 LLs_S_UT = LL_dist(R_gof, num_c_S, Nf_S, est_res_UT.MLE[1], 1/fit_m[2], eff[2])
                 b_M = CI_m(est_res_UT.MLE[1]*Nf_UT, est_res_S.MLE[1]*Nf_S, est_res_UT.lower_bound[1]*Nf_UT, est_res_S.lower_bound[1]*Nf_S, est_res_UT.upper_bound[1]*Nf_UT, est_res_S.upper_bound[1]*Nf_S)
                 b = [b_M; fit_m[1]/fit_m[2] fit_m[1]/fit_m[2]]
@@ -376,8 +377,8 @@ function estimu_hom(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
         msel_res.AIC = [6 + 2*MLL, 3 - 2*LL_UT, 3 - 2*LL_S]
         msel_res.BIC = [3*log(length(mc_UT)+length(mc_S)) + 2*MLL, 1.5*log(num_c_UT) - 2*LL_UT, 1.5*log(num_c_S) - 2*LL_S]
         msel_res.LL = [-MLL, LL_UT, LL_S]
-        LLs_UT = LL_dist(R_gof, num_c_UT, Nf_UT, p[1]/Nf_UT, 1/p[2], eff[1])
-        LLs_S = LL_dist(R_gof, num_c_S, Nf_S, p[1]/Nf_UT, 1/p[3], eff[2])
+        LLs_UT = LL_dist(R_gof, num_c_UT, Nf_UT, p[1]/Nf_UT, 1/p[3], eff[1])
+        LLs_S = LL_dist(R_gof, num_c_S, Nf_S, p[2]/Nf_S, 1/p[3], eff[2])
         msel_res.p_value = 1 .- [ecdf(LLs_UT.+LLs_S)(MLL), ecdf(LLs_UT)(-LL_UT), ecdf(LLs_S)(-LL_S)]
 	else
 		est_res.status = fill("failed", length(est_res.parameter))
