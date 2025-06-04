@@ -47,7 +47,9 @@ function q_coeffs(K::Int, inv_fit_m, eff::Float64)
     return @. eff^inv_fit_m * B * F
 end
 function q_coeffs!(q, k, b, inv_fit_m, eff)
-    push!(q, eff^inv_fit_m * b * pFq((inv_fit_m, inv_fit_m+1), (inv_fit_m+1+k, ), 1 - eff))
+    inv_fit_m_big = BigFloat(inv_fit_m)
+    eff_big = BigFloat(eff)
+    push!(q, Float64(eff^inv_fit_m * b * pFq((inv_fit_m_big, inv_fit_m_big+1), (inv_fit_m_big+1+k, ), 1 - eff_big)))
 end
 # For efficiency < 0.5, calculate hypergeometric functions from 1:K
 function q_coeffs(K::Int, inv_fit_m, eff::Tuple{Float64,Bool})
