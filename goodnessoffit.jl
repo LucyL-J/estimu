@@ -5,6 +5,7 @@ function LL_dist(R::Int, num_c::Int, N, mu, fit_m, eff)
     LL = Vector{Float64}(undef, R)
     s = randperm(R * num_c) 
     c_indices = reshape(s, num_c, R)
+    st = false
     for i in eachindex(LL)
         mc_obs = mc_rdraws[c_indices[:, i]]
         mc_counts_obs = counts(mc_obs, 0:maximum(mc_obs))
@@ -16,10 +17,11 @@ function LL_dist(R::Int, num_c::Int, N, mu, fit_m, eff)
         LL[i] = -sum(mc_counts_obs .* log.(p)) 
         if isnan(LL[i])
             LL[i] = Inf  # Assign a large value to avoid NaN
+            st = true
         end
     end
-    if any(isnan.(LL))
-        println("Warning: NaN values found in LL, homogeneous case")
+    if any(st)
+        println("Warning: NaN values found in LL; mu = $mu, fit_m = $fit_m")
     end
     return LL
 end
@@ -29,6 +31,7 @@ function LL_dist(R::Int, num_c::Int, N, mu_off, S, f_on, rel_div_on, fit_m, eff)
     LL = Vector{Float64}(undef, R)
     s = randperm(R * num_c) 
     c_indices = reshape(s, num_c, R)
+    st = false
     for i in eachindex(LL)
         mc_obs = mc_rdraws[c_indices[:, i]]
         mc_counts_obs = counts(mc_obs, 0:maximum(mc_obs))
@@ -40,10 +43,11 @@ function LL_dist(R::Int, num_c::Int, N, mu_off, S, f_on, rel_div_on, fit_m, eff)
         LL[i] = -sum(mc_counts_obs .* log.(p)) 
         if isnan(LL[i])
             LL[i] = Inf  # Assign a large value to avoid NaN
+            st = true
         end
     end
-    if any(isnan.(LL))
-        println("Warning: NaN values found in LL, heterogeneous case")
+    if any(st)
+        println("Warning: NaN values found in LL; mu_off = $mu_off, S = $S")
     end
     return LL
 end

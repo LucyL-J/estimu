@@ -195,8 +195,10 @@ end
 function tail_prob(p, max_mc_cutoff)    # "Tail" probability = 1 - cumulative probability
     if p[end] == 0
         p[end] = 1 - sum(p)
+        println("Warning: Last probability in p is zero, setting tail probability to $(p[end])")
     elseif length(p) == max_mc_cutoff   # "Jackpot" of observing large number of mutants
         push!(p, 1-sum(p)) 
+        println("Warning: p has reached max_mc_cutoff, setting tail probability to $(p[end])")
     end
     return p
 end
