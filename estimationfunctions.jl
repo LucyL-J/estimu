@@ -22,6 +22,7 @@ R_gof = 10^4  # Number of replicates for the goodness-of-fit test
 #        Alternatively, mutant fitness is inferred if fit_m=false
 # cond: Condition, by default = "UT" for untreated
 function estimu(mc::Vector{Int}, Nf, eff, fit_m::Float64=1.; cond="UT")
+    start_time = time()
     # Model depends on the value of the mutant fitness
     if fit_m == 1.
         M = "Standard"
@@ -55,18 +56,22 @@ function estimu(mc::Vector{Int}, Nf, eff, fit_m::Float64=1.; cond="UT")
         msel_res.BIC = [log(length(mc)) + 2*MLL] 
         msel_res.LL = [-MLL]
         LLs = LL_dist(R_gof, num_c, Nf, m/Nf, fit_m, eff)
-        msel_res.p_value = [1 - ecdf(LLs)(MLL)]   
+        msel_res.p_value = [1 - ecdf(LLs)(MLL)]
+        end_time = time()
+        msel_res.time = [end_time - start_time]   
     else
         est_res.status = fill("failed", length(est_res.parameter))
         msel_res.AIC = [Inf]
         msel_res.BIC = [Inf]
         msel_res.LL = [-Inf]
         msel_res.p_value = [0]
+        msel_res.time = [0]
     end 
     return est_res, msel_res, LLs
 end
 # Mutant fitness not given -> inferred 
 function estimu(mc::Vector{Int}, Nf, eff, fit_m::Bool; cond="UT")
+    start_time = time()
     est_res = DataFrame(parameter=["Mutation rate", "Mutant fitness"], condition=[cond, cond])
     msel_res = DataFrame(model=["Standard (diff. mutant fitness)"], condition=[cond])                                                        
 	mc_max, mc_counts, num_c = extract_mc(mc)
@@ -97,13 +102,16 @@ function estimu(mc::Vector{Int}, Nf, eff, fit_m::Bool; cond="UT")
         msel_res.BIC = [2*log(length(mc)) + 2*MLL]    
         msel_res.LL = [-MLL]
         LLs = LL_dist(R_gof, num_c, Nf, p[1]/Nf, 1/p[2], eff)
-        msel_res.p_value = [1 - ecdf(LLs)(MLL)]                
+        msel_res.p_value = [1 - ecdf(LLs)(MLL)]  
+        end_time = time()
+        msel_res.time = [end_time - start_time]              
 	else
         est_res.status = fill("failed", length(est_res.parameter))
         msel_res.AIC = [Inf]
         msel_res.BIC = [Inf]
 		msel_res.LL = [-Inf]
         msel_res.p_value = [0]
+        msel_res.time = [0]
         LLs = zeros(Float64, R_gof)
 	end
 	return est_res, msel_res, LLs                                                
@@ -123,6 +131,7 @@ end
 
 # Mutant fitness fixed in the inference
 function estimu_0(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vector{<:Number}, fit_m::Vector{Float64}=[1., 1.]; cond_S="S") 
+    start_time = time()
     if fit_m[1] ==  fit_m[2] == 1.                                         
         M = "No SIM"
     elseif fit_m[1] == fit_m[2]
@@ -172,17 +181,21 @@ function estimu_0(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vecto
         LLs_UT = LL_dist(R_gof, num_c_UT, Nf_UT, m/Nf_UT, fit_m[1], eff[1])
         LLs_S = LL_dist(R_gof, num_c_S, Nf_S, m/Nf_UT, fit_m[2], eff[2])
         msel_res.p_value = 1 .- [ecdf(LLs_UT.+LLs_S)(MLL), ecdf(LLs_UT)(-LL_UT), ecdf(LLs_S)(-LL_S)]
+        end_time = time()
+        msel_res.time = [end_time - start_time, (end_time - start_time)/2, (end_time - start_time)/2]
     else
         est_res.status = fill("failed", length(est_res.parameter))
         msel_res.AIC = [Inf, Inf, Inf]
         msel_res.BIC = [Inf, Inf, Inf]
         msel_res.LL = [-Inf, -Inf, -Inf]
         msel_res.p_value = [0, 0, 0]
+        msel_res.time = [0, 0, 0]
     end
     return est_res, msel_res
 end
 # Mutant fitness jointly inferred
 function estimu_0(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vector{<:Number}, fit_m::Bool; cond_S="S") 
+    start_time = time()
     N_ratio = Nf_S/Nf_UT
     est_res = DataFrame(parameter=["Mutation rate", "Mutant fitness", "Mutant fitness", "Ratio mutant fitness"], condition=["UT+"*cond_S, "UT+"*cond_S, "UT+"*cond_S, ""])       
     M = "No SIM (constr. mutant fitness)"    
@@ -218,17 +231,21 @@ function estimu_0(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vecto
         LLs_UT = LL_dist(R_gof, num_c_UT, Nf_UT, p[1]/Nf_UT, 1/p[2], eff[1])
         LLs_S = LL_dist(R_gof, num_c_S, Nf_S, p[1]/Nf_UT, 1/p[2], eff[2])
         msel_res.p_value = 1 .- [ecdf(LLs_UT.+LLs_S)(MLL), ecdf(LLs_UT)(-LL_UT), ecdf(LLs_S)(-LL_S)]
+        end_time = time()
+        msel_res.time = [end_time - start_time, (end_time - start_time)/2, (end_time - start_time)/2]
 	else
 		est_res.status = fill("failed", length(est_res.parameter))
         msel_res.AIC = [Inf, Inf, Inf]
         msel_res.BIC = [Inf, Inf, Inf]
         msel_res.LL = [-Inf, -Inf, -Inf]
         msel_res.p_value = [0, 0, 0]
+        msel_res.time = [0, 0, 0]
 	end
 	return est_res, msel_res
 end
 # Mutant fitness inferred separately
 function estimu_0(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vector{<:Number}, fit_m::Union{Tuple{Bool,Bool},BitVector}; cond_S="S") 
+    start_time = time()
     N_ratio = Nf_S/Nf_UT
     est_res = DataFrame(parameter=["Mutation rate", "Mutant fitness", "Mutant fitness", "Ratio mutant fitness"], condition=["UT+"*cond_S, "UT", cond_S, cond_S*"/UT"])       
     M = "No SIM (unconstr. mutant fitness)"
@@ -265,12 +282,15 @@ function estimu_0(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vecto
         LLs_UT = LL_dist(R_gof, num_c_UT, Nf_UT, p[1]/Nf_UT, 1/p[2], eff[1])
         LLs_S = LL_dist(R_gof, num_c_S, Nf_S, p[1]/Nf_UT, 1/p[3], eff[2])
         msel_res.p_value = 1 .- [ecdf(LLs_UT.+LLs_S)(MLL), ecdf(LLs_UT)(-LL_UT), ecdf(LLs_S)(-LL_S)]
+        end_time = time()
+        msel_res.time = [end_time - start_time, (end_time - start_time)/2, (end_time - start_time)/2]
 	else
 		est_res.status = fill("failed", length(est_res.parameter))
         msel_res.AIC = [Inf, Inf, Inf]
         msel_res.BIC = [Inf, Inf, Inf]
         msel_res.LL = [-Inf, -Inf, -Inf]
         msel_res.p_value = [0, 0, 0]
+        msel_res.time = [0, 0, 0]
 	end
 	return est_res, msel_res
 end
@@ -308,6 +328,7 @@ function estimu_hom(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
         # Estimation for stressful cond.
         est_res_S, msel_res_S, LLs_S = estimu(mc_S, Nf_S, eff[2], fit_m[2], cond=cond_S)
         if msel_res_S.LL[1] != -Inf
+            start_time = time()
             mc_max_S, mc_counts_S, num_c_S = extract_mc(mc_S)
             if typeof(fit_m) == Vector{Float64}
                 q0_S, q_S = coeffs(mc_max_S, 1/fit_m[2], eff[2])
@@ -328,14 +349,16 @@ function estimu_hom(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
             end
             push!(est_res_UT, ["Ratio mutant fitness", cond_S*"/UT", s, est_res_S.MLE[2]/est_res_UT.MLE[2], 1/b[2,2], 1/b[2,1]])
             push!(est_res_UT, ["Fold change mutation rate", cond_S*"/UT", "calc. from 1&3", est_res_S.MLE[1]/est_res_UT.MLE[1], b[1,1]*Nf_UT/Nf_S, b[1,2]*Nf_UT/Nf_S])
-            push!(msel_res_UT, [M, cond_S, msel_res_S.AIC[1], msel_res_S.BIC[1], msel_res_S.LL[1], msel_res_S.p_value[1]])
-            msel_res_UT[1, :] = [M, "UT+"*cond_S, msel_res_UT.AIC[1]+msel_res_S.AIC[1], Inf, msel_res_UT.LL[1]+msel_res_S.LL[1], 1 - ecdf(LLs_UT.+LLs_S)(-msel_res_UT.LL[1]-msel_res_S.LL[1])]
-            push!(msel_res_UT, [M, "UT->"*cond_S, -2*LL_S_UT, -2*LL_S_UT, LL_S_UT, 1 - ecdf(LLs_S_UT)(-LL_S_UT)])
+            msel_res_UT = vcat(msel_res_UT, msel_res_S)
+            end_time = time()
+            total_time = msel_res_UT.time[1]+msel_res_S.time[1] + (end_time-start_time)
+            msel_res_UT[1, :] = [M, "UT+"*cond_S, msel_res_UT.AIC[1]+msel_res_S.AIC[1], Inf, msel_res_UT.LL[1]+msel_res_S.LL[1], 1 - ecdf(LLs_UT.+LLs_S)(-msel_res_UT.LL[1]-msel_res_S.LL[1]), total_time]
+            push!(msel_res_UT, [M, "UT->"*cond_S, -2*LL_S_UT, -2*LL_S_UT, LL_S_UT, 1 - ecdf(LLs_S_UT)(-LL_S_UT), total_time])
         else
             push!(est_res_UT, ["Mutation rate", cond_S, "failed", 0., 0., 0.])
             push!(est_res_UT, ["Mutant fitness", cond_S, "failed", -1., -1., -1.])
-            push!(msel_res_UT, [M, cond_S, Inf, Inf, -Inf, 0])
-            msel_res_UT[1, :] = [M, "UT+"*cond_S, Inf, Inf, -Inf, 0]
+            push!(msel_res_UT, [M, cond_S, Inf, Inf, -Inf, 0, 0])
+            msel_res_UT[1, :] = [M, "UT+"*cond_S, Inf, Inf, -Inf, 0, 0]
         end
     end
     msel_res_UT.BIC[1] = sum((typeof(fit_m[1])==Bool)+(sum(typeof(fit_m[2])==Bool))) * log(length(mc_UT)+length(mc_S)) - 2*msel_res_UT.LL[1]
@@ -344,6 +367,7 @@ function estimu_hom(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
 end
 # Mutant fitness jointly inferred (constrained to be equal under permissive/stressful cond(s).)
 function estimu_hom(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vector{<:Number}, fit_m::Bool; cond_S="S")
+    start_time = time()
     parameter=["Mutation rate", "Mutant fitness", "Mutation rate", "Mutant fitness", "Ratio mutant fitness", "Fold change mutation rate"]
     condition = ["UT", "UT+"*cond_S, cond_S, "UT+"*cond_S, "", cond_S*"/UT"]
     status = ["inferred", "jointly inferred", "inferred", "jointly inferred", "constr.", "calc. from 1&3"]
@@ -380,12 +404,15 @@ function estimu_hom(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
         LLs_UT = LL_dist(R_gof, num_c_UT, Nf_UT, p[1]/Nf_UT, 1/p[3], eff[1])
         LLs_S = LL_dist(R_gof, num_c_S, Nf_S, p[2]/Nf_S, 1/p[3], eff[2])
         msel_res.p_value = 1 .- [ecdf(LLs_UT.+LLs_S)(MLL), ecdf(LLs_UT)(-LL_UT), ecdf(LLs_S)(-LL_S)]
+        end_time = time()
+     msel_res.time = [end_time - start_time, (end_time - start_time)/2, (end_time - start_time)/2]
 	else
 		est_res.status = fill("failed", length(est_res.parameter))
         msel_res.AIC = [Inf, Inf, Inf]
         msel_res.BIC = [Inf, Inf, Inf]
         msel_res.LL = [-Inf, -Inf, -Inf]
         msel_res.p_value = [0, 0, 0]
+        msel_res.time = [0, 0, 0]
 	end
 	return est_res, msel_res
 end
@@ -406,6 +433,7 @@ end
 
 # Fraction and relative division rate of on-cells given and fixed in the inference
 function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vector{<:Number}, f_on::Float64, rel_div_on::Float64=0., fit_m::Vector{Float64}=[1., 1.]; cond_S="S")
+    start_time = time()
     est_res = DataFrame(parameter=["Mutation rate off-cells", "Mutant fitness", "Mutant fitness", "Mutation-supply ratio", "Mutation rate on-cells", "Fraction on-cells", "Rel. division rate on-cells", "Rel. mutation rate on-cells", "Fold change mean mutation rate"])
 	est_res.condition = [["UT+"*cond_S, "UT"]; fill(cond_S, 6); cond_S*"/UT"]
     if rel_div_on == 0.
@@ -456,17 +484,21 @@ function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
         LLs_UT = LL_dist(R_gof, num_c_UT, Nf_UT, p[1]/Nf_UT, fit_m[1], eff[1])
         LLs_S = LL_dist(R_gof, num_c_S, Nf_S, p[1]/Nf_UT, p[2], f_on, rel_div_on, fit_m[2], eff[2])
         msel_res.p_value = 1 .- [ecdf(LLs_UT.+LLs_S)(MLL), ecdf(LLs_UT)(-LL_UT), ecdf(LLs_S)(-LL_S)]
+        end_time = time()
+        msel_res.time = [end_time - start_time, (end_time - start_time)/2, (end_time - start_time)/2]
 	else
 		est_res.status = fill("failed", length(est_res.parameter))
         msel_res.AIC = [Inf, Inf, Inf]
         msel_res.BIC = [Inf, Inf, Inf]
         msel_res.LL = [-Inf, -Inf, -Inf]
         msel_res.p_value = [0, 0, 0]
+        msel_res_UT.time[1]+msel_res_S.time[1] + (end_time-start_time)
     end   
     return est_res, msel_res
 end
 # Fraction of on-cells fixed, rel. division rate of on-cells inferred
 function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vector{<:Number}, f_on::Float64, rel_div_on::Bool, fit_m::Vector{Float64}=[1., 1.]; cond_S="S")
+    start_time = time()
     est_res = DataFrame(parameter=["Mutation rate off-cells", "Mutant fitness", "Mutant fitness", "Mutation-supply ratio", "Mutation rate on-cells", "Fraction on-cells", "Rel. division rate on-cells", "Rel. mutation rate on-cells", "Fold change mean mutation rate"])
 	est_res.condition = [["UT+"*cond_S, "UT"]; fill(cond_S, 6); cond_S*"/UT"]
     msel_res = DataFrame(model=["Heterogeneous", "Heterogeneous", "Heterogeneous"], condition=["UT+"*cond_S, "UT", cond_S])
@@ -507,17 +539,21 @@ function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
         LLs_UT = LL_dist(R_gof, num_c_UT, Nf_UT, p[1]/Nf_UT, fit_m[1], eff[1])
         LLs_S = LL_dist(R_gof, num_c_S, Nf_S, p[1]/Nf_UT, p[2], f_on, p[3], fit_m[2], eff[2])
         msel_res.p_value = 1 .- [ecdf(LLs_UT.+LLs_S)(MLL), ecdf(LLs_UT)(-LL_UT), ecdf(LLs_S)(-LL_S)]
+        end_time = time()
+        msel_res.time = [end_time - start_time, (end_time - start_time)/2, (end_time - start_time)/2]
 	else
 		est_res.status = fill("failed", length(est_res.parameter))
         msel_res.AIC = [Inf, Inf, Inf]
         msel_res.BIC = [Inf, Inf, Inf]
         msel_res.LL = [-Inf, -Inf, -Inf]
         msel_res.p_value = [0, 0, 0]
+        msel_res.time = [0, 0, 0]
     end
     return est_res, msel_res
 end
 # Fraction of on-cells not given; inferred if the rel. division rate of on-cells is non-zero
 function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vector{<:Number}, f_on::Bool, rel_div_on::Float64=0., fit_m::Vector{Float64}=[1., 1.]; cond_S="S")
+    start_time = time()
     parameter = ["Mutation rate off-cells", "Mutant fitness", "Mutant fitness"]
     condition = ["UT+"*cond_S, "UT", cond_S]
     status = ["jointly inferred", "set to input", "set to input"]
@@ -563,12 +599,15 @@ function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
             LLs_UT = LL_dist(R_gof, num_c_UT, Nf_UT, p[1]/Nf_UT, fit_m[1], eff[1])
             LLs_S = LL_dist(R_gof, num_c_S, Nf_S, p[1]/Nf_UT, p[2], f_on, rel_div_on, fit_m[2], eff[2])
             msel_res.p_value = 1 .- [ecdf(LLs_UT.+LLs_S)(MLL), ecdf(LLs_UT)(-LL_UT), ecdf(LLs_S)(-LL_S)]
+            end_time = time()
+            msel_res.time = [end_time - start_time, (end_time - start_time)/2, (end_time - start_time)/2]
         else
             est_res.status = fill("failed", length(est_res.parameter))
             msel_res.AIC = [Inf, Inf, Inf]
             msel_res.BIC = [Inf, Inf, Inf]
             msel_res.LL = [-Inf, -Inf, -Inf]
             msel_res.p_value = [0, 0, 0]
+            msel_res.time = [0, 0, 0]
         end
     # For non-zero rel. division rate on-cells -> Fraction of on-cells inferred
     else
@@ -607,18 +646,22 @@ function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
             LLs_UT = LL_dist(R_gof, num_c_UT, Nf_UT, p[1]/Nf_UT, fit_m[1], eff[1])
             LLs_S = LL_dist(R_gof, num_c_S, Nf_S, p[1]/Nf_UT, p[2], p[3], rel_div_on, fit_m[2], eff[2])
             msel_res.p_value = 1 .- [ecdf(LLs_UT.+LLs_S)(MLL), ecdf(LLs_UT)(-LL_UT), ecdf(LLs_S)(-LL_S)]
+            end_time = time()
+            msel_res.time = [end_time - start_time, (end_time - start_time)/2, (end_time - start_time)/2]
         else
             est_res.status = fill("failed", length(est_res.parameter))
             msel_res.AIC = [Inf, Inf, Inf]
             msel_res.BIC = [Inf, Inf, Inf]
             msel_res.LL = [-Inf, -Inf, -Inf]
             msel_res.p_value = [0, 0, 0]
+            msel_res.time = [0, 0, 0]
             end   
         end
     return est_res, msel_res 
 end
 # Relative division rate on-cells and fraction of on-cells not given -> both inferred
 function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vector{<:Number}, f_on::Bool, rel_div_on::Bool, fit_m::Vector{Float64}=[1., 1.]; cond_S="S")
+    start_time = time()
     est_res = DataFrame(parameter=["Mutation rate off-cells", "Mutant fitness", "Mutant fitness", "Mutation-supply ratio", "Mutation rate on-cells", "Fraction on-cells", "Rel. division rate on-cells", "Rel. mutation rate on-cells", "Fold change mean mutation rate"])
 	est_res.condition = [["UT+"*cond_S, "UT"]; fill(cond_S, 6); cond_S*"/UT"]
     msel_res = DataFrame(model=["Heterogeneous", "Heterogeneous", "Heterogeneous"], condition=["UT+"*cond_S, "UT", cond_S])
@@ -660,12 +703,15 @@ function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
         LLs_UT = LL_dist(R_gof, num_c_UT, Nf_UT, p[1]/Nf_UT, fit_m[1], eff[1])
         LLs_S = LL_dist(R_gof, num_c_S, Nf_S, p[1]/Nf_UT, p[2], p[3], p[4], fit_m[2], eff[2])
         msel_res.p_value = 1 .- [ecdf(LLs_UT.+LLs_S)(MLL), ecdf(LLs_UT)(-LL_UT), ecdf(LLs_S)(-LL_S)]
+        end_time = time()
+        msel_res.time = [end_time - start_time, (end_time - start_time)/2, (end_time - start_time)/2]
     else
         est_res.status = fill("failed", length(est_res.parameter))
         msel_res.AIC = [Inf, Inf, Inf]
         msel_res.BIC = [Inf, Inf, Inf]
         msel_res.LL = [-Inf, -Inf, -Inf]
         msel_res.p_value = [0, 0, 0]
+        msel_res.time = [0, 0, 0]
     end
     return est_res, msel_res
 end
