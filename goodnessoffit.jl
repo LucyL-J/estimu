@@ -23,7 +23,7 @@ function LL_dist(R::Int, num_c::Int, N, mu, fit_m, eff)
     if any(st)
         println("Warning: NaN values found in LL; mu = $mu, fit_m = $fit_m")
     end
-    return LL
+    return LL, length(p_rdraws), p_rdraws[end]
 end
 
 function LL_dist(R::Int, num_c::Int, N, mu_off, S, f_on, rel_div_on, fit_m, eff)
@@ -49,5 +49,5 @@ function LL_dist(R::Int, num_c::Int, N, mu_off, S, f_on, rel_div_on, fit_m, eff)
     if any(st)
         println("Warning: NaN values found in LL; mu_off = $mu_off, S = $S")
     end
-    return LL
+    return LL, length(p_rdraws), p_rdraws[end]
 end
