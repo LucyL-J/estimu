@@ -200,6 +200,9 @@ function tail_prob(p, max_mc_cutoff)    # "Tail" probability = 1 - cumulative pr
         push!(p, 1-sum(p)) 
         println("Warning: p has reached max_mc_cutoff, setting tail probability to $(p[end])")
     end
+    if p[end] > 1
+        println("Warning: Trail probability exceeds 1!")
+    end
     return p
 end
 
@@ -276,7 +279,7 @@ function mudi_threshold_het_0(p_threshold, m_off, m_on, inv_fit_m) # With diff. 
     return tail_prob(p, max_mc_cutoff)
 end
 function mudi_threshold_het_0(p_threshold, m_off, m_on, inv_fit_m, eff) # Plating efficiency < 1
-    p_cumulative = exp(m_off*(-1 + inv_fit_m*(1-eff)/(inv_fit_m+1) * pFq((1,1), (inv_fit_m+2,), 1-eff)) - eff)
+    p_cumulative = exp(m_off*(-1 + inv_fit_m*(1-eff)/(inv_fit_m+1) * pFq((1,1), (inv_fit_m+2,), 1-eff)) - eff*m_on)
     b = inv_fit_m/(inv_fit_m+1)
     q_off = Vector{Float64}(undef, 0)
     q_on = [eff]
