@@ -363,23 +363,3 @@ read_counts <- function(df_row){
   }
   return(v2)
 }
-
-LRT <- function(LLs){
-  q <- numeric()
-  for (d in 1:(length(LLs)-1)) {
-    q <- append(q, qchisq(0.95, df=d)/2)
-  }  
-  m <- 1
-  while (m < length(LLs)) {
-    for (d in 1:(length(LLs)-m)) {
-      if (LLs[m] + q[d] < LLs[m+d]) {
-        m <- m + d
-        break
-      }      
-    }
-    if (d == (length(LLs)-m)) {
-      break
-    }
-  }
-  return(m)
-}
