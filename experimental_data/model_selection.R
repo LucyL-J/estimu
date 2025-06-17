@@ -98,4 +98,16 @@ min_BIC <- pmin(min_BIC_hom, min_BIC_het)
 est_paras_BIC <- est_paras_all[est_paras_all$BIC_joint == rep(min_BIC, each = length(m)), ]
 est_sum$by_BIC <- est_paras_BIC$model
 
+
+est_sum$fitm_ratio_unconstr <- cbind(
+  subset(est_paras, model=="hom_fitm_unconstr")$fitm_ratio_MLE, 
+  subset(est_paras, model=="hom_fitm_unconstr")$fitm_ratio_lower_bound, 
+  subset(est_paras, model=="hom_fitm_unconstr")$fitm_ratio_upper_bound)
+
+
+est_sum$rel_div_on <- cbind(
+  subset(est_paras, model=="het_div")$rel_div_on_MLE, 
+  subset(est_paras, model=="het_div")$rel_div_on_lower_bound, 
+  subset(est_paras, model=="het_div")$rel_div_on_upper_bound)
+
 write.csv(est_sum, file = "experimental_data/est_sum.csv")
