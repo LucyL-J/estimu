@@ -623,7 +623,7 @@ function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
 
             end
             eff_conv = convert_eff(eff)
-            LL_UT = log_likelihood_m_fitm(mc_counts_UT, mc_max_UT, p[1], 1/fit_m[1], eff_conv[1])
+            LL_UT = log_likelihood_m(mc_counts_UT, mc_max_UT, p[1], q0_UT, q_UT)
             LL_S = log_likelihood_m_S(mc_counts_S, mc_max_S, p[1]*N_ratio, p[2], q0_S_off, q_S_off, q0_S_on, q_S_on)
             msel_res.AIC = [4 + 2*MLL, 2 - 2*LL_UT, 2 - 2*LL_S]
             msel_res.BIC = [2*log(length(mc_UT)+length(mc_S)) + 2*MLL, 1*log(num_c_UT) - 2*LL_UT, 1*log(num_c_S) - 2*LL_S]
@@ -674,7 +674,7 @@ function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
                 est_res.upper_bound = [Inf, fit_m[1], fit_m[2], Inf, Inf, 1., rel_div_on, Inf, Inf]
 
             end
-            LL_UT = log_likelihood_m_fitm(mc_counts_UT, mc_max_UT, p[1], 1/fit_m[1], eff_conv[1])
+            LL_UT = log_likelihood_m(mc_counts_UT, mc_max_UT, p[1], q0_UT, q_UT)
             LL_S = log_likelihood_m_S_div_f(mc_counts_S, mc_max_S, p[1]*N_ratio, p[2], p[3], rel_div_on, q0_S_off, q_S_off, 1/fit_m[2], eff_conv[2])
             msel_res.AIC = [6 + 2*MLL, 3 - 2*LL_UT, 3 - 2*LL_S]
             msel_res.BIC = [3*log(length(mc_UT)+length(mc_S)) + 2*MLL, 1.5*log(num_c_UT) - 2*LL_UT, 1.5*log(num_c_S) - 2*LL_S]
@@ -735,7 +735,7 @@ function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
             est_res.lower_bound = [0., fit_m[1], fit_m[2], 0., 0., 0., 0., 0., 0.]
             est_res.upper_bound = [Inf, fit_m[1], fit_m[2], Inf, Inf, 1., Inf, Inf, Inf]
         end
-        LL_UT = log_likelihood_m_fitm(mc_counts_UT, mc_max_UT, p[1], 1/fit_m[1], eff_conv[1])
+        LL_UT = log_likelihood_m(mc_counts_UT, mc_max_UT, p[1], q0_UT, q_UT)
         LL_S = log_likelihood_m_S_div_f(mc_counts_S, mc_max_S, p[1]*N_ratio, p[2], p[3], p[4], q0_S_off, q_S_off, 1/fit_m[2], eff_conv[2])
         msel_res.AIC = [8 + 2*MLL, 4 - 2*LL_UT, 4 - 2*LL_S]
         msel_res.BIC = [4*log(length(mc_UT)+length(mc_S)) + 2*MLL, 2*log(num_c_UT) - 2*LL_UT, 2*log(num_c_S) - 2*LL_S]
