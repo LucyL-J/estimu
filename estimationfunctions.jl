@@ -7,7 +7,7 @@ using StatsBase, DataFrames, Optim
 # Mutation rate estimation algorithms
 # Return two data frames: 
 #       (i) Maximum likelihood estimates and 95% confidence intervals 
-#       (ii) Log-likelihood and AIC+BIC values
+#       (ii) Log-likelihood and AIC, AIC_corrected + BIC values
 
 R_gof = 10^4  # Number of replicates for the goodness-of-fit test
 
@@ -53,6 +53,7 @@ function estimu(mc::Vector{Int}, Nf, eff, fit_m::Float64=1.; cond="UT")
             est_res.upper_bound = [Inf, fit_m] 
         end
         msel_res.AIC = [2 + 2*MLL]
+        msel_res.AIC_corr = [2*length(mc)/(length(mc)-2) + 2*MLL]  # AIC corrected for the sample size
         msel_res.BIC = [log(length(mc)) + 2*MLL] 
         msel_res.LL = [-MLL]
         LLs, mc_cutoff, p_cutoff = LL_dist(R_gof, num_c, Nf, m/Nf, fit_m, eff)
@@ -64,6 +65,7 @@ function estimu(mc::Vector{Int}, Nf, eff, fit_m::Float64=1.; cond="UT")
     else
         est_res.status = fill("failed", length(est_res.parameter))
         msel_res.AIC = [Inf]
+        msel_res.AIC_corr = [Inf]
         msel_res.BIC = [Inf]
         msel_res.LL = [-Inf]
         msel_res.p_value = [0]
@@ -102,7 +104,8 @@ function estimu(mc::Vector{Int}, Nf, eff, fit_m::Bool; cond="UT")
             est_res.lower_bound = [0., 0.]
             est_res.upper_bound = [Inf, Inf]
         end
-        msel_res.AIC = [4 + 2*MLL]         
+        msel_res.AIC = [4 + 2*MLL]
+        msel_res.AIC_corr = [4*length(mc)/(length(mc)-3) + 2*MLL]   
         msel_res.BIC = [2*log(length(mc)) + 2*MLL]    
         msel_res.LL = [-MLL]
         LLs, mc_cutoff, p_cutoff = LL_dist(R_gof, num_c, Nf, p[1]/Nf, 1/p[2], eff)
@@ -114,6 +117,7 @@ function estimu(mc::Vector{Int}, Nf, eff, fit_m::Bool; cond="UT")
 	else
         est_res.status = fill("failed", length(est_res.parameter))
         msel_res.AIC = [Inf]
+        msel_res.AIC_corr = [Inf]
         msel_res.BIC = [Inf]
 		msel_res.LL = [-Inf]
         msel_res.p_value = [0]
@@ -182,25 +186,27 @@ function estimu_0(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vecto
         end
         LL_UT = log_likelihood_m(mc_counts_UT, mc_max_UT, m, q0_UT, q_UT)
         LL_S = log_likelihood_m(mc_counts_S, mc_max_S, m*N_ratio, q0_S, q_S)
-        msel_res.AIC = [2 + 2*MLL, 1 - 2*LL_UT, 1 - 2*LL_S]
+        msel_res.AIC = [2 + 2*MLL, NaN, NaN]
         # Number of data points = total number of parallel cultures
-        msel_res.BIC = [1*log(num_c_UT+num_c_S) + 2*MLL, 0.5*log(num_c_UT) - 2*LL_UT, 0.5*log(num_c_S) - 2*LL_S] 
+        msel_res.AIC_corr = [2*(num_c_UT+num_c_S)/(num_c_UT+num_c_S-2) + 2*MLL, NaN, NaN]
+        msel_res.BIC = [1*log(num_c_UT+num_c_S) + 2*MLL, NaN, NaN] 
         msel_res.LL = [-MLL, LL_UT, LL_S]
         LLs_UT, mc_cutoff_UT, p_cutoff_UT = LL_dist(R_gof, num_c_UT, Nf_UT, m/Nf_UT, fit_m[1], eff[1])
         LLs_S, mc_cutoff_S, p_cutoff_S = LL_dist(R_gof, num_c_S, Nf_S, m/Nf_UT, fit_m[2], eff[2])
         msel_res.p_value = 1 .- [ecdf(LLs_UT.+LLs_S)(MLL), ecdf(LLs_UT)(-LL_UT), ecdf(LLs_S)(-LL_S)]
         msel_res.cutoff = [mc_cutoff_UT+mc_cutoff_S, mc_cutoff_UT, mc_cutoff_S]
-        msel_res.tail_prob = [p_cutoff_UT*p_cutoff_S, p_cutoff_UT, p_cutoff_S] 
+        msel_res.tail_prob = [NaN, p_cutoff_UT, p_cutoff_S] 
         end_time = time()
         msel_res.calc_time = [end_time - start_time, (end_time - start_time)/2, (end_time - start_time)/2]
     else
         est_res.status = fill("failed", length(est_res.parameter))
-        msel_res.AIC = [Inf, Inf, Inf]
-        msel_res.BIC = [Inf, Inf, Inf]
+        msel_res.AIC = [Inf, NaN, NaN]
+        msel_res.AIC_corr = [Inf, NaN, NaN]
+        msel_res.BIC = [Inf, NaN, NaN]
         msel_res.LL = [-Inf, -Inf, -Inf]
         msel_res.p_value = [0, 0, 0]
         msel_res.cutoff = [0, 0, 0]
-        msel_res.tail_prob = [1, 1, 1]
+        msel_res.tail_prob = [NaN, 1, 1]
         msel_res.calc_time = [0, 0, 0]
     end
     return est_res, msel_res
@@ -237,24 +243,26 @@ function estimu_0(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vecto
         end
         LL_UT = log_likelihood_m_fitm(mc_counts_UT, mc_max_UT, p[1], p[2], eff_conv[1])
         LL_S = log_likelihood_m_fitm(mc_counts_S, mc_max_S, p[1]*N_ratio, p[2], eff_conv[2])
-        msel_res.AIC = [4 + 2*MLL, 2 - 2*LL_UT, 2 - 2*LL_S]
-        msel_res.BIC = [2*log(length(mc_UT)+length(mc_S)) + 2*MLL, 1*log(num_c_UT) - 2*LL_UT, 1*log(num_c_S) - 2*LL_S] 
+        msel_res.AIC = [4 + 2*MLL, NaN, NaN]
+        msel_res.AIC_corr = [4*(num_c_UT+num_c_S)/(num_c_UT+num_c_S-3) + 2*MLL, NaN, NaN]
+        msel_res.BIC = [2*log(length(mc_UT)+length(mc_S)) + 2*MLL, NaN, NaN] 
         msel_res.LL = [-MLL, LL_UT, LL_S]
         LLs_UT, mc_cutoff_UT, p_cutoff_UT = LL_dist(R_gof, num_c_UT, Nf_UT, p[1]/Nf_UT, 1/p[2], eff[1])
         LLs_S, mc_cutoff_S, p_cutoff_S = LL_dist(R_gof, num_c_S, Nf_S, p[1]/Nf_UT, 1/p[2], eff[2])
         msel_res.p_value = 1 .- [ecdf(LLs_UT.+LLs_S)(MLL), ecdf(LLs_UT)(-LL_UT), ecdf(LLs_S)(-LL_S)]
         msel_res.cutoff = [mc_cutoff_UT+mc_cutoff_S, mc_cutoff_UT, mc_cutoff_S]
-        msel_res.tail_prob = [p_cutoff_UT*p_cutoff_S, p_cutoff_UT, p_cutoff_S] 
+        msel_res.tail_prob = [NaN, p_cutoff_UT, p_cutoff_S] 
         end_time = time()
         msel_res.calc_time = [end_time - start_time, (end_time - start_time)/2, (end_time - start_time)/2]
 	else
 		est_res.status = fill("failed", length(est_res.parameter))
-        msel_res.AIC = [Inf, Inf, Inf]
-        msel_res.BIC = [Inf, Inf, Inf]
+        msel_res.AIC = [Inf, NaN, NaN]
+        msel_res.AIC_corr = [Inf, NaN, NaN]
+        msel_res.BIC = [Inf, NaN, NaN]
         msel_res.LL = [-Inf, -Inf, -Inf]
         msel_res.p_value = [0, 0, 0]
         msel_res.cutoff = [0, 0, 0]
-        msel_res.tail_prob = [1, 1, 1]
+        msel_res.tail_prob = [NaN, 1, 1]
         msel_res.calc_time = [0, 0, 0]
 	end
 	return est_res, msel_res
@@ -292,24 +300,25 @@ function estimu_0(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vecto
         end
         LL_UT = log_likelihood_m_fitm(mc_counts_UT, mc_max_UT, p[1], p[2], eff_conv[1])
         LL_S = log_likelihood_m_fitm(mc_counts_S, mc_max_S, p[1]*N_ratio, p[3], eff_conv[2])
-        msel_res.AIC = [6 + 2*MLL, 3 - 2*LL_UT, 3 - 2*LL_S]
-        msel_res.BIC = [3*log(length(mc_UT)+length(mc_S)) + 2*MLL, 1.5*log(num_c_UT) - 2*LL_UT, 1.5*log(num_c_S) - 2*LL_S]
+        msel_res.AIC = [6 + 2*MLL, NaN, NaN]
+        msel_res.BIC = [3*log(length(mc_UT)+length(mc_S)) + 2*MLL, NaN, NaN]
         msel_res.LL = [-MLL, LL_UT, LL_S]
         LLs_UT, mc_cutoff_UT, p_cutoff_UT = LL_dist(R_gof, num_c_UT, Nf_UT, p[1]/Nf_UT, 1/p[2], eff[1])
         LLs_S, mc_cutoff_S, p_cutoff_S = LL_dist(R_gof, num_c_S, Nf_S, p[1]/Nf_UT, 1/p[3], eff[2])
         msel_res.p_value = 1 .- [ecdf(LLs_UT.+LLs_S)(MLL), ecdf(LLs_UT)(-LL_UT), ecdf(LLs_S)(-LL_S)]
         msel_res.cutoff = [mc_cutoff_UT+mc_cutoff_S, mc_cutoff_UT, mc_cutoff_S]
-        msel_res.tail_prob = [p_cutoff_UT*p_cutoff_S, p_cutoff_UT, p_cutoff_S] 
+        msel_res.tail_prob = [NaN, p_cutoff_UT, p_cutoff_S] 
         end_time = time()
         msel_res.calc_time = [end_time - start_time, (end_time - start_time)/2, (end_time - start_time)/2]
 	else
 		est_res.status = fill("failed", length(est_res.parameter))
-        msel_res.AIC = [Inf, Inf, Inf]
-        msel_res.BIC = [Inf, Inf, Inf]
+        msel_res.AIC = [Inf, NaN, NaN]
+        msel_res.AIC_corr = [Inf, NaN, NaN]
+        msel_res.BIC = [Inf, NaN, NaN]
         msel_res.LL = [-Inf, -Inf, -Inf]
         msel_res.p_value = [0, 0, 0]
         msel_res.cutoff = [0, 0, 0]
-        msel_res.tail_prob = [1, 1, 1]
+        msel_res.tail_prob = [NaN, 1, 1]
         msel_res.calc_time = [0, 0, 0]
 	end
 	return est_res, msel_res
@@ -372,16 +381,18 @@ function estimu_hom(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
             msel_res_UT = vcat(msel_res_UT, msel_res_S)
             end_time = time()
             total_time = msel_res_UT.calc_time[1]+msel_res_S.calc_time[1] + (end_time-start_time)
-            msel_res_UT[1, :] = [M, "UT+"*cond_S, msel_res_UT.AIC[1]+msel_res_S.AIC[1], Inf, msel_res_UT.LL[1]+msel_res_S.LL[1], 1 - ecdf(LLs_UT.+LLs_S)(-msel_res_UT.LL[1]-msel_res_S.LL[1]), msel_res_UT.cutoff[1]+msel_res_S.cutoff[1], msel_res_UT.tail_prob[1]*msel_res_S.tail_prob[1], total_time]
-            push!(msel_res_UT, [M, "UT->"*cond_S, -2*LL_S_UT, -2*LL_S_UT, LL_S_UT, 1 - ecdf(LLs_S_UT)(-LL_S_UT), mc_cutoff_S_UT, p_cutoff_S_UT, total_time])
+            msel_res_UT[1, :] = [M, "UT+"*cond_S, msel_res_UT.AIC[1]+msel_res_S.AIC[1], NaN, NaN, msel_res_UT.LL[1]+msel_res_S.LL[1], 1 - ecdf(LLs_UT.+LLs_S)(-msel_res_UT.LL[1]-msel_res_S.LL[1]), msel_res_UT.cutoff[1]+msel_res_S.cutoff[1], NaN, total_time]
+            push!(msel_res_UT, [M, "UT->"*cond_S, NaN, NaN, NaN, LL_S_UT, 1 - ecdf(LLs_S_UT)(-LL_S_UT), mc_cutoff_S_UT, p_cutoff_S_UT, total_time])
         else
             push!(est_res_UT, ["Mutation rate", cond_S, "failed", 0., 0., 0.])
             push!(est_res_UT, ["Mutant fitness", cond_S, "failed", -1., -1., -1.])
-            push!(msel_res_UT, [M, cond_S, Inf, Inf, -Inf, 0, 0, 1, 0])
-            msel_res_UT[1, :] = [M, "UT+"*cond_S, Inf, Inf, -Inf, 0, 0, 1, 0]
+            push!(msel_res_UT, [M, cond_S, Inf, Inf, Inf, -Inf, 0, 0, 1, 0])
+            msel_res_UT[1, :] = [M, "UT+"*cond_S, Inf, Inf, Inf, -Inf, 0, 0, 1, 0]
         end
     end
-    msel_res_UT.BIC[1] = sum((typeof(fit_m[1])==Bool)+(sum(typeof(fit_m[2])==Bool))) * log(length(mc_UT)+length(mc_S)) - 2*msel_res_UT.LL[1]
+    num_p = 2 + sum((typeof(fit_m[1]) == Bool)+(sum(typeof(fit_m[2]) == Bool))) # Total number of inference parameters
+    msel_res_UT.AIC_corr[1] = 2*num_p * (length(mc_UT)+length(mc_S))/(length(mc_UT)+length(mc_S)-num_p-1) - 2*msel_res_UT.LL[1]
+    msel_res_UT.BIC[1] = num_p * log(length(mc_UT)+length(mc_S)) - 2*msel_res_UT.LL[1]
     msel_res_UT.model = fill(M, length(msel_res_UT.model))   
     return est_res_UT, msel_res_UT
 end
@@ -418,24 +429,26 @@ function estimu_hom(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
         end
         LL_UT = log_likelihood_m_fitm(mc_counts_UT, mc_max_UT, p[1], p[3], eff_conv[1])
         LL_S = log_likelihood_m_fitm(mc_counts_S, mc_max_S, p[2], p[3], eff_conv[2])
-        msel_res.AIC = [6 + 2*MLL, 3 - 2*LL_UT, 3 - 2*LL_S]
-        msel_res.BIC = [3*log(length(mc_UT)+length(mc_S)) + 2*MLL, 1.5*log(num_c_UT) - 2*LL_UT, 1.5*log(num_c_S) - 2*LL_S]
+        msel_res.AIC = [6 + 2*MLL, NaN, NaN]
+        msel_res.AIC_corr = [6*(num_c_UT+num_c_S)/(num_c_UT+num_c_S-4) + 2*MLL, NaN, NaN]
+        msel_res.BIC = [3*log(length(mc_UT)+length(mc_S)) + 2*MLL, NaN, NaN]
         msel_res.LL = [-MLL, LL_UT, LL_S]
         LLs_UT, mc_cutoff_UT, p_cutoff_UT = LL_dist(R_gof, num_c_UT, Nf_UT, p[1]/Nf_UT, 1/p[3], eff[1])
         LLs_S, mc_cutoff_S, p_cutoff_S = LL_dist(R_gof, num_c_S, Nf_S, p[2]/Nf_S, 1/p[3], eff[2])
         msel_res.p_value = 1 .- [ecdf(LLs_UT.+LLs_S)(MLL), ecdf(LLs_UT)(-LL_UT), ecdf(LLs_S)(-LL_S)]
         msel_res.cutoff = [mc_cutoff_UT+mc_cutoff_S, mc_cutoff_UT, mc_cutoff_S]
-        msel_res.tail_prob = [p_cutoff_UT*p_cutoff_S, p_cutoff_UT, p_cutoff_S] 
+        msel_res.tail_prob = [NaN, p_cutoff_UT, p_cutoff_S] 
         end_time = time()
         msel_res.calc_time = [end_time - start_time, (end_time - start_time)/2, (end_time - start_time)/2]
 	else
 		est_res.status = fill("failed", length(est_res.parameter))
-        msel_res.AIC = [Inf, Inf, Inf]
-        msel_res.BIC = [Inf, Inf, Inf]
+        msel_res.AIC = [Inf, NaN, NaN]
+        msel_res.AIC_corr = [Inf, NaN, NaN]
+        msel_res.BIC = [Inf, NaN, NaN]
         msel_res.LL = [-Inf, -Inf, -Inf]
         msel_res.p_value = [0, 0, 0]
         msel_res.cutoff = [0, 0, 0]
-        msel_res.tail_prob = [1, 1, 1]
+        msel_res.tail_prob = [NaN, 1, 1]
         msel_res.calc_time = [0, 0, 0]
 	end
 	return est_res, msel_res
@@ -502,24 +515,26 @@ function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
         eff_conv = convert_eff(eff)
         LL_UT = log_likelihood_m_fitm(mc_counts_UT, mc_max_UT, p[1], 1/fit_m[1], eff_conv[1])
         LL_S = log_likelihood_m_S(mc_counts_S, mc_max_S, p[1]*N_ratio, p[2], q0_S_off, q_S_off, q0_S_on, q_S_on)
-        msel_res.AIC = [4 + 2*MLL, 2 - 2*LL_UT, 2 - 2*LL_S]
-        msel_res.BIC = [2*log(length(mc_UT)+length(mc_S)) + 2*MLL, 1*log(num_c_UT) - 2*LL_UT, 1*log(num_c_S) - 2*LL_S]
+        msel_res.AIC = [4 + 2*MLL, NaN, NaN]
+        msel_res.AIC_corr = [4*(num_c_UT+num_c_S)/(num_c_UT+num_c_S-3) + 2*MLL, NaN, NaN]
+        msel_res.BIC = [2*log(length(mc_UT)+length(mc_S)) + 2*MLL, NaN, NaN]
         msel_res.LL = [-MLL, LL_UT, LL_S]
         LLs_UT, mc_cutoff_UT, p_cutoff_UT = LL_dist(R_gof, num_c_UT, Nf_UT, p[1]/Nf_UT, fit_m[1], eff[1])
         LLs_S, mc_cutoff_S, p_cutoff_S = LL_dist(R_gof, num_c_S, Nf_S, p[1]/Nf_UT, p[2], f_on, rel_div_on, fit_m[2], eff[2])
         msel_res.p_value = 1 .- [ecdf(LLs_UT.+LLs_S)(MLL), ecdf(LLs_UT)(-LL_UT), ecdf(LLs_S)(-LL_S)]
         msel_res.cutoff = [mc_cutoff_UT+mc_cutoff_S, mc_cutoff_UT, mc_cutoff_S]
-        msel_res.tail_prob = [p_cutoff_UT*p_cutoff_S, p_cutoff_UT, p_cutoff_S] 
+        msel_res.tail_prob = [NaN, p_cutoff_UT, p_cutoff_S] 
         end_time = time()
         msel_res.calc_time = [end_time - start_time, (end_time - start_time)/2, (end_time - start_time)/2]
 	else
 		est_res.status = fill("failed", length(est_res.parameter))
-        msel_res.AIC = [Inf, Inf, Inf]
-        msel_res.BIC = [Inf, Inf, Inf]
+        msel_res.AIC = [Inf, NaN, NaN]
+        msel_res.AIC_corr = [Inf, NaN, NaN]
+        msel_res.BIC = [Inf, NaN, NaN]
         msel_res.LL = [-Inf, -Inf, -Inf]
         msel_res.p_value = [0, 0, 0]
         msel_res.cutoff = [0, 0, 0]
-        msel_res.tail_prob = [1, 1, 1]
+        msel_res.tail_prob = [NaN, 1, 1]
         msel_res_UT.calc_time = [0, 0, 0]
     end   
     return est_res, msel_res
@@ -561,24 +576,26 @@ function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
         end
         LL_UT = log_likelihood_m_fitm(mc_counts_UT, mc_max_UT, p[1], 1/fit_m[1], eff_conv[1])
         LL_S = log_likelihood_m_S_div_f(mc_counts_S, mc_max_S, p[1]*N_ratio, p[2], f_on, p[3], q0_S_off, q_S_off, 1/fit_m[2], eff_conv[2])
-        msel_res.AIC = [6 + 2*MLL, 3 - 2*LL_UT, 3 - 2*LL_S]
-        msel_res.BIC = [3*log(length(mc_UT)+length(mc_S)) + 2*MLL, 1.5*log(num_c_UT) - 2*LL_UT, 1.5*log(num_c_S) - 2*LL_S]
+        msel_res.AIC = [6 + 2*MLL, NaN, NaN]
+        msel_res.AIC_corr = [6*(num_c_UT+num_c_S)/(num_c_UT+num_c_S-4) + 2*MLL, NaN, NaN]
+        msel_res.BIC = [3*log(length(mc_UT)+length(mc_S)) + 2*MLL, NaN, NaN]
         msel_res.LL = [-MLL, LL_UT, LL_S]
         LLs_UT, mc_cutoff_UT, p_cutoff_UT = LL_dist(R_gof, num_c_UT, Nf_UT, p[1]/Nf_UT, fit_m[1], eff[1])
         LLs_S, mc_cutoff_S, p_cutoff_S = LL_dist(R_gof, num_c_S, Nf_S, p[1]/Nf_UT, p[2], f_on, p[3], fit_m[2], eff[2])
         msel_res.p_value = 1 .- [ecdf(LLs_UT.+LLs_S)(MLL), ecdf(LLs_UT)(-LL_UT), ecdf(LLs_S)(-LL_S)]
         msel_res.cutoff = [mc_cutoff_UT+mc_cutoff_S, mc_cutoff_UT, mc_cutoff_S]
-        msel_res.tail_prob = [p_cutoff_UT*p_cutoff_S, p_cutoff_UT, p_cutoff_S] 
+        msel_res.tail_prob = [NaN, p_cutoff_UT, p_cutoff_S] 
         end_time = time()
         msel_res.calc_time = [end_time - start_time, (end_time - start_time)/2, (end_time - start_time)/2]
 	else
 		est_res.status = fill("failed", length(est_res.parameter))
-        msel_res.AIC = [Inf, Inf, Inf]
-        msel_res.BIC = [Inf, Inf, Inf]
+        msel_res.AIC = [Inf, NaN, NaN]
+        msel_res.AIC_corr = [Inf, NaN, NaN]
+        msel_res.BIC = [Inf, NaN, NaN]
         msel_res.LL = [-Inf, -Inf, -Inf]
         msel_res.p_value = [0, 0, 0]
         msel_res.cutoff = [0, 0, 0]
-        msel_res.tail_prob = [1, 1, 1]
+        msel_res.tail_prob = [NaN, 1, 1]
         msel_res.calc_time = [0, 0, 0]
     end
     return est_res, msel_res
@@ -625,24 +642,26 @@ function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
             eff_conv = convert_eff(eff)
             LL_UT = log_likelihood_m(mc_counts_UT, mc_max_UT, p[1], q0_UT, q_UT)
             LL_S = log_likelihood_m_S(mc_counts_S, mc_max_S, p[1]*N_ratio, p[2], q0_S_off, q_S_off, q0_S_on, q_S_on)
-            msel_res.AIC = [4 + 2*MLL, 2 - 2*LL_UT, 2 - 2*LL_S]
-            msel_res.BIC = [2*log(length(mc_UT)+length(mc_S)) + 2*MLL, 1*log(num_c_UT) - 2*LL_UT, 1*log(num_c_S) - 2*LL_S]
+            msel_res.AIC = [4 + 2*MLL, NaN, NaN]
+            msel_res.AIC_corr = [4*(num_c_UT+num_c_S)/(num_c_UT+num_c_S-3) + 2*MLL, NaN, NaN]
+            msel_res.BIC = [2*log(length(mc_UT)+length(mc_S)) + 2*MLL, NaN, NaN]
             msel_res.LL = [-MLL, LL_UT, LL_S]
             LLs_UT, mc_cutoff_UT, p_cutoff_UT = LL_dist(R_gof, num_c_UT, Nf_UT, p[1]/Nf_UT, fit_m[1], eff[1])
             LLs_S, mc_cutoff_S, p_cutoff_S = LL_dist(R_gof, num_c_S, Nf_S, p[1]/Nf_UT, p[2], f_on, rel_div_on, fit_m[2], eff[2])
             msel_res.p_value = 1 .- [ecdf(LLs_UT.+LLs_S)(MLL), ecdf(LLs_UT)(-LL_UT), ecdf(LLs_S)(-LL_S)]
             msel_res.cutoff = [mc_cutoff_UT+mc_cutoff_S, mc_cutoff_UT, mc_cutoff_S]
-            msel_res.tail_prob = [p_cutoff_UT*p_cutoff_S, p_cutoff_UT, p_cutoff_S] 
+            msel_res.tail_prob = [NaN, p_cutoff_UT, p_cutoff_S] 
             end_time = time()
             msel_res.calc_time = [end_time - start_time, (end_time - start_time)/2, (end_time - start_time)/2]
         else
             est_res.status = fill("failed", length(est_res.parameter))
-            msel_res.AIC = [Inf, Inf, Inf]
-            msel_res.BIC = [Inf, Inf, Inf]
+            msel_res.AIC = [Inf, NaN, NaN]
+            msel_res.AIC_corr = [Inf, NaN, NaN]
+            msel_res.BIC = [Inf, NaN, NaN]
             msel_res.LL = [-Inf, -Inf, -Inf]
             msel_res.p_value = [0, 0, 0]
             msel_res.cutoff = [0, 0, 0]
-            msel_res.tail_prob = [1, 1, 1]
+            msel_res.tail_prob = [NaN, 1, 1]
             msel_res.calc_time = [0, 0, 0]
         end
     # For non-zero rel. division rate on-cells -> Fraction of on-cells inferred
@@ -676,24 +695,26 @@ function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
             end
             LL_UT = log_likelihood_m(mc_counts_UT, mc_max_UT, p[1], q0_UT, q_UT)
             LL_S = log_likelihood_m_S_div_f(mc_counts_S, mc_max_S, p[1]*N_ratio, p[2], p[3], rel_div_on, q0_S_off, q_S_off, 1/fit_m[2], eff_conv[2])
-            msel_res.AIC = [6 + 2*MLL, 3 - 2*LL_UT, 3 - 2*LL_S]
-            msel_res.BIC = [3*log(length(mc_UT)+length(mc_S)) + 2*MLL, 1.5*log(num_c_UT) - 2*LL_UT, 1.5*log(num_c_S) - 2*LL_S]
+            msel_res.AIC = [6 + 2*MLL, NaN, NaN]
+            msel_res.AIC_corr = [6*(num_c_UT+num_c_S)/(num_c_UT+num_c_S-4) + 2*MLL, NaN, NaN]
+            msel_res.BIC = [3*log(length(mc_UT)+length(mc_S)) + 2*MLL, NaN, NaN]
             msel_res.LL = [-MLL, LL_UT, LL_S]
             LLs_UT, mc_cutoff_UT, p_cutoff_UT = LL_dist(R_gof, num_c_UT, Nf_UT, p[1]/Nf_UT, fit_m[1], eff[1])
             LLs_S, mc_cutoff_S, p_cutoff_S = LL_dist(R_gof, num_c_S, Nf_S, p[1]/Nf_UT, p[2], p[3], rel_div_on, fit_m[2], eff[2])
             msel_res.p_value = 1 .- [ecdf(LLs_UT.+LLs_S)(MLL), ecdf(LLs_UT)(-LL_UT), ecdf(LLs_S)(-LL_S)]
             msel_res.cutoff = [mc_cutoff_UT+mc_cutoff_S, mc_cutoff_UT, mc_cutoff_S]
-            msel_res.tail_prob = [p_cutoff_UT*p_cutoff_S, p_cutoff_UT, p_cutoff_S] 
+            msel_res.tail_prob = [NaN, p_cutoff_UT, p_cutoff_S] 
             end_time = time()
             msel_res.calc_time = [end_time - start_time, (end_time - start_time)/2, (end_time - start_time)/2]
         else
             est_res.status = fill("failed", length(est_res.parameter))
-            msel_res.AIC = [Inf, Inf, Inf]
-            msel_res.BIC = [Inf, Inf, Inf]
+            msel_res.AIC = [Inf, NaN, NaN]
+            msel_res.AIC_corr = [Inf, NaN, NaN]
+            msel_res.BIC = [Inf, NaN, NaN]
             msel_res.LL = [-Inf, -Inf, -Inf]
             msel_res.p_value = [0, 0, 0]
             msel_res.cutoff = [0, 0, 0]
-            msel_res.tail_prob = [1, 1, 1]
+            msel_res.tail_prob = [NaN, 1, 1]
             msel_res.calc_time = [0, 0, 0]
             end   
         end
@@ -737,24 +758,26 @@ function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
         end
         LL_UT = log_likelihood_m(mc_counts_UT, mc_max_UT, p[1], q0_UT, q_UT)
         LL_S = log_likelihood_m_S_div_f(mc_counts_S, mc_max_S, p[1]*N_ratio, p[2], p[3], p[4], q0_S_off, q_S_off, 1/fit_m[2], eff_conv[2])
-        msel_res.AIC = [8 + 2*MLL, 4 - 2*LL_UT, 4 - 2*LL_S]
-        msel_res.BIC = [4*log(length(mc_UT)+length(mc_S)) + 2*MLL, 2*log(num_c_UT) - 2*LL_UT, 2*log(num_c_S) - 2*LL_S]
+        msel_res.AIC = [8 + 2*MLL, NaN, NaN]
+        msel_res.AIC_corr = [8*(num_c_UT+num_c_S)/(num_c_UT+num_c_S-5) + 2*MLL, NaN, NaN]
+        msel_res.BIC = [4*log(length(mc_UT)+length(mc_S)) + 2*MLL, NaN, NaN]
         msel_res.LL = [-MLL, LL_UT, LL_S]
         LLs_UT, mc_cutoff_UT, p_cutoff_UT = LL_dist(R_gof, num_c_UT, Nf_UT, p[1]/Nf_UT, fit_m[1], eff[1])
         LLs_S, mc_cutoff_S, p_cutoff_S = LL_dist(R_gof, num_c_S, Nf_S, p[1]/Nf_UT, p[2], p[3], p[4], fit_m[2], eff[2])
         msel_res.p_value = 1 .- [ecdf(LLs_UT.+LLs_S)(MLL), ecdf(LLs_UT)(-LL_UT), ecdf(LLs_S)(-LL_S)]
         msel_res.cutoff = [mc_cutoff_UT+mc_cutoff_S, mc_cutoff_UT, mc_cutoff_S]
-        msel_res.tail_prob = [p_cutoff_UT*p_cutoff_S, p_cutoff_UT, p_cutoff_S] 
+        msel_res.tail_prob = [NaN, p_cutoff_UT, p_cutoff_S] 
         end_time = time()
         msel_res.calc_time = [end_time - start_time, (end_time - start_time)/2, (end_time - start_time)/2]
     else
         est_res.status = fill("failed", length(est_res.parameter))
-        msel_res.AIC = [Inf, Inf, Inf]
-        msel_res.BIC = [Inf, Inf, Inf]
+        msel_res.AIC = [Inf, NaN, NaN]
+        msel_res.AIC_corr = [Inf, NaN, NaN]
+        msel_res.BIC = [Inf, NaN, NaN]
         msel_res.LL = [-Inf, -Inf, -Inf]
         msel_res.p_value = [0, 0, 0]
         msel_res.cutoff = [0, 0, 0]
-        msel_res.tail_prob = [1, 1, 1]
+        msel_res.tail_prob = [NaN, 1, 1]
         msel_res.calc_time = [0, 0, 0]
     end
     return est_res, msel_res

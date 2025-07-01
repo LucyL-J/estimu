@@ -24,7 +24,7 @@ for (k in c("joint", "UT", "S", "test")) {
   }
 }
 est_paras <- data.frame(matrix(ncol = (length(pq)+length(lk))+6, nrow = 0))
-colnames(est_paras) <- c("ID", "model", "status", pq, c("AIC_joint", "BIC_joint"), lk, "calc_time")
+colnames(est_paras) <- c("ID", "model", "status", pq, c("AIC", "AIC_corr"), lk, "calc_time")
 
 for (i in 1:length(meta_data$ID)) {
   mc_data <- read.table(paste0("experimental_data/raw_counts/", meta_data$ID[i], ".txt"), header = FALSE, sep = ",", fill = TRUE)
@@ -52,23 +52,23 @@ for (i in 1:length(meta_data$ID)) {
       if (is.data.frame(res[[2]]) && res[[2]]$LL[1] != -Inf) {
         if (mod[m] == "null"){
           if (m == "no_SIM_wo_fitm") {
-            est_paras[nrow(est_paras) + 1,] <- c(meta_data$ID[i], m, "success", c(t(res[[1]][1:2,4:6])), c(t(res[[1]][1,4:6])), c(t(res[[1]][3:4,4:6])), rep(1,3), c(t(res[[1]][1,4:6])), rep(0,3), rep(NA,12), c(t(res[[2]][1,3:6])), c(t(res[[2]][2:3,5:8])), rep(NA,4), res[[2]][1,9])
+            est_paras[nrow(est_paras) + 1,] <- c(meta_data$ID[i], m, "success", c(t(res[[1]][1:2,4:6])), c(t(res[[1]][1,4:6])), c(t(res[[1]][3:4,4:6])), rep(1,3), c(t(res[[1]][1,4:6])), rep(0,3), rep(NA,12), c(t(res[[2]][1,3:4])), c(t(res[[2]][1:3,6:9])), rep(NA,4), res[[2]][1,9])
           } else {
-            est_paras[nrow(est_paras) + 1,] <- c(meta_data$ID[i], m, "success", c(t(res[[1]][1:2,4:6])), c(t(res[[1]][1,4:6])), c(t(res[[1]][3:4,4:6])), rep(1,3), rep(NA,18), c(t(res[[2]][1,3:6])), c(t(res[[2]][2:3,5:8])), rep(NA,4), res[[2]][1,9])
+            est_paras[nrow(est_paras) + 1,] <- c(meta_data$ID[i], m, "success", c(t(res[[1]][1:2,4:6])), c(t(res[[1]][1,4:6])), c(t(res[[1]][3:4,4:6])), rep(1,3), rep(NA,18), c(t(res[[2]][1,3:4])), c(t(res[[2]][1:3,6:9])), rep(NA,4), res[[2]][1,9])
           }
         }
         if (mod[m] == "homogeneous") {
           if (m == "hom_fitm"){
-            est_paras[nrow(est_paras) + 1,] <- c(meta_data$ID[i], m, "success", c(t(res[[1]][1:6,4:6])), rep(NA,18), c(t(res[[2]][1,3:6])), c(t(res[[2]][2:3,5:8])), rep(NA,4), res[[2]][1,9])
+            est_paras[nrow(est_paras) + 1,] <- c(meta_data$ID[i], m, "success", c(t(res[[1]][1:6,4:6])), rep(NA,18), c(t(res[[2]][1,3:4])), c(t(res[[2]][1:3,6:9])), rep(NA,4), res[[2]][1,9])
           } else {
-            est_paras[nrow(est_paras) + 1,] <- c(meta_data$ID[i], m, "success", c(t(res[[1]][1:6,4:6])), rep(NA,18), c(t(res[[2]][1,3:6])), c(t(res[[2]][2:4,5:8])), res[[2]][1,9]) 
+            est_paras[nrow(est_paras) + 1,] <- c(meta_data$ID[i], m, "success", c(t(res[[1]][1:6,4:6])), rep(NA,18), c(t(res[[2]][1,3:4])), c(t(res[[2]][1:4,6:9])), res[[2]][1,9]) 
           }
         }
         if (mod[m] == "heterogeneous"){
           if (m == "het_zero_div") {
-            est_paras[nrow(est_paras) + 1,] <- c(meta_data$ID[i], m, "success", rep(NA,18), c(t(res[[1]][1,4:6])), c(t(res[[1]][4,4:6])), rep(NA,6), rep(0,3), rep(NA,3), c(t(res[[2]][1,3:6])), c(t(res[[2]][2:3,5:8])), rep(NA,4), res[[2]][1,9])
+            est_paras[nrow(est_paras) + 1,] <- c(meta_data$ID[i], m, "success", rep(NA,18), c(t(res[[1]][1,4:6])), c(t(res[[1]][4,4:6])), rep(NA,6), rep(0,3), rep(NA,3), c(t(res[[2]][1,3:4])), c(t(res[[2]][1:3,6:9])), rep(NA,4), res[[2]][1,9])
           } else {
-            est_paras[nrow(est_paras) + 1,] <- c(meta_data$ID[i], m, "success", rep(NA,15), c(t(res[[1]][9,4:6])), c(t(res[[1]][1,4:6])), c(t(res[[1]][4:8,4:6])),c(t(res[[2]][1,3:6])), c(t(res[[2]][2:3,5:8])), rep(NA,4), res[[2]][1,9])
+            est_paras[nrow(est_paras) + 1,] <- c(meta_data$ID[i], m, "success", rep(NA,15), c(t(res[[1]][9,4:6])), c(t(res[[1]][1,4:6])), c(t(res[[1]][4:8,4:6])), c(t(res[[2]][1,3:4])), c(t(res[[2]][1:3,6:9])), rep(NA,4), res[[2]][1,9])
           }
         }
       } else {
