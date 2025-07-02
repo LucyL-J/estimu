@@ -91,10 +91,12 @@ est_paras_all <- subset(est_paras, is.element(model, m_all))
 min_AIC <- pmin(min_AIC_hom, min_AIC_het)
 est_paras_AIC <- est_paras_all[est_paras_all$AIC == rep(min_AIC, each = length(m_all)), ]
 est_sum$by_AIC <- est_paras_AIC$model
+est_sum$Delta_AIC <- min_AIC_hom - min_AIC_het
 
 min_AIC_corr <- pmin(min_AIC_corr_hom, min_AIC_corr_het)
 est_paras_AIC_corr <- est_paras_all[est_paras_all$AIC_corr == rep(min_AIC_corr, each = length(m_all)), ]
 est_sum$by_AIC_corr <- est_paras_AIC_corr$model
+est_sum$Delta_AIC_corr <- min_AIC_corr_hom - min_AIC_corr_het
 
 write.csv(est_sum, file = "experimental_data/est_sum.csv")
 
