@@ -301,6 +301,7 @@ function estimu_0(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vecto
         LL_UT = log_likelihood_m_fitm(mc_counts_UT, mc_max_UT, p[1], p[2], eff_conv[1])
         LL_S = log_likelihood_m_fitm(mc_counts_S, mc_max_S, p[1]*N_ratio, p[3], eff_conv[2])
         msel_res.AIC = [6 + 2*MLL, NaN, NaN]
+        msel_res.AIC_corr = [6*(num_c_UT+num_c_S)/(num_c_UT+num_c_S-4) + 2*MLL, NaN, NaN]
         msel_res.BIC = [3*log(length(mc_UT)+length(mc_S)) + 2*MLL, NaN, NaN]
         msel_res.LL = [-MLL, LL_UT, LL_S]
         LLs_UT, mc_cutoff_UT, p_cutoff_UT = LL_dist(R_gof, num_c_UT, Nf_UT, p[1]/Nf_UT, 1/p[2], eff[1])
