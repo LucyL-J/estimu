@@ -40,7 +40,7 @@ df <- arrange(df, species, target)
 df$ID <- factor(df$ID, levels = unique(df$ID), ordered = TRUE)
 
 # Goodness of fit test for the untreated condition
-subset(df, p_value_UT_max < 0.05)$ID
+print(as.character(subset(df, p_value_UT_max < 0.05)$ID))
 df <- subset(df, p_value_UT_max >= 0.05)
 
 # Estimated increase in population-wide mutation rate by antibiotic
@@ -68,9 +68,9 @@ p_M_antibiotic <- ggplot(data = df, aes(x=ID, y=M_AIC.1, group=antibiotic)) +
 p_M_antibiotic
 
 # Experiments for which an increase in mutation rate is estimated (model selection criterion: lowest AIC)
-length(subset(df, M_AIC.1 > 1)$ID)
+print(length(subset(df, M_AIC.1 > 1)$ID))
 # Experiments for which we reject hypothesis that S data was generated under UT parameters (criterion: p<0.05 in GoF)
-length(subset(df, p_value_test_min < 0.05)$ID)
+print(length(subset(df, p_value_test_min < 0.05)$ID))
 
 setdiff(subset(df, M_AIC.1 != 1)$ID, subset(df, p_value_test_min < 0.05)$ID)
 
@@ -107,6 +107,40 @@ p_M_antibiotic <- ggplot(data = df_strict, aes(x=ID, y=M_AIC.1, group=antibiotic
   theme(axis.text.x = element_text(vjust = 0.5))
 p_M_antibiotic
 
+# Distribution of p-values of the goodness of fit test
+est_paras_pooled <- subset(est_paras, is.element(ID, meta_data$ID))
+crit <- "Hom with lowest AIC"
+cond <- "UT condition"
+p_values <- df$p_value_UT_hom_AIC
+print(as.character(subset(df, p_value_S_het_AIC_corr < 0.05)$ID))
+#p_values <- subset(est_paras_pooled, model == "het_div")$p_value_UT
+res <- shapiro.test(p_values)
+p_value <- res$p.value
+hist(p_values, probability = TRUE, xlab = paste0("p-value ", cond), main = crit)
+mtext(text = paste("Shapiro-Wilk p-value:", round(p_value, 3)), side = 3, line = 0.5, adj = 1)
+
+# Are p-values different for the UT and S conditions?
+df$SIM_lenient <- df$M_AIC.1 > 1
+df_p_value_UT_S <- data.frame(ID = rep(df$ID, 2))
+df_p_value_UT_S$condition <- rep(c("UT", "S"), each = length(df$ID))
+df_p_value_UT_S$SIM_lenient <- rep(df$SIM_lenient, 2)
+df_p_value_UT_S$SIM <- rep(df$SIM, 2)
+crit <- "Hom model with lowest AIC_corr"
+#mod <- "het_div"
+df_p_value_UT_S$p_values <- c(df$p_value_UT_hom_AIC_corr, df$p_value_S_hom_AIC_corr)
+#df_p_value_UT_S$p_values <- c(subset(est_paras_pooled, model == mod)$p_value_UT, subset(est_paras_pooled, model == mod)$p_value_S)
+wilcox.test(p_values ~ condition, data = df_p_value_UT_S)
+median(subset(df_p_value_UT_S, condition == "UT")$p_values)
+median(subset(df_p_value_UT_S, condition == "S")$p_values)
+p_M_DNA <- ggplot(data = df_p_value_UT_S, aes(x=condition, y=p_values)) + geom_boxplot(aes(fill=condition), show.legend = FALSE, outlier.shape = NA) + 
+  geom_jitter(aes(color = SIM), width = 0.25, alpha = 0.8) + scale_color_manual(values = c("TRUE" = "red", "FALSE" = "darkgrey")) +
+  #coord_trans(y = "log10", ylim = c(5*10^-2,5*10^2)) + scale_y_continuous(breaks = c(0.1,1,10,100), labels = c(0.1,1,10,100)) +
+  #scale_fill_manual(values = c("DNA/DNA gyrase" = "#4E6ADB", "Ribosome" = "#FE9B2D")) + 
+  #theme(plot.margin = margin(0.5,0.5,2.5,0.5, "cm")) + 
+  ylab("p-value goodness of fit test") + xlab("Treatment condition") + ggtitle(crit) + 
+  stat_compare_means(label.y = 1) + theme(legend.position = "right")
+p_M_DNA
+
 # Under homogeneous-response model with the lowest AIC_corr
 # AIC corrected for the sample size n: AIC_corr = 2p n/(n-p-1) - 2ln(L)
 p_M_antibiotic <- ggplot(data = df, aes(x=ID, y=M_AIC_corr.1, group=antibiotic)) + 
@@ -120,9 +154,9 @@ p_M_antibiotic <- ggplot(data = df, aes(x=ID, y=M_AIC_corr.1, group=antibiotic))
 p_M_antibiotic
 
 # Experiments for which an increase in mutation rate is estimated (model selection criterion: lowest AIC_corr)
-length(subset(df, M_AIC_corr.1 > 1)$ID)
+print(length(subset(df, M_AIC_corr.1 > 1)$ID))
 # Experiments for which we reject hypothesis that S data was generated under UT parameters (criterion: p<0.05 in GoF)
-length(subset(df, p_value_test_min < 0.05)$ID)
+print(length(subset(df, p_value_test_min < 0.05)$ID))
 
 setdiff(subset(df, M_AIC_corr.1 != 1)$ID, subset(df, p_value_test_min < 0.05)$ID)
 setdiff(subset(df, M_AIC.1 != 1)$ID, subset(df, M_AIC_corr.1 != 1)$ID)
@@ -140,7 +174,7 @@ p_M_antibiotic
 
 # Plating efficiency/number of parallel cultures and width of confidence intervals
 
-length(subset(df, plated_fraction < 1)$ID)
+print(length(subset(df, plated_fraction < 1)$ID))
 df$width_CI <- (df$M_wo_fitm.3-df$M_wo_fitm.2)/df$M_wo_fitm.1
 lm <- lm(log10(width_CI) ~ log10(plated_fraction) + log10(n_cultures), data = df)
 summary(lm)
@@ -167,16 +201,16 @@ lmer_p <- lmer(p_value_test_min ~ of_MIC + group + log10(plated_fraction) + log1
 summary(lmer_p)
 
 # Experiments with detected SIM
-print(subset(df_strict, SIM == TRUE)$ID) # AIC + GoF test
-print(subset(df, SIM == TRUE)$ID)        # AIC_corr
+print(as.character(subset(df_strict, SIM == TRUE)$ID)) # AIC + GoF test
+print(as.character(subset(df, SIM == TRUE)$ID))        # AIC_corr
 # Our model selection procedure (AIC+GoF test, AIC_corr) compared to none
 print(c(length(subset(df_strict, M_AIC.1 > 1)$ID), length(subset(df, M_AIC_corr.1 > 1)$ID), length(subset(df, M_wo_fitm.1 > 1)$ID)))
 
 # Further analysis with experiments using E. coli MG1655 and TD2158 (no mutant strains)
 df_Ecoli <- subset(subset(df, species == "E. coli"), is.element(strain, c("MG1655", "TD2158")))
 df_Ecoli_strict <- subset(subset(df_strict, species == "E. coli"), is.element(strain, c("MG1655", "TD2158")))
-print(subset(df_Ecoli_strict, M_AIC.1 > 1)$ID)
-print(subset(df_Ecoli, M_AIC.1 > 1)$ID)
+print(as.character(subset(df_Ecoli_strict, M_AIC.1 > 1)$ID))
+print(as.character(subset(df_Ecoli, M_AIC.1 > 1)$ID))
 
 # Testing for normality -> not normal
 shapiro.test(df_Ecoli$M_wo_fitm.1)
@@ -184,7 +218,7 @@ length(subset(df_Ecoli, is.element(target, c("DNA", "DNA gyrase")))$ID)
 shapiro.test(subset(df_Ecoli, is.element(target, c("DNA", "DNA gyrase")))$M_wo_fitm.1)
 length(subset(df_Ecoli, target=="Ribosome")$ID)
 shapiro.test(subset(df_Ecoli, target == "Ribosome")$M_wo_fitm.1)
-hist(subset(df_Ecoli, target == "Ribosome")$M_wo_fitm.1, main="Ribosome-targeting antibiotics", xlab="Increase in population-wide mutation rate", probability=TRUE) +
+#hist(subset(df_Ecoli, target == "Ribosome")$M_wo_fitm.1, main="Ribosome-targeting antibiotics", xlab="Increase in population-wide mutation rate", probability=TRUE) +
   abline(v = mean(subset(df_Ecoli, target == "Ribosome")$M_wo_fitm.1), col="red", lwd=2)
 
 # Kruskal-Wallis test -> DNA/DNA-gyrase and ribosome binding significantly different
@@ -269,10 +303,13 @@ p_Delta_AIC <- ggplot(data = df_SIM, aes(x=ID, y=Delta_AIC, group=antibiotic)) +
   ylab("Difference in AIC") + xlab("Experiment ID") + scale_shape_manual(values = c(16, 17), name = "Model w lowest AIC") 
 p_Delta_AIC
 
-i <- 3
+# Case studies
+i <- 20
 id <- df_SIM$ID[i]
 print(c(as.character(id), df_SIM$by_AIC[i]))
 df_id <- read.csv(paste0("experimental_data/model_selection/est_sum_", id, ".csv"))[,-1]
+print(as.character(subset(df_SIM, by_AIC == "hom_fitm_unconstr")$ID))
+print(as.character(subset(df_SIM, by_AIC == "hom_fitm")$ID))
 
 # Experiments, for which a heterogeneous/homogeneous stress response is selected
 df_het <- subset(df_SIM, is.element(by_AIC, c("het")))

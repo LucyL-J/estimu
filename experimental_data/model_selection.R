@@ -39,6 +39,8 @@ est_sum$fitm_ratio_AIC <- cbind(
   est_paras_hom_AIC$fitm_ratio_MLE,
   est_paras_hom_AIC$fitm_ratio_lower_bound,
   est_paras_hom_AIC$fitm_ratio_upper_bound)
+est_sum$p_value_UT_hom_AIC <- est_paras_hom_AIC$p_value_UT
+est_sum$p_value_S_hom_AIC <- est_paras_hom_AIC$p_value_S
 
 min_AIC_corr_hom <- pmin(
   subset(est_paras_hom_only, model==m_hom[1])$AIC_corr, 
@@ -57,6 +59,8 @@ est_sum$fitm_ratio_AIC_corr <- cbind(
   est_paras_hom_AIC_corr$fitm_ratio_MLE,
   est_paras_hom_AIC_corr$fitm_ratio_lower_bound,
   est_paras_hom_AIC_corr$fitm_ratio_upper_bound)
+est_sum$p_value_UT_hom_AIC_corr <- est_paras_hom_AIC_corr$p_value_UT
+est_sum$p_value_S_hom_AIC_corr <- est_paras_hom_AIC_corr$p_value_S
 
 m_het <- c("het_zero_div","het_div")
 est_paras_het_only <- subset(est_paras, is.element(model, m_het))
@@ -74,6 +78,8 @@ est_sum$rel_div_on_AIC <- cbind(
   est_paras_het_AIC$rel_div_on_MLE,
   est_paras_het_AIC$rel_div_on_lower_bound,
   est_paras_het_AIC$rel_div_on_upper_bound)
+est_sum$p_value_UT_het_AIC <- est_paras_het_AIC$p_value_UT
+est_sum$p_value_S_het_AIC <- est_paras_het_AIC$p_value_S
 
 min_AIC_corr_het <- pmin(
   subset(est_paras_het_only, model==m_het[1])$AIC_corr, 
@@ -84,6 +90,8 @@ est_sum$rel_div_on_AIC_corr <- cbind(
   est_paras_het_AIC_corr$rel_div_on_MLE,
   est_paras_het_AIC_corr$rel_div_on_lower_bound,
   est_paras_het_AIC_corr$rel_div_on_upper_bound)
+est_sum$p_value_UT_het_AIC_corr <- est_paras_het_AIC_corr$p_value_UT
+est_sum$p_value_S_het_AIC_corr <- est_paras_het_AIC_corr$p_value_S
 
 m_all <- c("no_SIM_wo_fitm","no_SIM_fitm","no_SIM_fitm_unconstr","hom_wo_fitm","hom_fitm","hom_fitm_unconstr","het_zero_div","het_div")
 est_paras_all <- subset(est_paras, is.element(model, m_all))
