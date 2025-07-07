@@ -5,15 +5,15 @@ Nf_UT = 10^9;
 mc_S = [10, 2, 4, 0, 0, 0, 0, 0, 1, 2, 1, 0, 0, 2, 1, 0, 1];
 Nf_S = 1.6*10^8;
 
-for eff_UT in [1, 0.9, 0.1]
+for eff_UT in [1., 0.9, 0.1]
     for fit_m in (1., 0.8, false)
         println(eff_UT)
         println(estimu(mc_UT, Nf_UT/eff_UT, eff_UT, fit_m)[1:2])
     end
 end
 
-for eff_UT in [1, 0.9]
-    for eff_S in [1, 0.1]
+for eff_UT in [1., 0.9]
+    for eff_S in [1., 0.1]
         for fit_m in [[1.,1.], [0.8,0.4]]
             println((eff_UT, eff_S))
             println(estimu_0(mc_UT, Nf_UT/eff_UT, mc_S, Nf_S/eff_S, [eff_UT,eff_S], fit_m))
@@ -24,12 +24,10 @@ for eff_UT in [1, 0.9]
                 end
             end
         end
-        for fit_m in ([1.,1.], [0.8,0.4], false)
+        for fit_m in ([1.,1.], [0.8,0.4], false, (false,false))
             println((eff_UT, eff_S))
             println(estimu_0(mc_UT, Nf_UT/eff_UT, mc_S, Nf_S/eff_S, [eff_UT,eff_S], fit_m))
             println(estimu_hom(mc_UT, Nf_UT/eff_UT, mc_S, Nf_S/eff_S, [eff_UT,eff_S], fit_m))
         end
-        println((eff_UT, eff_S))
-        println(estimu_hom(mc_UT, Nf_UT/eff_UT, mc_S, Nf_S/eff_S, [eff_UT,eff_S], (false,false)))
     end
 end
