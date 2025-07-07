@@ -355,7 +355,7 @@ function CI_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ra
         catch err
         end
         u_r = find_zero(LL_ratio_r, (rel_div_on, Inf))
-        return [l_1 u_1; l_2 u_2; l_3 u_3; l_r u_r; min(l_2*m*(1-f_on)/f_on, S*l_1*(1-f_on)/f_on, S*m*(1-u_3)/u_3) max(u_2*m*(1-f_on)/f_on, S*u_1*(1-f_on)/f_on, S*m*(1-l_3)/l_3); min(l_2*(1-f_on)/f_on, S*(1-u_3)/u_3) max(u_2*(1-f_on)/f_on, S*(1-l_3)/l_3); min((1-f_on)*(1+l_2), (1-u_3)*(1+S)) max((1-f_on)*(1*u_2), (1-l_3)*(1+S))]
+        return [l_1 u_1; l_2 u_2; l_r u_r; l_3 u_3; min(l_2*m*(1-f_on)/f_on, S*l_1*(1-f_on)/f_on, S*m*(1-u_3)/u_3) max(u_2*m*(1-f_on)/f_on, S*u_1*(1-f_on)/f_on, S*m*(1-l_3)/l_3); min(l_2*(1-f_on)/f_on, S*(1-u_3)/u_3) max(u_2*(1-f_on)/f_on, S*(1-l_3)/l_3); min((1-f_on)*(1+l_2), (1-u_3)*(1+S)) max((1-f_on)*(1*u_2), (1-l_3)*(1+S))]
     end
 end
 
