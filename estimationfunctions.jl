@@ -23,8 +23,8 @@ R_gof = 10^4  # Number of replicates for the goodness-of-fit test
 # cond: Condition, by default = "UT" for untreated  
 
 # To create the output data frames with default/failed values
-est_res_standard(cond) = DataFrame(parameter=["Mutation rate", "Mutant fitness"], condition=[cond, cond], status=["inferred", "set to input"])
-msel_res_standard(M, cond) = DataFrame(model=[M], condition=[cond], AIC=[Inf], AIC_corr=[Inf], BIC=[Inf], LL=[-Inf], p_value=[0], cutoff=[0], tail_prob=[1], calc_time=[0]) 
+est_res_standard(cond) = DataFrame(parameter=["Mutation rate", "Mutant fitness"], condition=[cond, cond], status=["inferred", "set to input"], MLE=[0.,1.], lower_bound=[0.,1.], upper_bound=[Inf,1.])
+msel_res_standard(M, cond) = DataFrame(model=[M], condition=[cond], AIC=[Inf], AIC_corr=[Inf], BIC=[Inf], LL=[-Inf], p_value=[0.], cutoff=[0], tail_prob=[1.], calc_time=[0.]) 
 
 function estimu(mc::Vector{Int}, Nf, eff, fit_m::Float64=1.; cond="UT")
     start_time = time()
@@ -126,7 +126,8 @@ msel_res_joint(M, cond_S) = DataFrame(model=[M,M,M], condition=["UT+"*cond_S,"UT
 # fit_m: Mutant fitness
 #        By default fit_m=1 for untreated and stressful cond. but can be set to different value(s) if known from separate experiment(s)
 # cond_S: Condition, by default = "S" for stressful  
-est_res_joint_0(cond_S) = DataFrame(parameter=["Mutation rate", "Mutant fitness", "Mutant fitness", "Ratio mutant fitness"], condition=["UT+"*cond_S, "UT", cond_S, cond_S*"/UT"], status=["jointly inferred", "set to input", "set to input", "set to input"]) 
+est_res_joint_0(cond_S) = DataFrame(parameter=["Mutation rate", "Mutant fitness", "Mutant fitness", "Ratio mutant fitness"], condition=["UT+"*cond_S, "UT", cond_S, cond_S*"/UT"], 
+    status=["jointly inferred", "set to input", "set to input", "set to input"], MLE=[0., 1., 1., 1.], lower_bound=[0., 1., 1., 1.], upper_bound=[Inf, 1., 1., 1.]) 
 
 # Mutant fitness fixed in the inference
 function estimu_0(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vector{<:Number}, fit_m::Vector{Float64}=[1., 1.]; cond_S="S") 
@@ -291,54 +292,47 @@ end
 # Mutant fitness under permissive/stressful cond(s). independent (either fixed in the inference, or inferred separately)
 function estimu_hom(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vector{<:Number}, fit_m::Union{Vector{Float64},Tuple{Bool,Bool},BitVector}=[1., 1.]; cond_S="S")
     M = (typeof(fit_m) == Vector{Float64}) ? ((fit_m[1] == fit_m[2] == 1.) ? "Homogeneous" : ((fit_m[1] == fit_m[2]) ? "Homogeneous (constr. fitness)" : "Homogeneous (unconstr. mutant fitness)")) : "Homogeneous (unconstr. mutant fitness)"
+    msel_res = msel_res_joint(M, cond_S)
     # Estimation for permissive cond.
 	est_res_UT, msel_res_UT, LLs_UT = estimu(mc_UT, Nf_UT, eff[1], fit_m[1])
-    if msel_res_UT.LL[1] != -Inf
-        push!(msel_res_UT, msel_res_UT[1, :])
+    msel_res[2,:] = msel_res_UT[1,:] # Copy the UT cond. to the second row of msel_res
         # Estimation for stressful cond.
         est_res_S, msel_res_S, LLs_S = estimu(mc_S, Nf_S, eff[2], fit_m[2], cond=cond_S)
-        if msel_res_S.LL[1] != -Inf
+    msel_res[3,:] = msel_res_S[1,:] # Copy the S cond. to the second row of msel_res
+    est_res = vcat(est_res_UT, est_res_S)
+    if msel_res_UT.LL[1] != -Inf && msel_res_S.LL[1] != -Inf
             start_time = time()
             mc_max_S, mc_counts_S, num_c_S = extract_mc(mc_S)
             if typeof(fit_m) == Vector{Float64}
                 q0_S, q_S = coeffs(mc_max_S, 1/fit_m[2], eff[2])
                 LL_S_UT = log_likelihood_m(mc_counts_S, mc_max_S, est_res_UT.MLE[1]*Nf_UT, q0_S, q_S)
-                LLs_S_UT, mc_cutoff_S_UT, p_cutoff_S_UT = LL_dist(R_gof, num_c_S, Nf_S, est_res_UT.MLE[1], 1/fit_m[2], eff[2])
+            LLs_S_UT, mc_cutoff_S_UT, p_cutoff_S_UT = LL_dist(R_gof, max_mc_cutoff, num_c_S, Nf_S, est_res_UT.MLE[1], 1/fit_m[2], eff[2])
                 b_M = CI_m(est_res_UT.MLE[1]*Nf_UT, est_res_S.MLE[1]*Nf_S, est_res_UT.lower_bound[1]*Nf_UT, est_res_S.lower_bound[1]*Nf_S, est_res_UT.upper_bound[1]*Nf_UT, est_res_S.upper_bound[1]*Nf_S)
                 b = [b_M; fit_m[1]/fit_m[2] fit_m[1]/fit_m[2]]
             else
                 LL_S_UT = log_likelihood_m_fitm(mc_counts_S, mc_max_S, est_res_UT.MLE[1]*Nf_UT, 1/est_res_UT.MLE[2], eff[2]) 
-                LLs_S_UT, mc_cutoff_S_UT, p_cutoff_S_UT = LL_dist(R_gof, num_c_S, Nf_S, est_res_UT.MLE[1], 1/est_res_UT.MLE[2], eff[2])
+            LLs_S_UT, mc_cutoff_S_UT, p_cutoff_S_UT = LL_dist(R_gof, max_mc_cutoff, num_c_S, Nf_S, est_res_UT.MLE[1], 1/est_res_UT.MLE[2], eff[2])
                 b = CI_m_fitm(est_res_UT.MLE[1]*Nf_UT, est_res_S.MLE[1]*Nf_S, est_res_UT.lower_bound[1]*Nf_UT, est_res_S.lower_bound[1]*Nf_S, est_res_UT.upper_bound[1]*Nf_UT, est_res_S.upper_bound[1]*Nf_S, 1/est_res_UT.MLE[2], 1/est_res_S.MLE[2], 1/est_res_UT.upper_bound[2], 1/est_res_S.upper_bound[2], 1/est_res_UT.lower_bound[2], 1/est_res_S.lower_bound[2])
             end
-            est_res = vcat(est_res_UT, est_res_S)
             s = (typeof(fit_m[2]) ==  Bool) ? "calc. from 2&4" : "set to input"
             push!(est_res, ["Ratio mutant fitness", cond_S*"/UT", s, est_res_S.MLE[2]/est_res_UT.MLE[2], 1/b[2,2], 1/b[2,1]])
             push!(est_res, ["Fold change mutation rate", cond_S*"/UT", "calc. from 1&3", est_res_S.MLE[1]/est_res_UT.MLE[1], b[1,1]*Nf_UT/Nf_S, b[1,2]*Nf_UT/Nf_S])
-            msel_res = vcat(msel_res_UT, msel_res_S)
+        num_para = 2 + sum((typeof(fit_m[1]) == Bool)+(sum(typeof(fit_m[2]) == Bool))) # Total number of inference parameters
+        msel_res[1,3:5] = selection_crit(num_para, length(mc_UT)+length(mc_S), msel_res_UT.LL[1]+msel_res_S.LL[1])
             end_time = time()
             total_time = msel_res_UT.calc_time[1]+msel_res_S.calc_time[1] + (end_time-start_time)
-            msel_res[1, :] = [M, "UT+"*cond_S, Inf, Inf, Inf, msel_res_UT.LL[1]+msel_res_S.LL[1], 1 - ecdf(LLs_UT.+LLs_S)(-msel_res_UT.LL[1]-msel_res_S.LL[1]), msel_res_UT.cutoff[1]+msel_res_S.cutoff[1], NaN, total_time]
+        msel_res[1,6:end] = [msel_res_UT.LL[1]+msel_res_S.LL[1], 1 - ecdf(LLs_UT.+LLs_S)(-msel_res_UT.LL[1]-msel_res_S.LL[1]), -1, NaN, total_time]
             push!(msel_res, [M, "UT->"*cond_S, NaN, NaN, NaN, LL_S_UT, 1 - ecdf(LLs_S_UT)(-LL_S_UT), mc_cutoff_S_UT, p_cutoff_S_UT, total_time])
         else
-            push!(est_res, ["Mutation rate", cond_S, "failed", 0., 0., 0.])
-            push!(est_res, ["Mutant fitness", cond_S, "failed", -1., -1., -1.])
-            push!(msel_res, [M, cond_S, Inf, Inf, Inf, -Inf, 0, 0, 1, 0])
-            msel_res[1, :] = [M, "UT+"*cond_S, Inf, Inf, Inf, -Inf, 0., 0., 1., 0.]
+        push!(msel_res, [M, "UT->"*cond_S, NaN, NaN, NaN, -Inf, 0., 0, 1., 0.])
         end
-    end
-    num_para = 2 + sum((typeof(fit_m[1]) == Bool)+(sum(typeof(fit_m[2]) == Bool))) # Total number of inference parameters
-    msel_res[1,3:5] = selection_crit(num_para, length(mc_UT)+length(mc_S), msel_res.LL[1])
     msel_res.model .= M 
     return est_res, msel_res
 end
 # Mutant fitness jointly inferred (constrained to be equal under permissive/stressful cond(s).)
-function est_res_joint_hom(cond_S)
-    parameter=["Mutation rate", "Mutant fitness", "Mutation rate", "Mutant fitness", "Ratio mutant fitness", "Fold change mutation rate"]
-    condition = ["UT", "UT+"*cond_S, cond_S, "UT+"*cond_S, cond_S*"/UT", cond_S*"/UT"]
-    status = ["inferred", "jointly inferred", "inferred", "jointly inferred", "constr.", "calc. from 1&3"]
-    return DataFrame(parameter=parameter, condition=condition, status=status)
-end
+est_res_joint_hom(cond_S) = DataFrame(parameter=["Mutation rate", "Mutant fitness", "Mutation rate", "Mutant fitness", "Ratio mutant fitness", "Fold change mutation rate"], condition=["UT", "UT+"*cond_S, cond_S, "UT+"*cond_S, cond_S*"/UT", cond_S*"/UT"],
+    status=["inferred", "jointly inferred", "inferred", "jointly inferred", "constr.", "calc. from 1&3"], MLE=[0., 1., 0., 1., 1., 1.], lower_bound=[0., 0., 0., 0., 1., 0.], upper_bound=[Inf, Inf, Inf, Inf, 1., Inf])
+
 function estimu_hom(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vector{<:Number}, fit_m::Bool; cond_S="S")
     start_time = time()
     est_res = est_res_joint_hom(cond_S)
@@ -396,12 +390,9 @@ end
 #             By default set to rel_div_on=0., inferred if rel_div_on=false
 #             For rel_div_on=0., the fraction of on-cells cannot be inferred
 # cond_S: Condition, by default = "S" for stressful 
-function est_res_joint_het(cond_S)
-    parameter = ["Mutation rate off-cells", "Mutant fitness", "Mutant fitness", "Mutation-supply ratio", "Rel. division rate on-cells", "Fraction on-cells", "Mutation rate on-cells", "Rel. mutation rate on-cells", "Fold change mean mutation rate"]
-    condition = [["UT+"*cond_S, "UT"]; fill(cond_S, 6); cond_S*"/UT"]
-    status = ["jointly inferred", "set to input", "set to input", "inferred", "set to input", "set to input", "calc. from 1,4&6", "calc. from 4&6", "calc. from 4&6"]
-    return DataFrame(parameter=parameter, condition=condition, status=status)
-end
+est_res_joint_het(cond_S) = DataFrame(parameter=["Mutation rate off-cells", "Mutant fitness", "Mutant fitness", "Mutation-supply ratio", "Rel. division rate on-cells", "Fraction on-cells", "Mutation rate on-cells", "Rel. mutation rate on-cells", "Fold change mean mutation rate"],
+    condition=[["UT+"*cond_S, "UT"]; fill(cond_S, 6); cond_S*"/UT"], status=["jointly inferred", "set to input", "set to input", "inferred", "set to input", "set to input", "calc. from 1,4&6", "calc. from 4&6", "calc. from 4&6"],
+    MLE=[0., 1., 1., 0., 0., 0., 0., 0., 0.], lower_bound=[0., 1., 1., 0., 0., 0., 0., 0., 0.], upper_bound=[Inf, 1., 1., Inf, Inf, Inf, Inf, Inf, Inf])
 
 # Fraction and relative division rate of on-cells given and fixed in the inference
 function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vector{<:Number}, f_on::Float64, rel_div_on::Float64=0., fit_m::Vector{Float64}=[1., 1.]; cond_S="S")
