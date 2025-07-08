@@ -30,7 +30,7 @@ function estimu(mc::Vector{Int}, Nf, eff, fit_m::Float64=1.; cond="UT")
     start_time = time()
     est_res = est_res_standard(cond)
     # Model depends on the value of the mutant fitness
-    M = fit_m == 1. ? "Standard" : "Standard (diff. mutant fitness)"     
+    M = (fit_m == 1.) ? "Standard" : "Standard (diff. mutant fitness)"     
     msel_res = msel_res_standard(M, cond)
     # Pre-inference calculations
     mc_max, mc_counts, num_c = extract_mc(mc)
@@ -56,7 +56,7 @@ function estimu(mc::Vector{Int}, Nf, eff, fit_m::Float64=1.; cond="UT")
         msel_res[1,3:5] = selection_crit(num_para, num_c, MLL)    
         msel_res.LL = [-MLL]
         # Goodness-of-fit test: distribution of log-likelihoods of randomly drawn mutant counts under the estimated parameters
-        LLs, mc_cutoff, p_cutoff = LL_dist(R_gof, num_c, Nf, m/Nf, fit_m, eff) # Also returns the cutoff value and the tail probability in the pmf calculation
+        LLs, mc_cutoff, p_cutoff = LL_dist(R_gof, num_c, Nf, m/Nf, fit_m, eff) # Also returns the cutoff value and tail probability in the pmf calculation
         msel_res.p_value = [1 - ecdf(LLs)(MLL)]
         msel_res.cutoff = [mc_cutoff]
         msel_res.tail_prob = [p_cutoff] 
@@ -132,7 +132,7 @@ est_res_joint_0(cond_S) = DataFrame(parameter=["Mutation rate", "Mutant fitness"
 function estimu_0(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vector{<:Number}, fit_m::Vector{Float64}=[1., 1.]; cond_S="S") 
     start_time = time()
     est_res = est_res_joint_0(cond_S)
-    M = fit_m[1] == fit_m[2] == 1. ? "No SIM" : fit_m[1] == fit_m[2] ? "No SIM (constr. mutant fitness)" : "No SIM (unconstr. mutant fitness)"
+    M = (fit_m[1] == fit_m[2] == 1.) ? "No SIM" : (fit_m[1] == fit_m[2]) ? "No SIM (constr. mutant fitness)" : "No SIM (unconstr. mutant fitness)"
     msel_res = msel_res_joint(M, cond_S)
     N_ratio = Nf_S/Nf_UT
     mc_max_UT, mc_counts_UT, num_c_UT = extract_mc(mc_UT)
@@ -140,8 +140,7 @@ function estimu_0(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vecto
     mc_max = max(mc_max_UT, mc_max_S)
     if eff[1] == eff[2] && fit_m[1] == fit_m[2]
         q0, q = coeffs(mc_max, 1/fit_m[1], eff[1])
-        q0_UT = q0
-        q0_S = q0
+        q0_UT = q0_S = q0
         q_UT = q[1:mc_max_UT]
         q_S = q[1:mc_max_S]
     else
@@ -165,7 +164,7 @@ function estimu_0(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vecto
             est_res.lower_bound = [0., fit_m[1], fit_m[2], fit_m[2]/fit_m[1]]
             est_res.upper_bound = [Inf, fit_m[1], fit_m[2], fit_m[2]/fit_m[1]]
         end
-        # Number of data points = total number of parallel cultures
+        # Sample size = total number of parallel cultures
         msel_res[1,3:5] = selection_crit(num_para, num_c_UT+num_c_S, MLL)
         LL_UT = log_likelihood_m(mc_counts_UT, mc_max_UT, m, q0_UT, q_UT)
         LL_S = log_likelihood_m(mc_counts_S, mc_max_S, m*N_ratio, q0_S, q_S)
@@ -291,7 +290,7 @@ end
 
 # Mutant fitness under permissive/stressful cond(s). independent (either fixed in the inference, or inferred separately)
 function estimu_hom(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vector{<:Number}, fit_m::Union{Vector{Float64},Tuple{Bool,Bool},BitVector}=[1., 1.]; cond_S="S")
-    M = typeof(fit_m) == Vector{Float64} ? (fit_m[1] == fit_m[2] == 1. ? "Homogeneous" : (fit_m[1] == fit_m[2] ? "Homogeneous (constr. fitness)" : "Homogeneous (unconstr. mutant fitness)")) : "Homogeneous (unconstr. mutant fitness)"
+    M = (typeof(fit_m) == Vector{Float64}) ? ((fit_m[1] == fit_m[2] == 1.) ? "Homogeneous" : ((fit_m[1] == fit_m[2]) ? "Homogeneous (constr. fitness)" : "Homogeneous (unconstr. mutant fitness)")) : "Homogeneous (unconstr. mutant fitness)"
     # Estimation for permissive cond.
 	est_res_UT, msel_res_UT, LLs_UT = estimu(mc_UT, Nf_UT, eff[1], fit_m[1])
     if msel_res_UT.LL[1] != -Inf
@@ -313,11 +312,7 @@ function estimu_hom(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
                 b = CI_m_fitm(est_res_UT.MLE[1]*Nf_UT, est_res_S.MLE[1]*Nf_S, est_res_UT.lower_bound[1]*Nf_UT, est_res_S.lower_bound[1]*Nf_S, est_res_UT.upper_bound[1]*Nf_UT, est_res_S.upper_bound[1]*Nf_S, 1/est_res_UT.MLE[2], 1/est_res_S.MLE[2], 1/est_res_UT.upper_bound[2], 1/est_res_S.upper_bound[2], 1/est_res_UT.lower_bound[2], 1/est_res_S.lower_bound[2])
             end
             est_res = vcat(est_res_UT, est_res_S)
-            if typeof(fit_m[2]) ==  Bool
-                s = "calc. from 2&4"
-            else
-                s = "set to input"
-            end
+            s = (typeof(fit_m[2]) ==  Bool) ? "calc. from 2&4" : "set to input"
             push!(est_res, ["Ratio mutant fitness", cond_S*"/UT", s, est_res_S.MLE[2]/est_res_UT.MLE[2], 1/b[2,2], 1/b[2,1]])
             push!(est_res, ["Fold change mutation rate", cond_S*"/UT", "calc. from 1&3", est_res_S.MLE[1]/est_res_UT.MLE[1], b[1,1]*Nf_UT/Nf_S, b[1,2]*Nf_UT/Nf_S])
             msel_res = vcat(msel_res_UT, msel_res_S)
@@ -412,7 +407,7 @@ end
 function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vector{<:Number}, f_on::Float64, rel_div_on::Float64=0., fit_m::Vector{Float64}=[1., 1.]; cond_S="S")
     start_time = time()
     est_res = est_res_joint_het(cond_S)
-    M = rel_div_on == 0. ? "Heterogeneous (zero division rate on-cells)" : "Heterogeneous"
+    M = (rel_div_on == 0.) ? "Heterogeneous (zero division rate on-cells)" : "Heterogeneous"
     msel_res = msel_res_joint(M, cond_S)
     N_ratio = Nf_S/Nf_UT
     mc_max_UT, mc_counts_UT, num_c_UT = extract_mc(mc_UT)

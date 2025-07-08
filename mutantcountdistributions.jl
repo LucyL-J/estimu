@@ -68,18 +68,10 @@ end
 function coeffs(K::Int, inv_fit_m, eff)
     if eff == 1.
         q0 = -1
-        if inv_fit_m == 1.
-            q = q_coeffs(K)
-        else
-            q = q_coeffs(K, inv_fit_m)
-        end
+        q = (inv_fit_m == 1.) ? q_coeffs(K) : q_coeffs(K, inv_fit_m)
     else
         q0 = q0_coeff(inv_fit_m, eff)
-        if eff < 0.5
-            q = q_coeffs(K, inv_fit_m, (eff, true))
-        else
-            q = q_coeffs(K, inv_fit_m, eff)
-        end
+        q = (eff < 0.5) ? q_coeffs(K, inv_fit_m, (eff, true)) : q_coeffs(K, inv_fit_m, eff)
     end
     return q0, q
 end
@@ -125,11 +117,7 @@ function p_mudi(K::Int, N, mu, fit_m, eff=1.)
             q = q_coeffs(K, 1/fit_m)
         else
             q0 = q0_coeff(1/fit_m, eff)
-            if eff < 0.5
-                q = q_coeffs(K, 1/fit_m, (eff, true))
-            else
-                q = q_coeffs(K, 1/fit_m, eff)
-            end
+            q = (eff < 0.5) ? q_coeffs(K, 1/fit_m, (eff, true)) : q_coeffs(K, 1/fit_m, eff)
         end
         p = mudi_K(K, mu*N, q0, q)
     end
@@ -145,11 +133,7 @@ function p_mudi(K::Int, N, mu_off, S, f_on, rel_div_on, fit_m, eff=1.)
         q_off = q_coeffs(K, 1/fit_m)
     else
         q0_off = q0_coeff(1/fit_m, eff)
-        if eff < 0.5
-            q_off = q_coeffs(K, 1/fit_m, (eff, true))
-        else
-            q_off = q_coeffs(K, 1/fit_m, eff)
-        end
+        q_off = (eff < 0.5) ? q_coeffs(K, 1/fit_m, (eff, true)) : q_coeffs(K, 1/fit_m, eff)
     end
     if rel_div_on == 0.
         # on-cells have zero division rate
@@ -166,11 +150,7 @@ function p_mudi(K::Int, N, mu_off, S, f_on, rel_div_on, fit_m, eff=1.)
             q_on = q_coeffs(K, ifit)
         else
             q0_on = q0_coeff(ifit, eff)
-            if eff < 0.5
-                q_on = q_coeffs(K, ifit, (eff, true))
-            else
-                q_on = q_coeffs(K, ifit, eff)
-            end
+            q_on = (eff < 0.5) ? q_coeffs(K, ifit, (eff, true)) : q_coeffs(K, ifit, eff)
         end
     end
     return mudi_K(K, N*mu_off, q0_off, q_off, N*mu_off*S, q0_on, q_on)
@@ -351,11 +331,7 @@ function r_mudi(K::Int, N, mu, fit_m, eff)
     uni_draws = sort(rand(K))
     p_threshold = uni_draws[end]
     if eff == 1.
-        if fit_m == 1.
-            p_draws = mudi_threshold(p_threshold, N*mu)
-        else
-            p_draws = mudi_threshold(p_threshold, N*mu, 1/fit_m)
-        end
+        p_draws = (fit_m == 1.) ? mudi_threshold(p_threshold, N*mu) : mudi_threshold(p_threshold, N*mu, 1/fit_m)
     else
         p_draws = mudi_threshold(p_threshold, N*mu, 1/fit_m, eff)
     end
@@ -378,11 +354,7 @@ function r_mudi(K::Int, N, mu_off, S, f_on, rel_div_on, fit_m, eff)
     p_threshold = uni_draws[K]
     if rel_div_on == 0.
         if eff == 1.
-            if fit_m == 1.
-                p_draws = mudi_threshold_het_0(p_threshold, N*mu_off, N*mu_off*S)
-            else
-                p_draws = mudi_threshold_het_0(p_threshold, N*mu_off, N*mu_off*S, 1/fit_m)
-            end
+            p_draws = (fit_m == 1.) ? mudi_threshold_het_0(p_threshold, N*mu_off, N*mu_off*S) : mudi_threshold_het_0(p_threshold, N*mu_off, N*mu_off*S, 1/fit_m)
         else
             p_draws = mudi_threshold_het_0(p_threshold, N*mu_off, N*mu_off*S, 1/fit_m, eff)
         end
@@ -390,11 +362,7 @@ function r_mudi(K::Int, N, mu_off, S, f_on, rel_div_on, fit_m, eff)
         N *= scale_f(f_on, rel_div_on)
         ifit = inverse_fit_on(f_on, rel_div_on)/fit_m
         if eff == 1.
-            if fit_m == 1.
-                p_draws = mudi_threshold_het(p_threshold, N*mu_off, N*mu_off*S, ifit)
-            else
-                p_draws = mudi_threshold_het(p_threshold, N*mu_off, N*mu_off*S, 1/fit_m, ifit)
-            end
+            p_draws = (fit_m == 1.) ? mudi_threshold_het(p_threshold, N*mu_off, N*mu_off*S, ifit) : mudi_threshold_het(p_threshold, N*mu_off, N*mu_off*S, 1/fit_m, ifit)
         else
             p_draws = mudi_threshold_het(p_threshold, N*mu_off, N*mu_off*S, 1/fit_m, ifit, eff)
         end

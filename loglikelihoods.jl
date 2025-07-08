@@ -40,11 +40,7 @@ function log_likelihood_m_fitm(mc_counts, mc_max, m, inv_fit_m, eff)
         q = q_coeffs(mc_max, inv_fit_m, eff)
         p = mudi_K(mc_max, m, q0, q)
         ll = sum(mc_counts .* log.(p))
-        if !isnan(ll) && ll < 0.
-            return ll
-        else
-            return -Inf
-        end
+        return (!isnan(ll) && ll < 0) ? ll : -Inf
     end
 end
 # Mutant fitness = 0 -> Mutant count distribution = Poisson(m*eff)
@@ -54,11 +50,7 @@ function log_likelihood_m_fitm(mc_counts, mc_max, m_eff)
     else
         p = mudi_K(mc_max, m_eff)
         ll = sum(mc_counts .* log.(p))
-        if !isnan(ll) && ll < 0.
-            return ll
-        else
-            return -Inf
-        end
+        return (!isnan(ll) && ll < 0) ? ll : -Inf
     end
 end
 # Heterogeneous population with on-cells and off-cells
@@ -69,11 +61,7 @@ function log_likelihood_m_S(mc_counts, mc_max, m_off, S, q0_off, q_off, q0_on, q
     else
         p = mudi_K(mc_max, m_off, q0_off, q_off, S*m_off, q0_on, q_on)
         ll  = sum(mc_counts .* log.(p))
-        if !isnan(ll) && ll < 0.
-            return ll
-        else
-            return -Inf
-        end
+        return (!isnan(ll) && ll < 0) ? ll : -Inf
     end
 end
 # Rel. division rate of on-cells > 0 -> q0, q coeffs. for untreated calculated outside LL function, but for stressful inside and depending on plating efficiency
@@ -87,11 +75,7 @@ function log_likelihood_m_S_div_f(mc_counts, mc_max, m_off, S, f_on, rel_div_on,
         q_on = q_coeffs(mc_max, ifit)
         p = mudi_K(mc_max, m_off*scale_f(f_on, rel_div_on), q0_off, q_off, S*m_off*scale_f(f_on, rel_div_on), q0_on, q_on)
         ll  = sum(mc_counts .* log.(p))
-        if !isnan(ll) && ll < 0.
-            return ll
-        else
-            return -Inf
-        end
+        return (!isnan(ll) && ll < 0) ? ll : -Inf
     end
 end
 function log_likelihood_m_S_div_f(mc_counts, mc_max, m_off, S, f_on, rel_div_on, q0_off, q_off, inv_fit_m, eff)
@@ -104,11 +88,7 @@ function log_likelihood_m_S_div_f(mc_counts, mc_max, m_off, S, f_on, rel_div_on,
         q_on = q_coeffs(mc_max, ifit, eff)
         p = mudi_K(mc_max, m_off*scale_f(f_on, rel_div_on), q0_off, q_off, S*m_off*scale_f(f_on, rel_div_on), q0_on, q_on)
         ll  = sum(mc_counts .* log.(p))
-        if !isnan(ll) && ll < 0.
-            return ll
-        else
-            return -Inf
-        end
+        return (!isnan(ll) && ll < 0) ? ll : -Inf
     end
 end
 
@@ -120,11 +100,7 @@ function log_likelihood_joint_m(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, 
         p_UT = mudi_K(mc_max_UT, m, q0_UT, q_UT)
         p_S = mudi_K(mc_max_S, m*N_ratio, q0_S, q_S)
         ll = sum(mc_counts_UT .* log.(p_UT)) + sum(mc_counts_S .* log.(p_S))
-        if !isnan(ll) && ll < 0.
-            return ll
-        else
-            return -Inf
-        end
+        return (!isnan(ll) && ll < 0) ? ll : -Inf
     end 
 end
 # Plating efficiency same for untreated and stressful -> q0, q coeffs. only calculated once and then subsampled
@@ -139,11 +115,7 @@ function log_likelihood_joint_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S,
         @views p_UT = mudi_K(mc_max_UT, m, q0, q[1:mc_max_UT])
         @views p_S = mudi_K(mc_max_S, m*N_ratio, q0, q[1:mc_max_S])
         ll  = sum(mc_counts_UT .* log.(p_UT)) + sum(mc_counts_S .* log.(p_S))
-        if !isnan(ll) && ll < 0.
-            return ll
-        else
-            return -Inf
-        end
+        return (!isnan(ll) && ll < 0) ? ll : -Inf
     end
 end
 function log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, m_UT, m_S, inv_fit_m, eff::Bool)
@@ -157,11 +129,7 @@ function log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_ma
         @views p_UT = mudi_K(mc_max_UT, m_UT, q0, q[1:mc_max_UT])
         @views p_S = mudi_K(mc_max_S, m_S, q0, q[1:mc_max_S])
         ll  = sum(mc_counts_UT .* log.(p_UT)) + sum(mc_counts_S .* log.(p_S))
-        if !isnan(ll) && ll < 0.
-            return ll
-        else
-            return -Inf
-        end
+        return (!isnan(ll) && ll < 0) ? ll : -Inf
     end
 end
 function log_likelihood_joint_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, N_ratio, m, inv_fit_m, eff::Union{Float64,Tuple{Float64,Bool}})
@@ -175,11 +143,7 @@ function log_likelihood_joint_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S,
         @views p_UT = mudi_K(mc_max_UT, m, q0, q[1:mc_max_UT])
         @views p_S = mudi_K(mc_max_S, m*N_ratio, q0, q[1:mc_max_S])
         ll  = sum(mc_counts_UT .* log.(p_UT)) + sum(mc_counts_S .* log.(p_S))
-        if !isnan(ll) && ll < 0.
-            return ll
-        else
-            return -Inf
-        end
+        return (!isnan(ll) && ll < 0) ? ll : -Inf
     end
 end
 function log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, mc_max, m_UT, m_S, inv_fit_m, eff::Union{Float64,Tuple{Float64,Bool}})
@@ -193,11 +157,7 @@ function log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_ma
         @views p_UT = mudi_K(mc_max_UT, m_UT, q0, q[1:mc_max_UT])
         @views p_S = mudi_K(mc_max_S, m_S, q0, q[1:mc_max_S])
         ll  = sum(mc_counts_UT .* log.(p_UT)) + sum(mc_counts_S .* log.(p_S))
-        if !isnan(ll) && ll < 0.
-            return ll
-        else
-            return -Inf
-        end
+        return (!isnan(ll) && ll < 0) ? ll : -Inf
     end
 end
 # Mutant fitness untreated/stressful inferred separately -> q0, q coeffs. need to be calculated separately
@@ -212,11 +172,7 @@ function log_likelihood_joint_m_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_ma
         p_UT = mudi_K(mc_max_UT, m, q0, q_UT)
         p_S = mudi_K(mc_max_S, m*N_ratio, q0, q_S)
         ll  = sum(mc_counts_UT .* log.(p_UT)) + sum(mc_counts_S .* log.(p_S))
-        if !isnan(ll) && ll < 0.
-            return ll
-        else
-            return -Inf
-        end
+        return (!isnan(ll) && ll < 0) ? ll : -Inf
     end
 end
 function log_likelihood_joint_m_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, x, N_ratio, m, inv_fit_m_UT, inv_fit_m_S, eff::Union{Float64,Tuple{Float64,Bool}})
@@ -231,11 +187,7 @@ function log_likelihood_joint_m_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_ma
         p_UT = mudi_K(mc_max_UT, m, q0_UT, q_UT)
         p_S = mudi_K(mc_max_S, m*N_ratio, q0_S, q_S)
         ll  = sum(mc_counts_UT .* log.(p_UT)) + sum(mc_counts_S .* log.(p_S))
-        if !isnan(ll) && ll < 0.
-            return ll
-        else
-            return -Inf
-        end
+        return (!isnan(ll) && ll < 0) ? ll : -Inf
     end
 end
 function log_likelihood_joint_m_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, x, m, inv_fit_m_UT, inv_fit_m_S, eff)
@@ -250,11 +202,7 @@ function log_likelihood_joint_m_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_ma
         p_UT = mudi_K(mc_max_UT, m, q0_UT, q_UT)
         p_S = mudi_K(mc_max_S, m*N_ratio, q0_S, q_S)
         ll  = sum(mc_counts_UT .* log.(p_UT)) + sum(mc_counts_S .* log.(p_S))
-        if !isnan(ll) && ll < 0.
-            return ll
-        else
-            return -Inf
-        end
+        return (!isnan(ll) && ll < 0) ? ll : -Inf
     end
 end
 # Plating efficiency different for untreated and stressful -> q0, q coeffs. need to be calculated separately
@@ -269,11 +217,7 @@ function log_likelihood_joint_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S,
         p_UT = mudi_K(mc_max_UT, m, q0_UT, q_UT)
         p_S = mudi_K(mc_max_S, m*N_ratio, q0_S, q_S)
         ll  = sum(mc_counts_UT .* log.(p_UT)) + sum(mc_counts_S .* log.(p_S))
-        if !isnan(ll) && ll < 0.
-            return ll
-        else
-            return -Inf
-        end
+        return (!isnan(ll) && ll < 0) ? ll : -Inf
     end
 end
 function log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, x, m_UT, m_S, inv_fit_m, eff)
@@ -287,11 +231,7 @@ function log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_ma
         p_UT = mudi_K(mc_max_UT, m_UT, q0_UT, q_UT)
         p_S = mudi_K(mc_max_S, m_S, q0_S, q_S)
         ll  = sum(mc_counts_UT .* log.(p_UT)) + sum(mc_counts_S .* log.(p_S))
-        if !isnan(ll) && ll < 0.
-            return ll
-        else
-            return -Inf
-        end
+        return (!isnan(ll) && ll < 0) ? ll : -Inf
     end
 end
 # Mutant fitnes = 0 -> Mutant count distributions = Poisson(m_UT*eff_UT) and Poisson(m_S*eff_S)
@@ -302,11 +242,7 @@ function log_likelihood_m_joint_fitm(mc_counts_UT, mc_max_UT, mc_counts_S, mc_ma
         p_UT = mudi_K(mc_max_UT, m_eff_UT)
         p_S = mudi_K(mc_max_S, m_eff_S)
         ll  = sum(mc_counts_UT .* log.(p_UT)) + sum(mc_counts_S .* log.(p_S))
-        if !isnan(ll) && ll < 0.
-            return ll
-        else
-            return -Inf
-        end
+        return (!isnan(ll) && ll < 0) ? ll : -Inf
     end
 end
 
@@ -319,11 +255,7 @@ function log_likelihood_joint_m_S(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S
         p_UT = mudi_K(mc_max_UT, m_off, q0_UT, q_UT)
         p_S = mudi_K(mc_max_S, m_off*N_ratio, q0_S_off, q_S_off, S*m_off*N_ratio, q0_S_on, q_S_on)
         ll  = sum(mc_counts_UT .* log.(p_UT)) + sum(mc_counts_S .* log.(p_S))
-        if !isnan(ll) && ll < 0.
-            return ll
-        else
-            return -Inf
-        end
+        return (!isnan(ll) && ll < 0) ? ll : -Inf
     end
 end
 # Rel. division rate of on-cells > 0 -> q0, q coeffs. for untreated calculated outside LL function, but for stressful inside and depending on plating efficiency
@@ -339,11 +271,7 @@ function log_likelihood_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc
         q_S_on = q_coeffs(mc_max_S, ifit)
         p_S = mudi_K(mc_max_S, m_off*N_ratio, q0_S_off, q_S_off, S*m_off*N_ratio, q0_S_on, q_S_on)
         ll  = sum(mc_counts_UT .* log.(p_UT)) + sum(mc_counts_S .* log.(p_S))
-        if !isnan(ll) && ll < 0.
-            return ll
-        else
-            return -Inf
-        end
+        return (!isnan(ll) && ll < 0) ? ll : -Inf
     end
 end
 function log_likelihood_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ratio, m_off, S, f_on, rel_div_on, q0_UT, q_UT, q0_S_off, q_S_off, inv_fit_m, eff)
@@ -358,11 +286,7 @@ function log_likelihood_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc
         q_S_on = q_coeffs(mc_max_S, ifit, eff)
         p_S = mudi_K(mc_max_S, m_off*N_ratio, q0_S_off, q_S_off, S*m_off*N_ratio, q0_S_on, q_S_on)
         ll  = sum(mc_counts_UT .* log.(p_UT)) + sum(mc_counts_S .* log.(p_S))
-        if !isnan(ll) && ll < 0.
-            return ll
-        else
-            return -Inf
-        end
+        return (!isnan(ll) && ll < 0) ? ll : -Inf
     end
 end
 

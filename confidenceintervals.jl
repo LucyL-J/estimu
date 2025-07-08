@@ -359,6 +359,7 @@ function CI_joint_m_S_div_f(mc_counts_UT, mc_max_UT, mc_counts_S, mc_max_S, N_ra
     end
 end
 
+# Threshold for upper bound of m -> 10 times the maximum observed mutant count divided by the plating efficiency
 m_max(mc_max, eff::Bool) = 10*mc_max
 m_max(mc_max, eff::Union{Float64,Tuple{Float64,Bool}}) = 10*mc_max/eff[1]
 m_max(mc_max, eff) = 10*mc_max/min(eff[1][1], eff[2][1])
