@@ -3,8 +3,6 @@
 
 using Distributions, HypergeometricFunctions, Random
 
-max_mc_cutoff = 1000 # Maximum number of mutants to be considered in the mutant count distribution
-
 # Pre-calculations independent of the inference parameter m
 
 # Plating efficiency = 1 without differential mutant fitness (= 1)
@@ -172,16 +170,16 @@ function add_p!(p, q_off, q_on, m_off, m_on, k)
     push!(p, isnan(S/k) ? 0 : max(S/k, 0.))
 end
 
-function tail_prob(p, max_mc_cutoff)    # "Tail" probability = 1 - cumulative probability
+function tail_prob!(p)    # "Tail" probability of observing more than the calculated maximal mutant count
     if p[end] == 0
         p[end] = 1 - sum(p)
         println("Warning: Last probability in p is zero, setting tail probability to $(p[end])")
-    elseif length(p) == max_mc_cutoff   # "Jackpot" of observing large number of mutants
+    elseif length(p) == max_mc_cutoff
         push!(p, 1-sum(p)) 
         println("Warning: p has reached max_mc_cutoff, setting tail probability to $(p[end])")
-    end
-    if p[end] > 1
-        println("Warning: Trail probability exceeds 1!")
+    elseif p[end] > 1
+        p[end] = 1 - sum(p[1:end-1])
+        println("Warning: Trail probability exceeds 1, setting tail probability to $(p[end])")
     end
     return p
 end
@@ -197,7 +195,7 @@ function mudi_threshold(p_threshold, m) # Homogeneous population
         k += 1
         p_cumulative += p[k]
     end
-    return tail_prob(p, max_mc_cutoff)
+    return tail_prob!(p)
 end
 function mudi_threshold(p_threshold, m, inv_fit_m) # With diff. mutant fitness
     p_cumulative = exp(-m)
@@ -210,7 +208,7 @@ function mudi_threshold(p_threshold, m, inv_fit_m) # With diff. mutant fitness
         p_cumulative += p[k]
         q_coeffs!(q, k, inv_fit_m)
     end
-    return tail_prob(p, max_mc_cutoff)
+    return tail_prob!(p)
 end
 function mudi_threshold(p_threshold, m, inv_fit_m, eff) # Plating efficiency < 1
     p_cumulative = exp(m*(-1 + inv_fit_m*(1-eff)/(inv_fit_m+1) * pFq((1,1), (inv_fit_m+2,), 1-eff)))
@@ -225,7 +223,7 @@ function mudi_threshold(p_threshold, m, inv_fit_m, eff) # Plating efficiency < 1
         b *= (k-1)/(k+inv_fit_m)
         p_cumulative += p[k]
     end
-    return tail_prob(p, max_mc_cutoff)
+    return tail_prob!(p)
 end
 
 function mudi_threshold_het_0(p_threshold, m_off, m_on) # Heterogeneous population, zero division rate of response-on subpopulation
@@ -241,7 +239,7 @@ function mudi_threshold_het_0(p_threshold, m_off, m_on) # Heterogeneous populati
         p_cumulative += p[k]
         push!(q_on, 0.)
     end
-    return tail_prob(p, max_mc_cutoff)
+    return tail_prob!(p)
 end
 function mudi_threshold_het_0(p_threshold, m_off, m_on, inv_fit_m) # With diff. mutant fitness in response-off subpopulation
     p_cumulative = exp(-(m_off + m_on))
@@ -256,7 +254,7 @@ function mudi_threshold_het_0(p_threshold, m_off, m_on, inv_fit_m) # With diff. 
         push!(q_on, 0.)
         q_coeffs!(q_off, k, inv_fit_m)
     end
-    return tail_prob(p, max_mc_cutoff)
+    return tail_prob!(p)
 end
 function mudi_threshold_het_0(p_threshold, m_off, m_on, inv_fit_m, eff) # Plating efficiency < 1
     p_cumulative = exp(m_off*(-1 + inv_fit_m*(1-eff)/(inv_fit_m+1) * pFq((1,1), (inv_fit_m+2,), 1-eff)) - eff*m_on)
@@ -273,7 +271,7 @@ function mudi_threshold_het_0(p_threshold, m_off, m_on, inv_fit_m, eff) # Platin
         p_cumulative += p[k]
         push!(q_on, 0.)
     end
-    return tail_prob(p, max_mc_cutoff)
+    return tail_prob!(p)
 end
 function mudi_threshold_het(p_threshold, m_off, m_on, ifit) # None-zero relative division rate of response-on subpopulation
     p_cumulative = exp(-(m_off + m_on))
@@ -288,7 +286,7 @@ function mudi_threshold_het(p_threshold, m_off, m_on, ifit) # None-zero relative
         p_cumulative += p[k]
         q_coeffs!(q_on, k, ifit)
     end
-    return tail_prob(p, max_mc_cutoff)
+    return tail_prob!(p)
 end
 function mudi_threshold_het(p_threshold, m_off, m_on, inv_fit_m, ifit) # Diff. mutant fitness in response-off subpopulation
     p_cumulative = exp(-(m_off + m_on))
@@ -303,10 +301,12 @@ function mudi_threshold_het(p_threshold, m_off, m_on, inv_fit_m, ifit) # Diff. m
         q_coeffs!(q_off, k, inv_fit_m)
         q_coeffs!(q_on, k, ifit)
     end
-    return tail_prob(p, max_mc_cutoff)
+    return tail_prob!(p)
 end
 function mudi_threshold_het(p_threshold, m_off, m_on, inv_fit_m, ifit, eff) # Plating efficiency < 1
-    p_cumulative = exp(m_off*(-1 + inv_fit_m*(1-eff)/(inv_fit_m+1) * pFq((1,1), (inv_fit_m+2,), 1-eff)) + m_on*(-1 + ifit*(1-eff)/(ifit+1) * pFq((1,1), (ifit+2,), 1-eff)))
+    eff_big = BigFloat(eff)
+    ifit_big = BigFloat(ifit)
+    p_cumulative = Float64(exp(m_off*(-1 + inv_fit_m*(1-eff)/(inv_fit_m+1) * pFq((1,1), (inv_fit_m+2,), 1-eff_big)) + m_on*(-1 + ifit_big*(1-eff_big)/(ifit_big+1) * pFq((1,1), (ifit_big+2,), 1-eff_big))))
     b_off = inv_fit_m/(inv_fit_m+1)
     b_on = ifit/(ifit+1)
     q_off = Vector{Float64}(undef, 0)
@@ -322,7 +322,7 @@ function mudi_threshold_het(p_threshold, m_off, m_on, inv_fit_m, ifit, eff) # Pl
         b_on *= (k-1)/(k+ifit)
         p_cumulative += p[k]
     end
-    return tail_prob(p, max_mc_cutoff)
+    return tail_prob!(p)
 end
 
 function r_mudi(K::Int, N, mu, fit_m, eff)

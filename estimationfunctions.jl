@@ -9,7 +9,9 @@ using StatsBase, DataFrames, Optim
 #       (i) Maximum likelihood estimates and 95% confidence intervals 
 #       (ii) Log-likelihood and AIC, AIC_corrected + BIC values
 
-R_gof = 10^4  # Number of replicates for the goodness-of-fit test
+# Global estimation meta parameters
+R_gof = 10^4            # Number of replicates for the goodness-of-fit test
+max_mc_cutoff = 1000    # Maximum mutant count at which the mutant count distribution is cutoff for the goodness-of-fit test
 
 # Mutation rate estimation from single fluctuation assay using the standard model with optional differential mutant fitness
 # Input
@@ -56,7 +58,7 @@ function estimu(mc::Vector{Int}, Nf, eff, fit_m::Float64=1.; cond="UT")
         msel_res[1,3:5] = selection_crit(num_para, num_c, MLL)    
         msel_res.LL = [-MLL]
         # Goodness-of-fit test: distribution of log-likelihoods of randomly drawn mutant counts under the estimated parameters
-        LLs, mc_cutoff, p_cutoff = LL_dist(R_gof, num_c, Nf, m/Nf, fit_m, eff) # Also returns the cutoff value and tail probability in the pmf calculation
+        LLs, mc_cutoff, p_cutoff = LL_dist(num_c, Nf, m/Nf, fit_m, eff) # Also returns the cutoff value and tail probability in the pmf calculation
         msel_res.p_value = [1 - ecdf(LLs)(MLL)]
         msel_res.cutoff = [mc_cutoff]
         msel_res.tail_prob = [p_cutoff] 
@@ -99,7 +101,7 @@ function estimu(mc::Vector{Int}, Nf, eff, fit_m::Bool; cond="UT")
         end
         msel_res[1,3:5] = selection_crit(num_para, num_c, MLL)   
         msel_res.LL = [-MLL]
-        LLs, mc_cutoff, p_cutoff = LL_dist(R_gof, num_c, Nf, p[1]/Nf, 1/p[2], eff)
+        LLs, mc_cutoff, p_cutoff = LL_dist(num_c, Nf, p[1]/Nf, 1/p[2], eff)
         msel_res.p_value = [1 - ecdf(LLs)(MLL)]  
         msel_res.cutoff = [mc_cutoff]
         msel_res.tail_prob = [p_cutoff]
@@ -113,7 +115,7 @@ function estimu(mc::Vector{Int}, Nf, eff, fit_m::Bool; cond="UT")
 end 
 
 # Mutation rate estimation from pair of fluctuation assays under permissive/stressful cond.
-msel_res_joint(M, cond_S) = DataFrame(model=[M,M,M], condition=["UT+"*cond_S,"UT",cond_S], AIC=[Inf,NaN,NaN], AIC_corr=[Inf,NaN,NaN], BIC=[Inf,NaN,NaN], LL=[-Inf,-Inf,-Inf], p_value=[0,0,0], cutoff=[0,0,0], tail_prob=[NaN,1,1], calc_time=[0,NaN,NaN])   
+msel_res_joint(M, cond_S) = DataFrame(model=[M,M,M], condition=["UT+"*cond_S,"UT",cond_S], AIC=[Inf,NaN,NaN], AIC_corr=[Inf,NaN,NaN], BIC=[Inf,NaN,NaN], LL=[-Inf,-Inf,-Inf], p_value=[0.,0.,0.], cutoff=[-1,0,0], tail_prob=[NaN,1.,1.], calc_time=[0.,NaN,NaN])   
 
 # Mutation rate estimation from pair of fluctuation assays under permissive/stressful cond. without change in mutation rate
 # Input
@@ -170,10 +172,10 @@ function estimu_0(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vecto
         LL_UT = log_likelihood_m(mc_counts_UT, mc_max_UT, m, q0_UT, q_UT)
         LL_S = log_likelihood_m(mc_counts_S, mc_max_S, m*N_ratio, q0_S, q_S)
         msel_res.LL = [-MLL, LL_UT, LL_S]
-        LLs_UT, mc_cutoff_UT, p_cutoff_UT = LL_dist(R_gof, num_c_UT, Nf_UT, m/Nf_UT, fit_m[1], eff[1])
-        LLs_S, mc_cutoff_S, p_cutoff_S = LL_dist(R_gof, num_c_S, Nf_S, m/Nf_UT, fit_m[2], eff[2])
+        LLs_UT, mc_cutoff_UT, p_cutoff_UT = LL_dist(num_c_UT, Nf_UT, m/Nf_UT, fit_m[1], eff[1])
+        LLs_S, mc_cutoff_S, p_cutoff_S = LL_dist(num_c_S, Nf_S, m/Nf_UT, fit_m[2], eff[2])
         msel_res.p_value = 1 .- [ecdf(LLs_UT.+LLs_S)(MLL), ecdf(LLs_UT)(-LL_UT), ecdf(LLs_S)(-LL_S)]
-        msel_res.cutoff = [mc_cutoff_UT+mc_cutoff_S, mc_cutoff_UT, mc_cutoff_S]
+        msel_res.cutoff = [-1, mc_cutoff_UT, mc_cutoff_S]
         msel_res.tail_prob = [NaN, p_cutoff_UT, p_cutoff_S] 
         end_time = time()
         msel_res.calc_time[1] = end_time - start_time
@@ -216,10 +218,10 @@ function estimu_0(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vecto
         LL_UT = log_likelihood_m_fitm(mc_counts_UT, mc_max_UT, p[1], p[2], eff_conv[1])
         LL_S = log_likelihood_m_fitm(mc_counts_S, mc_max_S, p[1]*N_ratio, p[2], eff_conv[2])
         msel_res.LL = [-MLL, LL_UT, LL_S]
-        LLs_UT, mc_cutoff_UT, p_cutoff_UT = LL_dist(R_gof, num_c_UT, Nf_UT, p[1]/Nf_UT, 1/p[2], eff[1])
-        LLs_S, mc_cutoff_S, p_cutoff_S = LL_dist(R_gof, num_c_S, Nf_S, p[1]/Nf_UT, 1/p[2], eff[2])
+        LLs_UT, mc_cutoff_UT, p_cutoff_UT = LL_dist(num_c_UT, Nf_UT, p[1]/Nf_UT, 1/p[2], eff[1])
+        LLs_S, mc_cutoff_S, p_cutoff_S = LL_dist(num_c_S, Nf_S, p[1]/Nf_UT, 1/p[2], eff[2])
         msel_res.p_value = 1 .- [ecdf(LLs_UT.+LLs_S)(MLL), ecdf(LLs_UT)(-LL_UT), ecdf(LLs_S)(-LL_S)]
-        msel_res.cutoff = [mc_cutoff_UT+mc_cutoff_S, mc_cutoff_UT, mc_cutoff_S]
+        msel_res.cutoff = [-1, mc_cutoff_UT, mc_cutoff_S]
         msel_res.tail_prob = [NaN, p_cutoff_UT, p_cutoff_S] 
         end_time = time()
         msel_res.calc_time[1] = end_time - start_time
@@ -263,10 +265,10 @@ function estimu_0(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vecto
         LL_UT = log_likelihood_m_fitm(mc_counts_UT, mc_max_UT, p[1], p[2], eff_conv[1])
         LL_S = log_likelihood_m_fitm(mc_counts_S, mc_max_S, p[1]*N_ratio, p[3], eff_conv[2])
         msel_res.LL = [-MLL, LL_UT, LL_S]
-        LLs_UT, mc_cutoff_UT, p_cutoff_UT = LL_dist(R_gof, num_c_UT, Nf_UT, p[1]/Nf_UT, 1/p[2], eff[1])
-        LLs_S, mc_cutoff_S, p_cutoff_S = LL_dist(R_gof, num_c_S, Nf_S, p[1]/Nf_UT, 1/p[3], eff[2])
+        LLs_UT, mc_cutoff_UT, p_cutoff_UT = LL_dist(num_c_UT, Nf_UT, p[1]/Nf_UT, 1/p[2], eff[1])
+        LLs_S, mc_cutoff_S, p_cutoff_S = LL_dist(num_c_S, Nf_S, p[1]/Nf_UT, 1/p[3], eff[2])
         msel_res.p_value = 1 .- [ecdf(LLs_UT.+LLs_S)(MLL), ecdf(LLs_UT)(-LL_UT), ecdf(LLs_S)(-LL_S)]
-        msel_res.cutoff = [mc_cutoff_UT+mc_cutoff_S, mc_cutoff_UT, mc_cutoff_S]
+        msel_res.cutoff = [-1, mc_cutoff_UT, mc_cutoff_S]
         msel_res.tail_prob = [NaN, p_cutoff_UT, p_cutoff_S] 
         end_time = time()
         msel_res.calc_time[1] = end_time - start_time
@@ -296,37 +298,37 @@ function estimu_hom(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
     # Estimation for permissive cond.
 	est_res_UT, msel_res_UT, LLs_UT = estimu(mc_UT, Nf_UT, eff[1], fit_m[1])
     msel_res[2,:] = msel_res_UT[1,:] # Copy the UT cond. to the second row of msel_res
-        # Estimation for stressful cond.
-        est_res_S, msel_res_S, LLs_S = estimu(mc_S, Nf_S, eff[2], fit_m[2], cond=cond_S)
+    # Estimation for stressful cond.
+    est_res_S, msel_res_S, LLs_S = estimu(mc_S, Nf_S, eff[2], fit_m[2], cond=cond_S)
     msel_res[3,:] = msel_res_S[1,:] # Copy the S cond. to the second row of msel_res
     est_res = vcat(est_res_UT, est_res_S)
     if msel_res_UT.LL[1] != -Inf && msel_res_S.LL[1] != -Inf
-            start_time = time()
-            mc_max_S, mc_counts_S, num_c_S = extract_mc(mc_S)
-            if typeof(fit_m) == Vector{Float64}
-                q0_S, q_S = coeffs(mc_max_S, 1/fit_m[2], eff[2])
-                LL_S_UT = log_likelihood_m(mc_counts_S, mc_max_S, est_res_UT.MLE[1]*Nf_UT, q0_S, q_S)
-            LLs_S_UT, mc_cutoff_S_UT, p_cutoff_S_UT = LL_dist(R_gof, max_mc_cutoff, num_c_S, Nf_S, est_res_UT.MLE[1], 1/fit_m[2], eff[2])
-                b_M = CI_m(est_res_UT.MLE[1]*Nf_UT, est_res_S.MLE[1]*Nf_S, est_res_UT.lower_bound[1]*Nf_UT, est_res_S.lower_bound[1]*Nf_S, est_res_UT.upper_bound[1]*Nf_UT, est_res_S.upper_bound[1]*Nf_S)
-                b = [b_M; fit_m[1]/fit_m[2] fit_m[1]/fit_m[2]]
-            else
-                LL_S_UT = log_likelihood_m_fitm(mc_counts_S, mc_max_S, est_res_UT.MLE[1]*Nf_UT, 1/est_res_UT.MLE[2], eff[2]) 
-            LLs_S_UT, mc_cutoff_S_UT, p_cutoff_S_UT = LL_dist(R_gof, max_mc_cutoff, num_c_S, Nf_S, est_res_UT.MLE[1], 1/est_res_UT.MLE[2], eff[2])
-                b = CI_m_fitm(est_res_UT.MLE[1]*Nf_UT, est_res_S.MLE[1]*Nf_S, est_res_UT.lower_bound[1]*Nf_UT, est_res_S.lower_bound[1]*Nf_S, est_res_UT.upper_bound[1]*Nf_UT, est_res_S.upper_bound[1]*Nf_S, 1/est_res_UT.MLE[2], 1/est_res_S.MLE[2], 1/est_res_UT.upper_bound[2], 1/est_res_S.upper_bound[2], 1/est_res_UT.lower_bound[2], 1/est_res_S.lower_bound[2])
-            end
-            s = (typeof(fit_m[2]) ==  Bool) ? "calc. from 2&4" : "set to input"
-            push!(est_res, ["Ratio mutant fitness", cond_S*"/UT", s, est_res_S.MLE[2]/est_res_UT.MLE[2], 1/b[2,2], 1/b[2,1]])
-            push!(est_res, ["Fold change mutation rate", cond_S*"/UT", "calc. from 1&3", est_res_S.MLE[1]/est_res_UT.MLE[1], b[1,1]*Nf_UT/Nf_S, b[1,2]*Nf_UT/Nf_S])
+        start_time = time()
+        mc_max_S, mc_counts_S, num_c_S = extract_mc(mc_S)
+        if typeof(fit_m) == Vector{Float64}
+            q0_S, q_S = coeffs(mc_max_S, 1/fit_m[2], eff[2])
+            LL_S_UT = log_likelihood_m(mc_counts_S, mc_max_S, est_res_UT.MLE[1]*Nf_UT, q0_S, q_S)
+            LLs_S_UT, mc_cutoff_S_UT, p_cutoff_S_UT = LL_dist(num_c_S, Nf_S, est_res_UT.MLE[1], 1/fit_m[2], eff[2])
+            b_M = CI_m(est_res_UT.MLE[1]*Nf_UT, est_res_S.MLE[1]*Nf_S, est_res_UT.lower_bound[1]*Nf_UT, est_res_S.lower_bound[1]*Nf_S, est_res_UT.upper_bound[1]*Nf_UT, est_res_S.upper_bound[1]*Nf_S)
+            b = [b_M; fit_m[1]/fit_m[2] fit_m[1]/fit_m[2]]
+        else
+            LL_S_UT = log_likelihood_m_fitm(mc_counts_S, mc_max_S, est_res_UT.MLE[1]*Nf_UT, 1/est_res_UT.MLE[2], eff[2]) 
+            LLs_S_UT, mc_cutoff_S_UT, p_cutoff_S_UT = LL_dist(num_c_S, Nf_S, est_res_UT.MLE[1], 1/est_res_UT.MLE[2], eff[2])
+            b = CI_m_fitm(est_res_UT.MLE[1]*Nf_UT, est_res_S.MLE[1]*Nf_S, est_res_UT.lower_bound[1]*Nf_UT, est_res_S.lower_bound[1]*Nf_S, est_res_UT.upper_bound[1]*Nf_UT, est_res_S.upper_bound[1]*Nf_S, 1/est_res_UT.MLE[2], 1/est_res_S.MLE[2], 1/est_res_UT.upper_bound[2], 1/est_res_S.upper_bound[2], 1/est_res_UT.lower_bound[2], 1/est_res_S.lower_bound[2])
+        end
+        s = (typeof(fit_m[2]) ==  Bool) ? "calc. from 2&4" : "set to input"
+        push!(est_res, ["Ratio mutant fitness", cond_S*"/UT", s, est_res_S.MLE[2]/est_res_UT.MLE[2], 1/b[2,2], 1/b[2,1]])
+        push!(est_res, ["Fold change mutation rate", cond_S*"/UT", "calc. from 1&3", est_res_S.MLE[1]/est_res_UT.MLE[1], b[1,1]*Nf_UT/Nf_S, b[1,2]*Nf_UT/Nf_S])
         num_para = 2 + sum((typeof(fit_m[1]) == Bool)+(sum(typeof(fit_m[2]) == Bool))) # Total number of inference parameters
         msel_res[1,3:5] = selection_crit(num_para, length(mc_UT)+length(mc_S), msel_res_UT.LL[1]+msel_res_S.LL[1])
-            end_time = time()
-            total_time = msel_res_UT.calc_time[1]+msel_res_S.calc_time[1] + (end_time-start_time)
+        end_time = time()
+        total_time = msel_res_UT.calc_time[1]+msel_res_S.calc_time[1] + (end_time-start_time)
         msel_res[1,6:end] = [msel_res_UT.LL[1]+msel_res_S.LL[1], 1 - ecdf(LLs_UT.+LLs_S)(-msel_res_UT.LL[1]-msel_res_S.LL[1]), -1, NaN, total_time]
-            push!(msel_res, [M, "UT->"*cond_S, NaN, NaN, NaN, LL_S_UT, 1 - ecdf(LLs_S_UT)(-LL_S_UT), mc_cutoff_S_UT, p_cutoff_S_UT, total_time])
-        else
+        push!(msel_res, [M, "UT->"*cond_S, NaN, NaN, NaN, LL_S_UT, 1 - ecdf(LLs_S_UT)(-LL_S_UT), mc_cutoff_S_UT, p_cutoff_S_UT, total_time])
+    else
         push!(msel_res, [M, "UT->"*cond_S, NaN, NaN, NaN, -Inf, 0., 0, 1., 0.])
-        end
-    msel_res.model .= M 
+    end
+    msel_res.model .= M     
     return est_res, msel_res
 end
 # Mutant fitness jointly inferred (constrained to be equal under permissive/stressful cond(s).)
@@ -364,10 +366,10 @@ function estimu_hom(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
         LL_UT = log_likelihood_m_fitm(mc_counts_UT, mc_max_UT, p[1], p[3], eff_conv[1])
         LL_S = log_likelihood_m_fitm(mc_counts_S, mc_max_S, p[2], p[3], eff_conv[2])
         msel_res.LL = [-MLL, LL_UT, LL_S]
-        LLs_UT, mc_cutoff_UT, p_cutoff_UT = LL_dist(R_gof, num_c_UT, Nf_UT, p[1]/Nf_UT, 1/p[3], eff[1])
-        LLs_S, mc_cutoff_S, p_cutoff_S = LL_dist(R_gof, num_c_S, Nf_S, p[2]/Nf_S, 1/p[3], eff[2])
+        LLs_UT, mc_cutoff_UT, p_cutoff_UT = LL_dist(num_c_UT, Nf_UT, p[1]/Nf_UT, 1/p[3], eff[1])
+        LLs_S, mc_cutoff_S, p_cutoff_S = LL_dist(num_c_S, Nf_S, p[2]/Nf_S, 1/p[3], eff[2])
         msel_res.p_value = 1 .- [ecdf(LLs_UT.+LLs_S)(MLL), ecdf(LLs_UT)(-LL_UT), ecdf(LLs_S)(-LL_S)]
-        msel_res.cutoff = [mc_cutoff_UT+mc_cutoff_S, mc_cutoff_UT, mc_cutoff_S]
+        msel_res.cutoff = [-1, mc_cutoff_UT, mc_cutoff_S]
         msel_res.tail_prob = [NaN, p_cutoff_UT, p_cutoff_S] 
         end_time = time()
         msel_res.calc_time[1] = end_time - start_time
@@ -438,10 +440,10 @@ function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
         LL_UT = log_likelihood_m_fitm(mc_counts_UT, mc_max_UT, p[1], 1/fit_m[1], eff_conv[1])
         LL_S = log_likelihood_m_S(mc_counts_S, mc_max_S, p[1]*N_ratio, p[2], q0_S_off, q_S_off, q0_S_on, q_S_on)
         msel_res.LL = [-MLL, LL_UT, LL_S]
-        LLs_UT, mc_cutoff_UT, p_cutoff_UT = LL_dist(R_gof, num_c_UT, Nf_UT, p[1]/Nf_UT, fit_m[1], eff[1])
-        LLs_S, mc_cutoff_S, p_cutoff_S = LL_dist(R_gof, num_c_S, Nf_S, p[1]/Nf_UT, p[2], f_on, rel_div_on, fit_m[2], eff[2])
+        LLs_UT, mc_cutoff_UT, p_cutoff_UT = LL_dist(num_c_UT, Nf_UT, p[1]/Nf_UT, fit_m[1], eff[1])
+        LLs_S, mc_cutoff_S, p_cutoff_S = LL_dist(num_c_S, Nf_S, p[1]/Nf_UT, p[2], f_on, rel_div_on, fit_m[2], eff[2])
         msel_res.p_value = 1 .- [ecdf(LLs_UT.+LLs_S)(MLL), ecdf(LLs_UT)(-LL_UT), ecdf(LLs_S)(-LL_S)]
-        msel_res.cutoff = [mc_cutoff_UT+mc_cutoff_S, mc_cutoff_UT, mc_cutoff_S]
+        msel_res.cutoff = [-1, mc_cutoff_UT, mc_cutoff_S]
         msel_res.tail_prob = [NaN, p_cutoff_UT, p_cutoff_S] 
         end_time = time()
         msel_res.calc_time[1] = end_time - start_time
@@ -489,10 +491,10 @@ function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
         LL_UT = log_likelihood_m_fitm(mc_counts_UT, mc_max_UT, p[1], 1/fit_m[1], eff_conv[1])
         LL_S = log_likelihood_m_S_div_f(mc_counts_S, mc_max_S, p[1]*N_ratio, p[2], f_on, p[3], q0_S_off, q_S_off, 1/fit_m[2], eff_conv[2])
         msel_res.LL = [-MLL, LL_UT, LL_S]
-        LLs_UT, mc_cutoff_UT, p_cutoff_UT = LL_dist(R_gof, num_c_UT, Nf_UT, p[1]/Nf_UT, fit_m[1], eff[1])
-        LLs_S, mc_cutoff_S, p_cutoff_S = LL_dist(R_gof, num_c_S, Nf_S, p[1]/Nf_UT, p[2], f_on, p[3], fit_m[2], eff[2])
+        LLs_UT, mc_cutoff_UT, p_cutoff_UT = LL_dist(num_c_UT, Nf_UT, p[1]/Nf_UT, fit_m[1], eff[1])
+        LLs_S, mc_cutoff_S, p_cutoff_S = LL_dist(num_c_S, Nf_S, p[1]/Nf_UT, p[2], f_on, p[3], fit_m[2], eff[2])
         msel_res.p_value = 1 .- [ecdf(LLs_UT.+LLs_S)(MLL), ecdf(LLs_UT)(-LL_UT), ecdf(LLs_S)(-LL_S)]
-        msel_res.cutoff = [mc_cutoff_UT+mc_cutoff_S, mc_cutoff_UT, mc_cutoff_S]
+        msel_res.cutoff = [-1, mc_cutoff_UT, mc_cutoff_S]
         msel_res.tail_prob = [NaN, p_cutoff_UT, p_cutoff_S] 
         end_time = time()
         msel_res.calc_time[1] = end_time - start_time
@@ -538,10 +540,10 @@ function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
             LL_UT = log_likelihood_m(mc_counts_UT, mc_max_UT, p[1], q0_UT, q_UT)
             LL_S = log_likelihood_m_S(mc_counts_S, mc_max_S, p[1]*N_ratio, p[2], q0_S_off, q_S_off, q0_S_on, q_S_on)
             msel_res.LL = [-MLL, LL_UT, LL_S]
-            LLs_UT, mc_cutoff_UT, p_cutoff_UT = LL_dist(R_gof, num_c_UT, Nf_UT, p[1]/Nf_UT, fit_m[1], eff[1])
-            LLs_S, mc_cutoff_S, p_cutoff_S = LL_dist(R_gof, num_c_S, Nf_S, p[1]/Nf_UT, p[2], f_on, rel_div_on, fit_m[2], eff[2])
+            LLs_UT, mc_cutoff_UT, p_cutoff_UT = LL_dist(num_c_UT, Nf_UT, p[1]/Nf_UT, fit_m[1], eff[1])
+            LLs_S, mc_cutoff_S, p_cutoff_S = LL_dist(num_c_S, Nf_S, p[1]/Nf_UT, p[2], f_on, rel_div_on, fit_m[2], eff[2])
             msel_res.p_value = 1 .- [ecdf(LLs_UT.+LLs_S)(MLL), ecdf(LLs_UT)(-LL_UT), ecdf(LLs_S)(-LL_S)]
-            msel_res.cutoff = [mc_cutoff_UT+mc_cutoff_S, mc_cutoff_UT, mc_cutoff_S]
+            msel_res.cutoff = [-1, mc_cutoff_UT, mc_cutoff_S]
             msel_res.tail_prob = [NaN, p_cutoff_UT, p_cutoff_S] 
             end_time = time()
             msel_res.calc_time[1] = end_time - start_time
@@ -551,10 +553,10 @@ function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
     # For non-zero rel. division rate on-cells -> Fraction of on-cells inferred
     else
         # Add the fraction of on-cells and parameters calculated from it
-        push!(est_res, ["Fraction on-cells", cond_S, "inferred"])
-        push!(est_res, ["Mutation rate on-cells", cond_S, "calc. from 1,4&6"])
-        push!(est_res, ["Rel. mutation rate on-cells", cond_S, "calc. from 4&6"])
-        push!(est_res, ["Fold change mean mutation rate", cond_S, "calc. from 4&6"])
+        push!(est_res, ["Fraction on-cells", cond_S, "inferred", 0., 0., Inf])
+        push!(est_res, ["Mutation rate on-cells", cond_S, "calc. from 1,4&6", 0., 0., Inf])
+        push!(est_res, ["Rel. mutation rate on-cells", cond_S, "calc. from 4&6", 0., 0., Inf])
+        push!(est_res, ["Fold change mean mutation rate", cond_S, "calc. from 4&6", 0., 0., Inf])
         msel_res.model .= "Heterogeneous"
         # Calculate the initial value for optimisation
         f_on = initial_f(mc_S, N_ratio, Nf_S, m, S, rel_div_on)
@@ -583,10 +585,10 @@ function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
             LL_UT = log_likelihood_m(mc_counts_UT, mc_max_UT, p[1], q0_UT, q_UT)
             LL_S = log_likelihood_m_S_div_f(mc_counts_S, mc_max_S, p[1]*N_ratio, p[2], p[3], rel_div_on, q0_S_off, q_S_off, 1/fit_m[2], eff_conv[2])
             msel_res.LL = [-MLL, LL_UT, LL_S]
-            LLs_UT, mc_cutoff_UT, p_cutoff_UT = LL_dist(R_gof, num_c_UT, Nf_UT, p[1]/Nf_UT, fit_m[1], eff[1])
-            LLs_S, mc_cutoff_S, p_cutoff_S = LL_dist(R_gof, num_c_S, Nf_S, p[1]/Nf_UT, p[2], p[3], rel_div_on, fit_m[2], eff[2])
+            LLs_UT, mc_cutoff_UT, p_cutoff_UT = LL_dist(num_c_UT, Nf_UT, p[1]/Nf_UT, fit_m[1], eff[1])
+            LLs_S, mc_cutoff_S, p_cutoff_S = LL_dist(num_c_S, Nf_S, p[1]/Nf_UT, p[2], p[3], rel_div_on, fit_m[2], eff[2])
             msel_res.p_value = 1 .- [ecdf(LLs_UT.+LLs_S)(MLL), ecdf(LLs_UT)(-LL_UT), ecdf(LLs_S)(-LL_S)]
-            msel_res.cutoff = [mc_cutoff_UT+mc_cutoff_S, mc_cutoff_UT, mc_cutoff_S]
+            msel_res.cutoff = [-1, mc_cutoff_UT, mc_cutoff_S]
             msel_res.tail_prob = [NaN, p_cutoff_UT, p_cutoff_S] 
             end_time = time()
             msel_res.calc_time[1] = end_time - start_time
@@ -636,10 +638,10 @@ function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
         LL_UT = log_likelihood_m(mc_counts_UT, mc_max_UT, p[1], q0_UT, q_UT)
         LL_S = log_likelihood_m_S_div_f(mc_counts_S, mc_max_S, p[1]*N_ratio, p[2], p[4], p[3], q0_S_off, q_S_off, 1/fit_m[2], eff_conv[2])
         msel_res.LL = [-MLL, LL_UT, LL_S]
-        LLs_UT, mc_cutoff_UT, p_cutoff_UT = LL_dist(R_gof, num_c_UT, Nf_UT, p[1]/Nf_UT, fit_m[1], eff[1])
-        LLs_S, mc_cutoff_S, p_cutoff_S = LL_dist(R_gof, num_c_S, Nf_S, p[1]/Nf_UT, p[2], p[3], p[4], fit_m[2], eff[2])
+        LLs_UT, mc_cutoff_UT, p_cutoff_UT = LL_dist(num_c_UT, Nf_UT, p[1]/Nf_UT, fit_m[1], eff[1])
+        LLs_S, mc_cutoff_S, p_cutoff_S = LL_dist(num_c_S, Nf_S, p[1]/Nf_UT, p[2], p[4], p[3], fit_m[2], eff[2])
         msel_res.p_value = 1 .- [ecdf(LLs_UT.+LLs_S)(MLL), ecdf(LLs_UT)(-LL_UT), ecdf(LLs_S)(-LL_S)]
-        msel_res.cutoff = [mc_cutoff_UT+mc_cutoff_S, mc_cutoff_UT, mc_cutoff_S]
+        msel_res.cutoff = [-1, mc_cutoff_UT, mc_cutoff_S]
         msel_res.tail_prob = [NaN, p_cutoff_UT, p_cutoff_S] 
         end_time = time()
         msel_res.calc_time[1] = end_time - start_time

@@ -1,10 +1,10 @@
 using StatsBase
 
-function LL_dist(R::Int, num_c::Int, N, mu, fit_m, eff)
-    mc_rdraws, p_rdraws = r_mudi(R*num_c, N, mu, fit_m, eff)
-    LL = Vector{Float64}(undef, R)
-    s = randperm(R * num_c) 
-    c_indices = reshape(s, num_c, R)
+function LL_dist(num_c::Int, N, mu, fit_m, eff)
+    mc_rdraws, p_rdraws = r_mudi(R_gof*num_c, N, mu, fit_m, eff)
+    LL = Vector{Float64}(undef, R_gof)
+    s = randperm(R_gof * num_c) 
+    c_indices = reshape(s, num_c, R_gof)
     st = false
     for i in eachindex(LL)
         mc_obs = mc_rdraws[c_indices[:, i]]
@@ -15,11 +15,11 @@ function LL_dist(R::Int, num_c::Int, N, mu, fit_m, eff)
     return LL, length(p_rdraws), p_rdraws[end]
 end
 
-function LL_dist(R::Int, num_c::Int, N, mu_off, S, f_on, rel_div_on, fit_m, eff)
-    mc_rdraws, p_rdraws = r_mudi(R*num_c, N, mu_off, S, f_on, rel_div_on, fit_m, eff)
-    LL = Vector{Float64}(undef, R)
-    s = randperm(R * num_c) 
-    c_indices = reshape(s, num_c, R)
+function LL_dist(num_c::Int, N, mu_off, S, f_on, rel_div_on, fit_m, eff)
+    mc_rdraws, p_rdraws = r_mudi(R_gof*num_c, N, mu_off, S, f_on, rel_div_on, fit_m, eff)
+    LL = Vector{Float64}(undef, R_gof)
+    s = randperm(R_gof * num_c) 
+    c_indices = reshape(s, num_c, R_gof)
     st = false
     for i in eachindex(LL)
         mc_obs = mc_rdraws[c_indices[:, i]]
