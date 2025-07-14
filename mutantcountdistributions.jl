@@ -304,9 +304,7 @@ function mudi_threshold_het(p_threshold, m_off, m_on, inv_fit_m, ifit) # Diff. m
     return tail_prob!(p)
 end
 function mudi_threshold_het(p_threshold, m_off, m_on, inv_fit_m, ifit, eff) # Plating efficiency < 1
-    eff_big = BigFloat(eff)
-    ifit_big = BigFloat(ifit)
-    p_cumulative = Float64(exp(m_off*(-1 + inv_fit_m*(1-eff)/(inv_fit_m+1) * pFq((1,1), (inv_fit_m+2,), 1-eff_big)) + m_on*(-1 + ifit_big*(1-eff_big)/(ifit_big+1) * pFq((1,1), (ifit_big+2,), 1-eff_big))))
+    p_cumulative = Float64(exp(m_off*(-1 + inv_fit_m*(1-eff)/(inv_fit_m+1) * pFq((1,1), (inv_fit_m+2,), 1-eff)) + m_on*(-1 + ifit*(1-eff)/(ifit+1) * pFq((1,1), (ifit+2,), 1-eff))))
     b_off = inv_fit_m/(inv_fit_m+1)
     b_on = ifit/(ifit+1)
     q_off = Vector{Float64}(undef, 0)
