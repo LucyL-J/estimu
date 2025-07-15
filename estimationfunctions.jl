@@ -10,8 +10,8 @@ using StatsBase, DataFrames, Optim
 #       (ii) Log-likelihood and AIC, AIC_corrected + BIC values
 
 # Global estimation meta parameters
-R_gof = 10^4            # Number of replicates for the goodness-of-fit test
-max_mc_cutoff = 1000    # Maximum mutant count at which the mutant count distribution is cutoff for the goodness-of-fit test
+R_gof = 10^4                    # Number of replicates for the goodness-of-fit test
+max_mc_cutoff_default = 1000    # Maximum mutant count at which the mutant count distribution is cutoff for the goodness-of-fit test
 
 # Mutation rate estimation from single fluctuation assay using the standard model with optional differential mutant fitness
 # Input
@@ -32,7 +32,7 @@ function estimu(mc::Vector{Int}, Nf, eff, fit_m::Float64=1.; cond="UT")
     start_time = time()
     est_res = est_res_standard(cond)
     # Model depends on the value of the mutant fitness
-    M = (fit_m == 1.) ? "Standard" : "Standard (diff. mutant fitness)"     
+    M = (fit_m == 1.) ? "Standard" : "Standard (diff. mutant fitness)"  # ? : is syntax for conditional assignment in Julia
     msel_res = msel_res_standard(M, cond)
     # Pre-inference calculations
     mc_max, mc_counts, num_c = extract_mc(mc)
@@ -58,7 +58,7 @@ function estimu(mc::Vector{Int}, Nf, eff, fit_m::Float64=1.; cond="UT")
         msel_res[1,3:5] = selection_crit(num_para, num_c, MLL)    
         msel_res.LL = [-MLL]
         # Goodness-of-fit test: distribution of log-likelihoods of randomly drawn mutant counts under the estimated parameters
-        LLs, mc_cutoff, p_cutoff = LL_dist(num_c, Nf, m/Nf, fit_m, eff) # Also returns the cutoff value and tail probability in the pmf calculation
+        LLs, mc_cutoff, p_cutoff = LL_dist(num_c, Nf, m/Nf, fit_m, eff, mc_max) # Also returns the cutoff value and tail probability in the pmf calculation
         msel_res.p_value = [1 - ecdf(LLs)(MLL)]
         msel_res.cutoff = [mc_cutoff]
         msel_res.tail_prob = [p_cutoff] 
@@ -101,7 +101,7 @@ function estimu(mc::Vector{Int}, Nf, eff, fit_m::Bool; cond="UT")
         end
         msel_res[1,3:5] = selection_crit(num_para, num_c, MLL)   
         msel_res.LL = [-MLL]
-        LLs, mc_cutoff, p_cutoff = LL_dist(num_c, Nf, p[1]/Nf, 1/p[2], eff)
+        LLs, mc_cutoff, p_cutoff = LL_dist(num_c, Nf, p[1]/Nf, 1/p[2], eff, mc_max)
         msel_res.p_value = [1 - ecdf(LLs)(MLL)]  
         msel_res.cutoff = [mc_cutoff]
         msel_res.tail_prob = [p_cutoff]
@@ -172,8 +172,8 @@ function estimu_0(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vecto
         LL_UT = log_likelihood_m(mc_counts_UT, mc_max_UT, m, q0_UT, q_UT)
         LL_S = log_likelihood_m(mc_counts_S, mc_max_S, m*N_ratio, q0_S, q_S)
         msel_res.LL = [-MLL, LL_UT, LL_S]
-        LLs_UT, mc_cutoff_UT, p_cutoff_UT = LL_dist(num_c_UT, Nf_UT, m/Nf_UT, fit_m[1], eff[1])
-        LLs_S, mc_cutoff_S, p_cutoff_S = LL_dist(num_c_S, Nf_S, m/Nf_UT, fit_m[2], eff[2])
+        LLs_UT, mc_cutoff_UT, p_cutoff_UT = LL_dist(num_c_UT, Nf_UT, m/Nf_UT, fit_m[1], eff[1], mc_max_UT)
+        LLs_S, mc_cutoff_S, p_cutoff_S = LL_dist(num_c_S, Nf_S, m/Nf_UT, fit_m[2], eff[2], mc_max_S)
         msel_res.p_value = 1 .- [ecdf(LLs_UT.+LLs_S)(MLL), ecdf(LLs_UT)(-LL_UT), ecdf(LLs_S)(-LL_S)]
         msel_res.cutoff = [-1, mc_cutoff_UT, mc_cutoff_S]
         msel_res.tail_prob = [NaN, p_cutoff_UT, p_cutoff_S] 
@@ -218,8 +218,8 @@ function estimu_0(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vecto
         LL_UT = log_likelihood_m_fitm(mc_counts_UT, mc_max_UT, p[1], p[2], eff_conv[1])
         LL_S = log_likelihood_m_fitm(mc_counts_S, mc_max_S, p[1]*N_ratio, p[2], eff_conv[2])
         msel_res.LL = [-MLL, LL_UT, LL_S]
-        LLs_UT, mc_cutoff_UT, p_cutoff_UT = LL_dist(num_c_UT, Nf_UT, p[1]/Nf_UT, 1/p[2], eff[1])
-        LLs_S, mc_cutoff_S, p_cutoff_S = LL_dist(num_c_S, Nf_S, p[1]/Nf_UT, 1/p[2], eff[2])
+        LLs_UT, mc_cutoff_UT, p_cutoff_UT = LL_dist(num_c_UT, Nf_UT, p[1]/Nf_UT, 1/p[2], eff[1], mc_max_UT)
+        LLs_S, mc_cutoff_S, p_cutoff_S = LL_dist(num_c_S, Nf_S, p[1]/Nf_UT, 1/p[2], eff[2], mc_max_S)
         msel_res.p_value = 1 .- [ecdf(LLs_UT.+LLs_S)(MLL), ecdf(LLs_UT)(-LL_UT), ecdf(LLs_S)(-LL_S)]
         msel_res.cutoff = [-1, mc_cutoff_UT, mc_cutoff_S]
         msel_res.tail_prob = [NaN, p_cutoff_UT, p_cutoff_S] 
@@ -265,8 +265,8 @@ function estimu_0(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vecto
         LL_UT = log_likelihood_m_fitm(mc_counts_UT, mc_max_UT, p[1], p[2], eff_conv[1])
         LL_S = log_likelihood_m_fitm(mc_counts_S, mc_max_S, p[1]*N_ratio, p[3], eff_conv[2])
         msel_res.LL = [-MLL, LL_UT, LL_S]
-        LLs_UT, mc_cutoff_UT, p_cutoff_UT = LL_dist(num_c_UT, Nf_UT, p[1]/Nf_UT, 1/p[2], eff[1])
-        LLs_S, mc_cutoff_S, p_cutoff_S = LL_dist(num_c_S, Nf_S, p[1]/Nf_UT, 1/p[3], eff[2])
+        LLs_UT, mc_cutoff_UT, p_cutoff_UT = LL_dist(num_c_UT, Nf_UT, p[1]/Nf_UT, 1/p[2], eff[1], mc_max_UT)
+        LLs_S, mc_cutoff_S, p_cutoff_S = LL_dist(num_c_S, Nf_S, p[1]/Nf_UT, 1/p[3], eff[2], mc_max_S)
         msel_res.p_value = 1 .- [ecdf(LLs_UT.+LLs_S)(MLL), ecdf(LLs_UT)(-LL_UT), ecdf(LLs_S)(-LL_S)]
         msel_res.cutoff = [-1, mc_cutoff_UT, mc_cutoff_S]
         msel_res.tail_prob = [NaN, p_cutoff_UT, p_cutoff_S] 
@@ -308,12 +308,12 @@ function estimu_hom(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
         if typeof(fit_m) == Vector{Float64}
             q0_S, q_S = coeffs(mc_max_S, 1/fit_m[2], eff[2])
             LL_S_UT = log_likelihood_m(mc_counts_S, mc_max_S, est_res_UT.MLE[1]*Nf_UT, q0_S, q_S)
-            LLs_S_UT, mc_cutoff_S_UT, p_cutoff_S_UT = LL_dist(num_c_S, Nf_S, est_res_UT.MLE[1], fit_m[2], eff[2])
+            LLs_S_UT, mc_cutoff_S_UT, p_cutoff_S_UT = LL_dist(num_c_S, Nf_S, est_res_UT.MLE[1], fit_m[2], eff[2], mc_max_S)
             b_M = CI_m(est_res_UT.MLE[1]*Nf_UT, est_res_S.MLE[1]*Nf_S, est_res_UT.lower_bound[1]*Nf_UT, est_res_S.lower_bound[1]*Nf_S, est_res_UT.upper_bound[1]*Nf_UT, est_res_S.upper_bound[1]*Nf_S)
             b = [b_M; fit_m[1]/fit_m[2] fit_m[1]/fit_m[2]]
         else
             LL_S_UT = log_likelihood_m_fitm(mc_counts_S, mc_max_S, est_res_UT.MLE[1]*Nf_UT, 1/est_res_UT.MLE[2], eff[2]) 
-            LLs_S_UT, mc_cutoff_S_UT, p_cutoff_S_UT = LL_dist(num_c_S, Nf_S, est_res_UT.MLE[1], est_res_UT.MLE[2], eff[2])
+            LLs_S_UT, mc_cutoff_S_UT, p_cutoff_S_UT = LL_dist(num_c_S, Nf_S, est_res_UT.MLE[1], est_res_UT.MLE[2], eff[2], mc_max_S)
             b = CI_m_fitm(est_res_UT.MLE[1]*Nf_UT, est_res_S.MLE[1]*Nf_S, est_res_UT.lower_bound[1]*Nf_UT, est_res_S.lower_bound[1]*Nf_S, est_res_UT.upper_bound[1]*Nf_UT, est_res_S.upper_bound[1]*Nf_S, 1/est_res_UT.MLE[2], 1/est_res_S.MLE[2], 1/est_res_UT.upper_bound[2], 1/est_res_S.upper_bound[2], 1/est_res_UT.lower_bound[2], 1/est_res_S.lower_bound[2])
         end
         s = (typeof(fit_m[2]) ==  Bool) ? "calc. from 2&4" : "set to input"
@@ -366,8 +366,8 @@ function estimu_hom(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
         LL_UT = log_likelihood_m_fitm(mc_counts_UT, mc_max_UT, p[1], p[3], eff_conv[1])
         LL_S = log_likelihood_m_fitm(mc_counts_S, mc_max_S, p[2], p[3], eff_conv[2])
         msel_res.LL = [-MLL, LL_UT, LL_S]
-        LLs_UT, mc_cutoff_UT, p_cutoff_UT = LL_dist(num_c_UT, Nf_UT, p[1]/Nf_UT, 1/p[3], eff[1])
-        LLs_S, mc_cutoff_S, p_cutoff_S = LL_dist(num_c_S, Nf_S, p[2]/Nf_S, 1/p[3], eff[2])
+        LLs_UT, mc_cutoff_UT, p_cutoff_UT = LL_dist(num_c_UT, Nf_UT, p[1]/Nf_UT, 1/p[3], eff[1], mc_max_UT)
+        LLs_S, mc_cutoff_S, p_cutoff_S = LL_dist(num_c_S, Nf_S, p[2]/Nf_S, 1/p[3], eff[2], mc_max_S)
         msel_res.p_value = 1 .- [ecdf(LLs_UT.+LLs_S)(MLL), ecdf(LLs_UT)(-LL_UT), ecdf(LLs_S)(-LL_S)]
         msel_res.cutoff = [-1, mc_cutoff_UT, mc_cutoff_S]
         msel_res.tail_prob = [NaN, p_cutoff_UT, p_cutoff_S] 
@@ -440,8 +440,8 @@ function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
         LL_UT = log_likelihood_m_fitm(mc_counts_UT, mc_max_UT, p[1], 1/fit_m[1], eff_conv[1])
         LL_S = log_likelihood_m_S(mc_counts_S, mc_max_S, p[1]*N_ratio, p[2], q0_S_off, q_S_off, q0_S_on, q_S_on)
         msel_res.LL = [-MLL, LL_UT, LL_S]
-        LLs_UT, mc_cutoff_UT, p_cutoff_UT = LL_dist(num_c_UT, Nf_UT, p[1]/Nf_UT, fit_m[1], eff[1])
-        LLs_S, mc_cutoff_S, p_cutoff_S = LL_dist(num_c_S, Nf_S, p[1]/Nf_UT, p[2], f_on, rel_div_on, fit_m[2], eff[2])
+        LLs_UT, mc_cutoff_UT, p_cutoff_UT = LL_dist(num_c_UT, Nf_UT, p[1]/Nf_UT, fit_m[1], eff[1], mc_max_UT)
+        LLs_S, mc_cutoff_S, p_cutoff_S = LL_dist(num_c_S, Nf_S, p[1]/Nf_UT, p[2], f_on, rel_div_on, fit_m[2], eff[2], mc_max_S)
         msel_res.p_value = 1 .- [ecdf(LLs_UT.+LLs_S)(MLL), ecdf(LLs_UT)(-LL_UT), ecdf(LLs_S)(-LL_S)]
         msel_res.cutoff = [-1, mc_cutoff_UT, mc_cutoff_S]
         msel_res.tail_prob = [NaN, p_cutoff_UT, p_cutoff_S] 
@@ -491,8 +491,8 @@ function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
         LL_UT = log_likelihood_m_fitm(mc_counts_UT, mc_max_UT, p[1], 1/fit_m[1], eff_conv[1])
         LL_S = log_likelihood_m_S_div_f(mc_counts_S, mc_max_S, p[1]*N_ratio, p[2], f_on, p[3], q0_S_off, q_S_off, 1/fit_m[2], eff_conv[2])
         msel_res.LL = [-MLL, LL_UT, LL_S]
-        LLs_UT, mc_cutoff_UT, p_cutoff_UT = LL_dist(num_c_UT, Nf_UT, p[1]/Nf_UT, fit_m[1], eff[1])
-        LLs_S, mc_cutoff_S, p_cutoff_S = LL_dist(num_c_S, Nf_S, p[1]/Nf_UT, p[2], f_on, p[3], fit_m[2], eff[2])
+        LLs_UT, mc_cutoff_UT, p_cutoff_UT = LL_dist(num_c_UT, Nf_UT, p[1]/Nf_UT, fit_m[1], eff[1], mc_max_UT)
+        LLs_S, mc_cutoff_S, p_cutoff_S = LL_dist(num_c_S, Nf_S, p[1]/Nf_UT, p[2], f_on, p[3], fit_m[2], eff[2], mc_max_S)
         msel_res.p_value = 1 .- [ecdf(LLs_UT.+LLs_S)(MLL), ecdf(LLs_UT)(-LL_UT), ecdf(LLs_S)(-LL_S)]
         msel_res.cutoff = [-1, mc_cutoff_UT, mc_cutoff_S]
         msel_res.tail_prob = [NaN, p_cutoff_UT, p_cutoff_S] 
@@ -540,8 +540,8 @@ function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
             LL_UT = log_likelihood_m(mc_counts_UT, mc_max_UT, p[1], q0_UT, q_UT)
             LL_S = log_likelihood_m_S(mc_counts_S, mc_max_S, p[1]*N_ratio, p[2], q0_S_off, q_S_off, q0_S_on, q_S_on)
             msel_res.LL = [-MLL, LL_UT, LL_S]
-            LLs_UT, mc_cutoff_UT, p_cutoff_UT = LL_dist(num_c_UT, Nf_UT, p[1]/Nf_UT, fit_m[1], eff[1])
-            LLs_S, mc_cutoff_S, p_cutoff_S = LL_dist(num_c_S, Nf_S, p[1]/Nf_UT, p[2], f_on, rel_div_on, fit_m[2], eff[2])
+            LLs_UT, mc_cutoff_UT, p_cutoff_UT = LL_dist(num_c_UT, Nf_UT, p[1]/Nf_UT, fit_m[1], eff[1], mc_max_UT)
+            LLs_S, mc_cutoff_S, p_cutoff_S = LL_dist(num_c_S, Nf_S, p[1]/Nf_UT, p[2], f_on, rel_div_on, fit_m[2], eff[2], mc_max_S)
             msel_res.p_value = 1 .- [ecdf(LLs_UT.+LLs_S)(MLL), ecdf(LLs_UT)(-LL_UT), ecdf(LLs_S)(-LL_S)]
             msel_res.cutoff = [-1, mc_cutoff_UT, mc_cutoff_S]
             msel_res.tail_prob = [NaN, p_cutoff_UT, p_cutoff_S] 
@@ -585,8 +585,8 @@ function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
             LL_UT = log_likelihood_m(mc_counts_UT, mc_max_UT, p[1], q0_UT, q_UT)
             LL_S = log_likelihood_m_S_div_f(mc_counts_S, mc_max_S, p[1]*N_ratio, p[2], p[3], rel_div_on, q0_S_off, q_S_off, 1/fit_m[2], eff_conv[2])
             msel_res.LL = [-MLL, LL_UT, LL_S]
-            LLs_UT, mc_cutoff_UT, p_cutoff_UT = LL_dist(num_c_UT, Nf_UT, p[1]/Nf_UT, fit_m[1], eff[1])
-            LLs_S, mc_cutoff_S, p_cutoff_S = LL_dist(num_c_S, Nf_S, p[1]/Nf_UT, p[2], p[3], rel_div_on, fit_m[2], eff[2])
+            LLs_UT, mc_cutoff_UT, p_cutoff_UT = LL_dist(num_c_UT, Nf_UT, p[1]/Nf_UT, fit_m[1], eff[1], mc_max_UT)
+            LLs_S, mc_cutoff_S, p_cutoff_S = LL_dist(num_c_S, Nf_S, p[1]/Nf_UT, p[2], p[3], rel_div_on, fit_m[2], eff[2], mc_max_S)
             msel_res.p_value = 1 .- [ecdf(LLs_UT.+LLs_S)(MLL), ecdf(LLs_UT)(-LL_UT), ecdf(LLs_S)(-LL_S)]
             msel_res.cutoff = [-1, mc_cutoff_UT, mc_cutoff_S]
             msel_res.tail_prob = [NaN, p_cutoff_UT, p_cutoff_S] 
@@ -638,8 +638,8 @@ function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
         LL_UT = log_likelihood_m(mc_counts_UT, mc_max_UT, p[1], q0_UT, q_UT)
         LL_S = log_likelihood_m_S_div_f(mc_counts_S, mc_max_S, p[1]*N_ratio, p[2], p[4], p[3], q0_S_off, q_S_off, 1/fit_m[2], eff_conv[2])
         msel_res.LL = [-MLL, LL_UT, LL_S]
-        LLs_UT, mc_cutoff_UT, p_cutoff_UT = LL_dist(num_c_UT, Nf_UT, p[1]/Nf_UT, fit_m[1], eff[1])
-        LLs_S, mc_cutoff_S, p_cutoff_S = LL_dist(num_c_S, Nf_S, p[1]/Nf_UT, p[2], p[4], p[3], fit_m[2], eff[2])
+        LLs_UT, mc_cutoff_UT, p_cutoff_UT = LL_dist(num_c_UT, Nf_UT, p[1]/Nf_UT, fit_m[1], eff[1], mc_max_UT)
+        LLs_S, mc_cutoff_S, p_cutoff_S = LL_dist(num_c_S, Nf_S, p[1]/Nf_UT, p[2], p[4], p[3], fit_m[2], eff[2], mc_max_S)
         msel_res.p_value = 1 .- [ecdf(LLs_UT.+LLs_S)(MLL), ecdf(LLs_UT)(-LL_UT), ecdf(LLs_S)(-LL_S)]
         msel_res.cutoff = [-1, mc_cutoff_UT, mc_cutoff_S]
         msel_res.tail_prob = [NaN, p_cutoff_UT, p_cutoff_S] 
@@ -651,6 +651,7 @@ function estimu_het(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
     return est_res, msel_res
 end
 
+# Helper functions
 function convert_eff(eff::Vector{<:Number})
     # Convert the efficiency vector to a single value or a tuple
     if eff[1] == eff[2] == 1    # Case 1: both efficiencies are equal to 1

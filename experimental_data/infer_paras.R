@@ -1,9 +1,5 @@
 meta_data <- read.csv("experimental_data/meta_data.csv")[,-1]
 
-est_model <- c("no_SIM_wo_fitm", "no_SIM_fitm", "no_SIM_fitm_unconstr", "hom_wo_fitm", "hom_fitm", "hom_fitm_unconstr", "het_zero_div", "het_div", "het_zero_div_fon", "het_div_fon")
-fit_m <- list("no_SIM_wo_fitm"=1, "no_SIM_fitm"=FALSE, "no_SIM_fitm_unconstr"=c(FALSE,FALSE), "hom_wo_fitm"=1, "hom_fitm"=FALSE, "hom_fitm_unconstr"=c(FALSE,FALSE), "het_zero_div"=1, "het_div"=1, "het_zero_div_fon"=1, "het_div_fon"=1)
-rel_div_on <- list("no_SIM_wo_fitm"=0, "no_SIM_fitm"=0, "no_SIM_fitm_unconstr"=0, "hom_wo_fitm"=0, "hom_fitm"=0, "hom_fitm_unconstr"=0, "het_zero_div"=0, "het_div"=FALSE, "het_zero_div_fon"=0, "het_div_fon"=FALSE)
-mod <- list("no_SIM_wo_fitm"="null", "no_SIM_fitm"="null", "no_SIM_fitm_unconstr"="null", "hom_wo_fitm"="homogeneous", "hom_fitm"="homogeneous", "hom_fitm_unconstr"="homogeneous", "het_zero_div"="heterogeneous", "het_div"="heterogeneous", "het_zero_div_fon"="heterogeneous", "het_div_fon"="heterogeneous")
 est_p <- c("mu_UT","fitm_UT","mu_S","fitm_S", "fitm_ratio", "M", "mu_off", "S", "rel_div_on", "f_on", "mu_on", "mu_inc")
 pq <- c()
 for (p in est_p) {
@@ -25,6 +21,11 @@ for (k in c("joint", "UT", "S", "test")) {
 }
 est_paras <- data.frame(matrix(ncol = (length(pq)+length(lk))+6, nrow = 0))
 colnames(est_paras) <- c("ID", "model", "status", pq, c("AIC", "AIC_corr"), lk, "calc_time")
+
+est_model <- c("no_SIM_wo_fitm", "no_SIM_fitm", "no_SIM_fitm_unconstr", "hom_wo_fitm", "hom_fitm", "hom_fitm_unconstr", "het_zero_div", "het_div", "het_zero_div_fon", "het_div_fon")
+fit_m <- list("no_SIM_wo_fitm"=1, "no_SIM_fitm"=FALSE, "no_SIM_fitm_unconstr"=c(FALSE,FALSE), "hom_wo_fitm"=1, "hom_fitm"=FALSE, "hom_fitm_unconstr"=c(FALSE,FALSE), "het_zero_div"=1, "het_div"=1, "het_zero_div_fon"=1, "het_div_fon"=1)
+rel_div_on <- list("no_SIM_wo_fitm"=0, "no_SIM_fitm"=0, "no_SIM_fitm_unconstr"=0, "hom_wo_fitm"=0, "hom_fitm"=0, "hom_fitm_unconstr"=0, "het_zero_div"=0, "het_div"=FALSE, "het_zero_div_fon"=0, "het_div_fon"=FALSE)
+mod <- list("no_SIM_wo_fitm"="null", "no_SIM_fitm"="null", "no_SIM_fitm_unconstr"="null", "hom_wo_fitm"="homogeneous", "hom_fitm"="homogeneous", "hom_fitm_unconstr"="homogeneous", "het_zero_div"="heterogeneous", "het_div"="heterogeneous", "het_zero_div_fon"="heterogeneous", "het_div_fon"="heterogeneous")
 
 for (i in 1:length(meta_data$ID)) {
   mc_data <- read.table(paste0("experimental_data/raw_counts/", meta_data$ID[i], ".txt"), header = FALSE, sep = ",", fill = TRUE)
@@ -78,5 +79,7 @@ for (i in 1:length(meta_data$ID)) {
   }
 }
 
-est_paras[,4:dim(est_paras)[2]][!is.na(est_paras[,4:dim(est_paras)[2]])] <- as.numeric(est_paras[,4:dim(est_paras)[2]][!is.na(est_paras[,4:dim(est_paras)[2]])])
+for (i in 4:ncol(est_paras)) {
+  est_paras[,i] <- as.numeric(est_paras[,i])
+}
 write.csv(est_paras, file = "experimental_data/est_paras.csv")

@@ -219,7 +219,7 @@ shapiro.test(subset(df_Ecoli, is.element(target, c("DNA", "DNA gyrase")))$M_wo_f
 length(subset(df_Ecoli, target=="Ribosome")$ID)
 shapiro.test(subset(df_Ecoli, target == "Ribosome")$M_wo_fitm.1)
 #hist(subset(df_Ecoli, target == "Ribosome")$M_wo_fitm.1, main="Ribosome-targeting antibiotics", xlab="Increase in population-wide mutation rate", probability=TRUE) +
-  abline(v = mean(subset(df_Ecoli, target == "Ribosome")$M_wo_fitm.1), col="red", lwd=2)
+#  abline(v = mean(subset(df_Ecoli, target == "Ribosome")$M_wo_fitm.1), col="red", lwd=2)
 
 # Kruskal-Wallis test -> DNA/DNA-gyrase and ribosome binding significantly different
 kruskal.test(M_wo_fitm.1 ~ target, data = df_Ecoli_strict)
@@ -276,7 +276,7 @@ p_S_antibiotic
 selected_models <- data.frame(antibiotic=rep(unique(df_SIM$antibiotic), each=2))
 selected_models$target <- mapvalues(selected_models$antibiotic, from = antibiotic_classes$antibiotic_abbr, to = as.character(antibiotic_classes$target_group))
 selected_models$m <- rep(c("hom","het"), length(unique(df_SIM$antibiotic)))
-criterion <- "by_AIC"
+criterion <- "by_AIC_corr"
 n <- match(criterion, names(df_SIM))
 v <- numeric(length(selected_models$antibiotic))
 for (i in 1:length(unique(df_SIM$antibiotic))) {
@@ -295,13 +295,13 @@ p_msel_t <- ggplot(data = selected_models, aes(x=factor(m, c("hom","het")), y=pr
   xlab("Selected model") + ggtitle(criterion) + ylab("Number of experiments") 
 p_msel_t
 
-# Difference in AIC between homogeneous and heterogeneous-response model
-p_Delta_AIC <- ggplot(data = df_SIM, aes(x=ID, y=Delta_AIC, group=antibiotic)) + geom_point(aes(color=antibiotic, shape=homhet)) +
+# Difference in AIC_corr between homogeneous and heterogeneous-response model
+p_Delta <- ggplot(data = df_SIM, aes(x=ID, y=Delta_AIC_corr, group=antibiotic)) + geom_point(aes(color=antibiotic, shape=homhet)) +
   scale_color_manual(values = subset(antibiotic_classes, is.element(antibiotic_abbr, unique(df_SIM$antibiotic)))$color, name = "Antimicrobial") +
   theme(axis.text.x = element_text(angle = 60, vjust = 0.9, hjust = 0.9), plot.margin = margin(3.5,0.5,0.5,0.5, "cm")) +
   geom_hline(yintercept = 2, linetype = "dashed") + geom_hline(yintercept = -2, linetype = "dashed") + 
   ylab("Difference in AIC") + xlab("Experiment ID") + scale_shape_manual(values = c(16, 17), name = "Model w lowest AIC") 
-p_Delta_AIC
+p_Delta
 
 # Case studies
 i <- 20
