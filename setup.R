@@ -85,11 +85,11 @@ check_input <- function(mc, Nf, plateff=1, fit_m=1., rel_div_on=FALSE, f_on=0.1)
   return(list(status, mc, as.numeric(Nf), plateff, fit_m, f_on, rel_div_on))
 }
 
-estimu <- function(mc_UT, Nf_UT, mc_S, Nf_S, plateff=1, fit_m=1., f_on=FALSE, rel_div_on=0., mod="selection", criterion="AIC"){
+estimu <- function(mc_UT, Nf_UT, mc_S, Nf_S, plateff=1, fit_m=1., f_on=FALSE, rel_div_on=0., mod="selection", criterion="AIC_corr"){
   res <- "Warning: Model has to be one of the following 'standard', 'null', 'homogeneous', 'heterogeneous', or 'selection' (the default)."
-  if(!is.element(criterion, c("AIC", "BIC"))){
-    criterion <- "AIC"
-    print("Warning: selection criterion must be either 'AIC' or 'BIC'. Using the default AIC.")
+  if(!is.element(criterion, c("AIC_corr", "AIC", "BIC"))){
+    criterion <- "AI_corr"
+    print("Warning: selection criterion must be either 'AIC_corr', 'AIC' or 'BIC'. Using the default AIC_corr.")
   }
   if(missing(mc_S) || missing(Nf_S)){
     mod <- "standard"
@@ -161,18 +161,6 @@ estimu <- function(mc_UT, Nf_UT, mc_S, Nf_S, plateff=1, fit_m=1., f_on=FALSE, re
           conv_input_UT[[2]], conv_input_UT[[3]], conv_input_S[[2]], conv_input_S[[3]], conv_input_UT[[4]], conv_input_UT[[5]],
           need_return = "R"
         )
-        hom <- list(res_null, res_hom)
-        LRT_hom <- LRT(c(res_null[[2]]$LL[1], res_hom[[2]]$LL[1]))
-        if (LRT_hom == 1){
-          hom[[2]][[2]]$selection_result[1] <- "ns"
-        } else {
-          hom[[LRT_hom]][[2]]$selection_result[1] <- "best hom."
-        }
-        if(criterion == "AIC"){
-          crit_hom <- hom[[LRT_hom]][[2]]$AIC[1] 
-        } else {
-          crit_hom <- hom[[LRT_hom]][[2]]$BIC[1] 
-        }
         res_het_0 <- julia_call(
           "estimu_het",
           conv_input_UT[[2]], conv_input_UT[[3]], conv_input_S[[2]], conv_input_S[[3]], conv_input_UT[[4]], FALSE, 0., conv_input_UT[[5]],
@@ -184,45 +172,16 @@ estimu <- function(mc_UT, Nf_UT, mc_S, Nf_S, plateff=1, fit_m=1., f_on=FALSE, re
             conv_input_UT[[2]], conv_input_UT[[3]], conv_input_S[[2]], conv_input_S[[3]], conv_input_UT[[4]], FALSE, FALSE, conv_input_UT[[5]],
             need_return = "R"
           ) 
-          LRT_het <- min(LRT(c(res_null[[2]]$LL[1], res_het_0[[2]]$LL[1], -Inf, res_het[[2]]$LL[1])), 3)
         } else {
           res_het <- julia_call(
             "estimu_het",
             conv_input_UT[[2]], conv_input_UT[[3]], conv_input_S[[2]], conv_input_S[[3]], conv_input_UT[[4]], FALSE, conv_input_S[[7]], conv_input_UT[[5]],
             need_return = "R"
           ) 
-          LRT_het <- LRT(c(res_null[[2]]$LL[1], res_het_0[[2]]$LL[1], res_het[[2]]$LL[1]))
         }
-        het <- list(res_null, res_het_0, res_het)
-        if (LRT_het == 1){
-          het[[2]][[2]]$selection_result[1] <- "ns"
-          het[[3]][[2]]$selection_result[1] <- "ns"
-        } else {
-          het[[LRT_het]][[2]]$selection_result[1] <- "best het."
-        }
-        if(criterion == "AIC"){
-          crit_het <- het[[LRT_het]][[2]]$AIC[1] 
-        } else {
-          crit_het <- het[[LRT_het]][[2]]$BIC[1]
-        }
-        if(LRT_hom > 1 || LRT_het > 1){
-          print("Significant support for SIM")
-          if(crit_hom - crit_het < -2){
-            hom[[LRT_hom]][[2]]$selection_result[1] <- "selected"
-            print(paste0("Selected model: ", hom[[LRT_hom]][[2]]$model[1]))
-          } else {
-            if(crit_hom - crit_het > 2){
-              het[[LRT_het]][[2]]$selection_result[1] <- "selected"
-              print(paste0("Selected model: ", het[[LRT_het]][[2]]$model[1]))
-            } else {
-              print(paste0("Model selection between ", hom[[LRT_hom]][[2]]$model[1], "and", het[[LRT_het]][[2]]$model[1], " inconclusive."))
-            }
-          }
-        } else {
-          print("No significant support for SIM")
-        }
+        # Insert new model selection procedure here:
         print("Estimated parameters under all models are:")
-        res <- list(hom[[1]][[2]], hom[[1]][[1]], hom[[2]][[2]], hom[[2]][[1]], het[[2]][[2]], het[[2]][[1]], het[[3]][[2]], het[[3]][[1]])
+        res <- list(res_null, res_hom, res_het_0, res_het)
       } else {
         res_null <- julia_call(
           "estimu_0",
@@ -232,6 +191,11 @@ estimu <- function(mc_UT, Nf_UT, mc_S, Nf_S, plateff=1, fit_m=1., f_on=FALSE, re
         res_null_constr <- julia_call(
           "estimu_0",
           conv_input_UT[[2]], conv_input_UT[[3]], conv_input_S[[2]], conv_input_S[[3]], conv_input_UT[[4]], FALSE,
+          need_return = "R"
+        )
+        res_null_unconstr <- julia_call(
+          "estimu_0",
+          conv_input_UT[[2]], conv_input_UT[[3]], conv_input_S[[2]], conv_input_S[[3]], conv_input_UT[[4]], c(FALSE, FALSE),
           need_return = "R"
         )
         res_hom_1 <- julia_call(
@@ -249,37 +213,6 @@ estimu <- function(mc_UT, Nf_UT, mc_S, Nf_S, plateff=1, fit_m=1., f_on=FALSE, re
           conv_input_UT[[2]], conv_input_UT[[3]], conv_input_S[[2]], conv_input_S[[3]], conv_input_UT[[4]], c(FALSE, FALSE),
           need_return = "R"
         )
-        LRT_null <- LRT(c(res_null[[2]]$LL[1], res_null_constr[[2]]$LL[1]))
-        hom <- list(res_null, res_hom_1, res_hom_constr, res_hom_unconstr)
-        LRT_hom <- LRT(c(res_null[[2]]$LL[1], res_hom_1[[2]]$LL[1], res_hom_constr[[2]]$LL[1], res_hom_unconstr[[2]]$LL[1]))
-        if (LRT_null == 2 && LRT_hom == 2){
-          if(criterion == "AIC"){
-            crit_null <- res_null_constr[[2]]$AIC[1]
-            crit_hom <- res_hom_1[[2]]$AIC[1] 
-          } else {
-            crit_null <- res_null_constr[[2]]$BIC[1]
-            crit_hom <- res_hom_1[[2]]$BIC[1] 
-          }
-          if(crit_null - crit_hom < -2){
-            LRT_hom <- 1
-          } else {
-            if(crit_null - crit_hom < 2){
-              print(paste0("Model selection between ", res_null_constr[[2]]$model[1], "and", res_hom_1[[2]]$model[1], " inconclusive."))
-            }
-          }
-        }
-        if (LRT_hom == 1){
-          hom[[2]][[2]]$selection_result[1] <- "ns"
-          hom[[3]][[2]]$selection_result[1] <- "ns"
-          hom[[4]][[2]]$selection_result[1] <- "ns"
-        } else {
-          hom[[LRT_hom]][[2]]$selection_result[1] <- "best hom."
-        }
-        if(criterion == "AIC"){
-          crit_hom <- hom[[LRT_hom]][[2]]$AIC[1] 
-        } else {
-          crit_hom <- hom[[LRT_hom]][[2]]$BIC[1] 
-        }
         res_het_0 <- julia_call(
           "estimu_het",
           conv_input_UT[[2]], conv_input_UT[[3]], conv_input_S[[2]], conv_input_S[[3]], conv_input_UT[[4]], FALSE, 0.,
@@ -291,45 +224,16 @@ estimu <- function(mc_UT, Nf_UT, mc_S, Nf_S, plateff=1, fit_m=1., f_on=FALSE, re
             conv_input_UT[[2]], conv_input_UT[[3]], conv_input_S[[2]], conv_input_S[[3]], conv_input_UT[[4]], FALSE, FALSE,
             need_return = "R"
           ) 
-          LRT_het <- min(LRT(c(res_null[[2]]$LL[1], res_het_0[[2]]$LL[1], -Inf, res_het[[2]]$LL[1])), 3)
         } else {
           res_het <- julia_call(
             "estimu_het",
             conv_input_UT[[2]], conv_input_UT[[3]], conv_input_S[[2]], conv_input_S[[3]], conv_input_UT[[4]], FALSE, conv_input_S[[7]],
             need_return = "R"
           )  
-          LRT_het <- LRT(c(res_null[[2]]$LL[1], res_het_0[[2]]$LL[1], res_het[[2]]$LL[1]))
         }
-        het <- list(res_null, res_het_0, res_het)
-        if (LRT_het == 1){
-          het[[2]][[2]]$selection_result[1] <- "ns"
-          het[[3]][[2]]$selection_result[1] <- "ns"
-        } else {
-          het[[LRT_het]][[2]]$selection_result[1] <- "best het."
-        }
-        if(criterion == "AIC"){
-          crit_het <- het[[LRT_het]][[2]]$AIC[1] 
-        } else {
-          crit_het <- het[[LRT_het]][[2]]$BIC[1]
-        }
-        if(LRT_hom > 1 || LRT_het > 1){
-          print("Significant support for SIM")
-          if(crit_hom - crit_het < -2){
-            hom[[LRT_hom]][[2]]$selection_result[1] <- "selected"
-            print(paste0("Selected model: ", hom[[LRT_hom]][[2]]$model[1]))
-          } else {
-            if(crit_hom - crit_het > 2){
-              het[[LRT_het]][[2]]$selection_result[1] <- "selected"
-              print(paste0("Selected model: ", het[[LRT_het]][[2]]$model[1]))
-            } else {
-              print(paste0("Model selection between ", hom[[LRT_hom]][[2]]$model[1], " and ", het[[LRT_het]][[2]]$model[1], " inconclusive."))
-            }
-          }
-        } else {
-          print("No significant support for SIM")
-        }
+        # Insert new model selection procedure here:
         print("Estimated parameters under all models are:")
-        res <- list(res_null[[2]], res_null[[1]], res_null_constr[[2]], res_null_constr[[1]], hom[[2]][[2]], hom[[2]][[1]], hom[[3]][[2]], hom[[3]][[1]], hom[[4]][[2]], hom[[4]][[1]], het[[2]][[2]], het[[2]][[1]], het[[3]][[2]], het[[3]][[1]])
+        res <- list(res_null, res_null_constr, res_null_unconstr, res_hom_1, res_hom_constr, res_hom_unconstr, res_het_0, res_het)
       }
     }
   }
@@ -347,6 +251,23 @@ pMudi <- function(mc_max, Nf, mu, plateff=1, fit_m=1., S=FALSE, f_on=0., rel_div
     p <- julia_call(
       "p_mudi",
       as.integer(mc_max), Nf, mu, S, f_on, rel_div_on, fit_m, plateff,
+      need_return = "R"
+    )
+  }
+  return(p)
+}
+
+rMudi <- function(n, Nf, mu, plateff=1, fit_m=1., S=FALSE, f_on=0., rel_div_on=0.){
+  if(S == FALSE){
+    p <- julia_call(
+      "r_mudi",
+      as.integer(n), Nf, mu, fit_m, plateff,
+      need_return = "R"
+    )
+  } else {
+    p <- julia_call(
+      "r_mudi",
+      as.integer(n), Nf, mu, S, f_on, rel_div_on, fit_m, plateff,
       need_return = "R"
     )
   }
