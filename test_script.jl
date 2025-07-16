@@ -1,5 +1,7 @@
 include("estimationfunctions.jl")
 
+start_time = time()
+
 mc_UT = [80, 0, 9, 3, 11, 0, 0, 1, 0, 3, 5, 1, 1, 2, 0, 0, 1];
 Nf_UT = 10^9;
 mc_S = [10, 2, 4, 0, 0, 0, 0, 0, 1, 2, 1, 0, 0, 2, 1, 0, 1];
@@ -31,3 +33,6 @@ for eff_UT in [1., 0.9]
         end
     end
 end
+
+end_time = time()
+println("Total time taken: ", end_time - start_time, " seconds")
