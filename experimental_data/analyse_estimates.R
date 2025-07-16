@@ -19,6 +19,8 @@ df <- merge(meta_data, sum_data, by = "ID")
 df <- merge(df, est_sum, by = "ID")
 df$antibiotic <- factor(df$antibiotic, levels = antibiotic_classes$antibiotic_abbr, ordered = TRUE)
 df$target <- factor(df$target, levels = unique(antibiotic_classes$target_group), ordered = TRUE)
+df$hom_by_AIC <- factor(df$hom_by_AIC, levels = c("no_SIM_wo_fitm", "no_SIM_fitm", "no_SIM_fitm_unconstr", "hom_wo_fitm", "hom_fitm", "hom_fitm_unconstr"))
+df$hom_by_AIC_corr <- factor(df$hom_by_AIC_corr, levels = c("no_SIM_wo_fitm", "no_SIM_fitm", "no_SIM_fitm_unconstr", "hom_wo_fitm", "hom_fitm", "hom_fitm_unconstr"))
 antibiotic_classes$antibiotic_abbr <- factor(antibiotic_classes$antibiotic_abbr, levels = antibiotic_classes$antibiotic_abbr, ordered = TRUE)
 antibiotic_classes$target_group <- factor(antibiotic_classes$target_group, levels = unique(antibiotic_classes$target_group), ordered = TRUE)
 
@@ -30,7 +32,7 @@ for (i in 1:length(v)) {
 }
 antibiotic_classes$prevalence <- v
 p_antibiotic <- ggplot(data = antibiotic_classes, aes(x=target_group, y=prevalence, fill=antibiotic_abbr)) + 
-  geom_bar(stat = "identity") + scale_fill_manual(values = antibiotic_classes$color, name = "Antibiotic (abbr)") + 
+  geom_bar(stat = "identity") + scale_fill_manual(values = antibiotic_classes$color, name = "Antimicrobial (abbr)") + 
   xlab("Grouped by target") + ylab("Number of experiments") + 
   theme(axis.text.x = element_text(angle = 60, vjust = 0.9, hjust = 0.8))
 p_antibiotic
@@ -46,26 +48,26 @@ df <- subset(df, p_value_UT_max >= 0.05)
 # Estimated increase in population-wide mutation rate by antibiotic
 # Under homogeneous-response model without differential mutant fitness used in the inference (standard model for UT and S separately), 
 # for purpose of comparison
-p_M_antibiotic <- ggplot(data = df, aes(x=ID, y=M_wo_fitm.1, group=antibiotic)) + 
-  geom_point(aes(color=antibiotic)) +
+p_M_wo_fitm <- ggplot(data = df, aes(x=ID, y=M_wo_fitm.1, group=antibiotic)) + 
+  geom_point(aes(color=antibiotic), shape = 17) +
   geom_errorbar(aes(ymin=M_wo_fitm.2, ymax=M_wo_fitm.3, color=antibiotic)) +
-  geom_hline(yintercept = 1) +
-  scale_color_manual(values = subset(antibiotic_classes, is.element(antibiotic_abbr, unique(df$antibiotic)))$color, name = "Antibiotic (abbr)") + 
-  scale_y_continuous(trans="log10") + theme(axis.text.x = element_text(angle = 90), plot.margin = margin(3.5,0.5,0.5,0.5, "cm")) +
+  geom_hline(yintercept = 1) + #guides(color = guide_legend(ncol = 1)) +
+  scale_color_manual(values = subset(antibiotic_classes, is.element(antibiotic_abbr, unique(df$antibiotic)))$color, name = "Antimicrobial (abbr)") + 
+  scale_y_continuous(trans="log10", limits = c(1.4*10^-4, 7.2*10^5)) + theme(axis.text.x = element_text(angle = 90), plot.margin = margin(3.5,0.5,0.5,0.5, "cm")) +
   ylab("Fold-change population-wide mutation rate") + xlab("Experiment ID") +
   theme(axis.text.x = element_text(vjust = 0.5))
-p_M_antibiotic
+p_M_wo_fitm
 
 # Under homogeneous-response model with the lowest AIC
-p_M_antibiotic <- ggplot(data = df, aes(x=ID, y=M_AIC.1, group=antibiotic)) + 
+p_M_AIC <- ggplot(data = df, aes(x=ID, y=M_AIC.1, group=antibiotic, shape = hom_by_AIC)) + 
   geom_point(aes(color=antibiotic)) +
   geom_errorbar(aes(ymin=M_AIC.2, ymax=M_AIC.3, color=antibiotic)) +
-  geom_hline(yintercept = 1) +
-  scale_color_manual(values = subset(antibiotic_classes, is.element(antibiotic_abbr, unique(df$antibiotic)))$color, name = "Antibiotic (abbr)") + 
-  scale_y_continuous(trans="log10") + theme(axis.text.x = element_text(angle = 90), plot.margin = margin(3.5,0.5,0.5,0.5, "cm")) +
+  geom_hline(yintercept = 1) +  scale_shape_manual(values = c(2,5,0,17,18,15), name = "Model") +
+  scale_color_manual(values = subset(antibiotic_classes, is.element(antibiotic_abbr, unique(df$antibiotic)))$color, name = "Antimicrobial (abbr)") + 
+  scale_y_continuous(trans="log10", limits = c(1.4*10^-4, 7.2*10^5)) + theme(axis.text.x = element_text(angle = 90), plot.margin = margin(3.5,0.5,0.5,0.5, "cm")) +
   ylab("Fold-change population-wide mutation rate") + xlab("Experiment ID") +
   theme(axis.text.x = element_text(vjust = 0.5))
-p_M_antibiotic
+p_M_AIC
 
 # Experiments for which an increase in mutation rate is estimated (model selection criterion: lowest AIC)
 print(length(subset(df, M_AIC.1 > 1)$ID))
@@ -86,26 +88,45 @@ p_GoF
 
 # Restriction to experiments with rejected hypothesis 'S generated under UT parameters'
 df_strict <- df
+print(as.character(subset(df_strict, p_value_test_min >= 0.05)$ID))
 df_strict$M_AIC.1[df_strict$p_value_test_min >= 0.05] <- 1.
 df_strict$M_AIC.2[df_strict$p_value_test_min >= 0.05] <- 1.
 df_strict$M_AIC.3[df_strict$p_value_test_min >= 0.05] <- 1.
 df_strict$M_AIC_corr.1[df_strict$p_value_test_min >= 0.05] <- 1.
 df_strict$M_AIC_corr.2[df_strict$p_value_test_min >= 0.05] <- 1.
 df_strict$M_AIC_corr.3[df_strict$p_value_test_min >= 0.05] <- 1.
+df_strict$M_wo_fitm.1[df_strict$p_value_test_min >= 0.05] <- 1.
+df_strict$M_wo_fitm.2[df_strict$p_value_test_min >= 0.05] <- 1.
+df_strict$M_wo_fitm.3[df_strict$p_value_test_min >= 0.05] <- 1.
 # 'Strict' model selection criterion: lowest AIC + GoF
 df_strict$SIM <- df_strict$M_AIC.1 > 1
 # Alternatively, using AIC_corr as the model selection criterion
 df$SIM <- df$M_AIC_corr.1 > 1
 
-p_M_antibiotic <- ggplot(data = df_strict, aes(x=ID, y=M_AIC.1, group=antibiotic)) + 
+# Remove experiments with poor model fit
+print(as.character(subset(df_strict, p_value_UT_hom_AIC < 0.05)$ID))
+print(as.character(subset(df_strict, p_value_S_hom_AIC < 0.05)$ID))
+
+p_M_AIC_GoF <- ggplot(data = df_strict, aes(x=ID, y=M_AIC.1, group=antibiotic, shape = hom_by_AIC)) + 
   geom_point(aes(color=antibiotic)) +
   geom_errorbar(aes(ymin=M_AIC.2, ymax=M_AIC.3, color=antibiotic)) +
+  geom_hline(yintercept = 1) + scale_shape_manual(values = c(2,5,0,17,18,15), name = "Selected model") +
+  scale_color_manual(values = subset(antibiotic_classes, is.element(antibiotic_abbr, unique(df$antibiotic)))$color, name = "Antimicrobial (abbr)") + 
+  scale_y_continuous(trans="log10", limits = c(1.4*10^-4, 7.2*10^5)) + theme(axis.text.x = element_text(angle = 90), plot.margin = margin(3.5,0.5,0.5,0.5, "cm")) +
+  ylab("Fold-change population-wide mutation rate") + xlab("Experiment ID") +
+  theme(axis.text.x = element_text(vjust = 0.5)) +
+  annotate("point", x = 32, y = 10^3, shape = 4, color = "#3BA0FDFF", size = 2)
+p_M_AIC_GoF
+
+p_M_wo_fitm_GoF <- ggplot(data = df_strict, aes(x=ID, y=M_wo_fitm.1, group=antibiotic)) + 
+  geom_point(aes(color=antibiotic)) +
+  geom_errorbar(aes(ymin=M_wo_fitm.2, ymax=M_wo_fitm.3, color=antibiotic)) +
   geom_hline(yintercept = 1) +
-  scale_color_manual(values = subset(antibiotic_classes, is.element(antibiotic_abbr, unique(df$antibiotic)))$color, name = "Antibiotic (abbr)") + 
-  scale_y_continuous(trans="log10") + theme(axis.text.x = element_text(angle = 90), plot.margin = margin(3.5,0.5,0.5,0.5, "cm")) +
+  scale_color_manual(values = subset(antibiotic_classes, is.element(antibiotic_abbr, unique(df$antibiotic)))$color, name = "Antimicrobial (abbr)") + 
+  scale_y_continuous(trans="log10", limits = c(1.4*10^-4, 7.2*10^5)) + theme(axis.text.x = element_text(angle = 90), plot.margin = margin(3.5,0.5,0.5,0.5, "cm")) +
   ylab("Fold-change population-wide mutation rate") + xlab("Experiment ID") +
   theme(axis.text.x = element_text(vjust = 0.5))
-p_M_antibiotic
+p_M_wo_fitm_GoF
 
 # Distribution of p-values of the goodness of fit test
 est_paras_pooled <- subset(est_paras, is.element(ID, meta_data$ID))
@@ -143,15 +164,15 @@ p_M_DNA
 
 # Under homogeneous-response model with the lowest AIC_corr
 # AIC corrected for the sample size n: AIC_corr = 2p n/(n-p-1) - 2ln(L)
-p_M_antibiotic <- ggplot(data = df, aes(x=ID, y=M_AIC_corr.1, group=antibiotic)) + 
+p_M_AIC_corr <- ggplot(data = df, aes(x=ID, y=M_AIC_corr.1, group=antibiotic)) + 
   geom_point(aes(color=antibiotic)) +
   geom_errorbar(aes(ymin=M_AIC_corr.2, ymax=M_AIC_corr.3, color=antibiotic)) +
   geom_hline(yintercept = 1) +
-  scale_color_manual(values = subset(antibiotic_classes, is.element(antibiotic_abbr, unique(df$antibiotic)))$color, name = "Antibiotic (abbr)") + 
-  scale_y_continuous(trans="log10") + theme(axis.text.x = element_text(angle = 90), plot.margin = margin(3.5,0.5,0.5,0.5, "cm")) +
+  scale_color_manual(values = subset(antibiotic_classes, is.element(antibiotic_abbr, unique(df$antibiotic)))$color, name = "Antimicrobial (abbr)") + 
+  scale_y_continuous(trans="log10", limits = c(1.4*10^-4, 7.2*10^5)) + theme(axis.text.x = element_text(angle = 90), plot.margin = margin(3.5,0.5,0.5,0.5, "cm")) +
   ylab("Fold-change population-wide mutation rate") + xlab("Experiment ID") +
   theme(axis.text.x = element_text(vjust = 0.5))
-p_M_antibiotic
+p_M_AIC_corr
 
 # Experiments for which an increase in mutation rate is estimated (model selection criterion: lowest AIC_corr)
 print(length(subset(df, M_AIC_corr.1 > 1)$ID))
@@ -161,15 +182,15 @@ print(length(subset(df, p_value_test_min < 0.05)$ID))
 setdiff(subset(df, M_AIC_corr.1 != 1)$ID, subset(df, p_value_test_min < 0.05)$ID)
 setdiff(subset(df, M_AIC.1 != 1)$ID, subset(df, M_AIC_corr.1 != 1)$ID)
 
-p_M_antibiotic <- ggplot(data = df_strict, aes(x=ID, y=M_AIC_corr.1, group=antibiotic)) + 
+p_M_AIC_corr_GoF <- ggplot(data = df_strict, aes(x=ID, y=M_AIC_corr.1, group=antibiotic)) + 
   geom_point(aes(color=antibiotic)) +
   geom_errorbar(aes(ymin=M_AIC_corr.2, ymax=M_AIC_corr.3, color=antibiotic)) +
   geom_hline(yintercept = 1) +
-  scale_color_manual(values = subset(antibiotic_classes, is.element(antibiotic_abbr, unique(df$antibiotic)))$color, name = "Antibiotic (abbr)") + 
-  scale_y_continuous(trans="log10") + theme(axis.text.x = element_text(angle = 90), plot.margin = margin(3.5,0.5,0.5,0.5, "cm")) +
+  scale_color_manual(values = subset(antibiotic_classes, is.element(antibiotic_abbr, unique(df$antibiotic)))$color, name = "Antimicrobial (abbr)") + 
+  scale_y_continuous(trans="log10", limits = c(1.4*10^-4, 7.2*10^5)) + theme(axis.text.x = element_text(angle = 90), plot.margin = margin(3.5,0.5,0.5,0.5, "cm")) +
   ylab("Fold-change population-wide mutation rate") + xlab("Experiment ID") +
   theme(axis.text.x = element_text(vjust = 0.5))
-p_M_antibiotic
+p_M_AIC_corr_GoF
 
 
 # Plating efficiency/number of parallel cultures and width of confidence intervals
