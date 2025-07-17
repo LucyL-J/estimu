@@ -5,21 +5,21 @@ IDs <- unique(est_paras$ID)
 est_sum <- data.frame(ID = IDs)
 
 est_sum$p_value_UT_max <- pmax(
-  subset(est_paras, model=="hom_wo_fitm")$p_value_UT, 
-  subset(est_paras, model=="hom_fitm")$p_value_UT, 
-  subset(est_paras, model=="hom_fitm_unconstr")$p_value_UT)
+  subset(est_paras, model=="HOM0")$p_value_UT, 
+  subset(est_paras, model=="HOM1")$p_value_UT, 
+  subset(est_paras, model=="HOM2")$p_value_UT)
 
 est_sum$p_value_test_min <- pmin(
-  subset(est_paras, model=="hom_wo_fitm")$p_value_test, 
-  subset(est_paras, model=="hom_fitm_unconstr")$p_value_test,
+  subset(est_paras, model=="HOM0")$p_value_test, 
+  subset(est_paras, model=="HOM2")$p_value_test,
   na.rm = TRUE)
 
-est_sum$M_wo_fitm <- cbind(
-  subset(est_paras, model=="hom_wo_fitm")$M_MLE, 
-  subset(est_paras, model=="hom_wo_fitm")$M_lower_bound, 
-  subset(est_paras, model=="hom_wo_fitm")$M_upper_bound)
+est_sum$M_HOM0 <- cbind(
+  subset(est_paras, model=="HOM0")$M_MLE, 
+  subset(est_paras, model=="HOM0")$M_lower_bound, 
+  subset(est_paras, model=="HOM0")$M_upper_bound)
 
-m_hom <- c("no_SIM_wo_fitm","no_SIM_fitm","no_SIM_fitm_unconstr","hom_wo_fitm","hom_fitm","hom_fitm_unconstr")
+m_hom <- c("N0","N1","N2","HOM0","HOM1","HOM2")
 est_paras_hom_only <- subset(est_paras, is.element(model, m_hom))
 
 min_AIC_hom <- pmin(
@@ -62,12 +62,13 @@ est_sum$fitm_ratio_AIC_corr <- cbind(
 est_sum$p_value_UT_hom_AIC_corr <- est_paras_hom_AIC_corr$p_value_UT
 est_sum$p_value_S_hom_AIC_corr <- est_paras_hom_AIC_corr$p_value_S
 
-m_het <- c("het_zero_div","het_div")
+m_het <- c("N0","HET0","HET2")
 est_paras_het_only <- subset(est_paras, is.element(model, m_het))
 
 min_AIC_het <- pmin(
-  subset(est_paras_het_only, model==m_het[1])$AIC, 
-  subset(est_paras_het_only, model==m_het[2])$AIC)
+  subset(est_paras_het_only, model==m_het[1])$AIC,
+  subset(est_paras_het_only, model==m_het[2])$AIC,
+  subset(est_paras_het_only, model==m_het[3])$AIC)
 est_paras_het_AIC <- est_paras_het_only[est_paras_het_only$AIC == rep(min_AIC_het, each = length(m_het)), ]
 est_sum$het_by_AIC <- est_paras_het_AIC$model
 est_sum$S_AIC <- cbind(
@@ -83,7 +84,8 @@ est_sum$p_value_S_het_AIC <- est_paras_het_AIC$p_value_S
 
 min_AIC_corr_het <- pmin(
   subset(est_paras_het_only, model==m_het[1])$AIC_corr, 
-  subset(est_paras_het_only, model==m_het[2])$AIC_corr)
+  subset(est_paras_het_only, model==m_het[2])$AIC_corr,
+  subset(est_paras_het_only, model==m_het[3])$AIC_corr)
 est_paras_het_AIC_corr <- est_paras_het_only[est_paras_het_only$AIC_corr == rep(min_AIC_corr_het, each = length(m_het)), ]
 est_sum$het_by_AIC_corr <- est_paras_het_AIC_corr$model
 est_sum$rel_div_on_AIC_corr <- cbind(
@@ -93,7 +95,7 @@ est_sum$rel_div_on_AIC_corr <- cbind(
 est_sum$p_value_UT_het_AIC_corr <- est_paras_het_AIC_corr$p_value_UT
 est_sum$p_value_S_het_AIC_corr <- est_paras_het_AIC_corr$p_value_S
 
-m_all <- c("no_SIM_wo_fitm","no_SIM_fitm","no_SIM_fitm_unconstr","hom_wo_fitm","hom_fitm","hom_fitm_unconstr","het_zero_div","het_div")
+m_all <- c("N0","N1","N2","HOM0","HOM1","HOM2","HET0","HET2")
 est_paras_all <- subset(est_paras, is.element(model, m_all))
 
 min_AIC <- pmin(min_AIC_hom, min_AIC_het)

@@ -1,7 +1,7 @@
 library(JuliaCall)
-julia_setup()
+#julia_setup()
 # Run Sys.BINDIR in julia to get the full path to the directory containing the julia binary
-#julia_setup(JULIA_HOME = "/Users/lucylansch-justen/.julia/juliaup/julia-1.11.3+0.aarch64.apple.darwin14/bin")
+julia_setup(JULIA_HOME = "/Users/lucylansch-justen/.julia/juliaup/julia-1.11.3+0.aarch64.apple.darwin14/bin")
 
 for (p in c("StatsBase", "Optim", "DataFrames", "Distributions", "HypergeometricFunctions", "Roots")) {
   julia_install_package_if_needed(p)
@@ -86,7 +86,7 @@ check_input <- function(mc, Nf, plateff=1, fit_m=1., rel_div_on=FALSE, f_on=0.1)
 }
 
 estimu <- function(mc_UT, Nf_UT, mc_S, Nf_S, plateff=1, fit_m=1., f_on=FALSE, rel_div_on=0., mod="selection", criterion="AIC_corr"){
-  res <- "Warning: Model has to be one of the following 'standard', 'null', 'homogeneous', 'heterogeneous', or 'selection' (the default)."
+  res <- "Warning: Model has to be one of the following 'standard', 'null', 'hom', 'het', or 'selection' (the default)."
   if(!is.element(criterion, c("AIC_corr", "AIC", "BIC"))){
     criterion <- "AI_corr"
     print("Warning: selection criterion must be either 'AIC_corr', 'AIC' or 'BIC'. Using the default AIC_corr.")
@@ -120,7 +120,7 @@ estimu <- function(mc_UT, Nf_UT, mc_S, Nf_S, plateff=1, fit_m=1., f_on=FALSE, re
       res <- list(res[[1]], res[[2]])
     }
   }
-  if(mod == "homogeneous"){
+  if(mod == "hom"){
     conv_input_UT <- check_input(mc_UT, Nf_UT, plateff = plateff, fit_m = fit_m)
     conv_input_S <- check_input(mc_S, Nf_S)
     if(conv_input_UT[[1]]&&conv_input_S[[1]]){
@@ -133,7 +133,7 @@ estimu <- function(mc_UT, Nf_UT, mc_S, Nf_S, plateff=1, fit_m=1., f_on=FALSE, re
       res <- list(res[[1]], res[[2]])
     }
   }
-  if(mod == "heterogeneous"){
+  if(mod == "het"){
     conv_input_UT <- check_input(mc_UT, Nf_UT, plateff = plateff, fit_m = fit_m)
     conv_input_S <- check_input(mc_S, Nf_S, f_on = f_on, rel_div_on = rel_div_on)
     if(conv_input_UT[[1]]&&conv_input_S[[1]]){

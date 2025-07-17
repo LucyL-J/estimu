@@ -135,7 +135,7 @@ est_res_joint_0(cond_S) = DataFrame(parameter=["Mutation rate", "Mutant fitness"
 function estimu_0(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vector{<:Number}, fit_m::Vector{Float64}=[1., 1.]; cond_S="S") 
     start_time = time()
     est_res = est_res_joint_0(cond_S)
-    M = (fit_m[1] == fit_m[2] == 1.) ? "No SIM" : (fit_m[1] == fit_m[2]) ? "No SIM (constr. mutant fitness)" : "No SIM (unconstr. mutant fitness)"
+    M = (fit_m[1] == fit_m[2] == 1.) ? "Null" : (fit_m[1] == fit_m[2]) ? "Null (constr. mutant fitness)" : "Null (unconstr. mutant fitness)"
     msel_res = msel_res_joint(M, cond_S)
     N_ratio = Nf_S/Nf_UT
     mc_max_UT, mc_counts_UT, num_c_UT = extract_mc(mc_UT)
@@ -188,7 +188,7 @@ end
 function estimu_0(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vector{<:Number}, fit_m::Bool; cond_S="S") 
     start_time = time()
     est_res = est_res_joint_0(cond_S)
-    msel_res = msel_res_joint("No SIM (constr. mutant fitness)", cond_S)
+    msel_res = msel_res_joint("Null (constr. mutant fitness)", cond_S)
     N_ratio = Nf_S/Nf_UT  
     mc_max_UT, mc_counts_UT, num_c_UT = extract_mc(mc_UT)
     mc_max_S, mc_counts_S, num_c_S = extract_mc(mc_S)
@@ -234,7 +234,7 @@ end
 function estimu_0(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vector{<:Number}, fit_m::Union{Tuple{Bool,Bool},BitVector}; cond_S="S") 
     start_time = time()
     est_res = est_res_joint_0(cond_S) 
-    msel_res = msel_res_joint("No SIM (unconstr. mutant fitness)", cond_S)  
+    msel_res = msel_res_joint("Null (unconstr. mutant fitness)", cond_S)  
     N_ratio = Nf_S/Nf_UT                     
     mc_max_UT, mc_counts_UT, num_c_UT = extract_mc(mc_UT)
     mc_max_S, mc_counts_S, num_c_S = extract_mc(mc_S)
@@ -320,7 +320,7 @@ function estimu_hom(mc_UT::Vector{Int}, Nf_UT, mc_S::Vector{Int}, Nf_S, eff::Vec
         push!(est_res, ["Ratio mutant fitness", cond_S*"/UT", s, est_res_S.MLE[2]/est_res_UT.MLE[2], 1/b[2,2], 1/b[2,1]])
         push!(est_res, ["Fold change mutation rate", cond_S*"/UT", "calc. from 1&3", est_res_S.MLE[1]/est_res_UT.MLE[1], b[1,1]*Nf_UT/Nf_S, b[1,2]*Nf_UT/Nf_S])
         num_para = 2 + sum((typeof(fit_m[1]) == Bool)+(sum(typeof(fit_m[2]) == Bool))) # Total number of inference parameters
-        msel_res[1,3:5] = selection_crit(num_para, length(mc_UT)+length(mc_S), msel_res_UT.LL[1]+msel_res_S.LL[1])
+        msel_res[1,3:5] = selection_crit(num_para, length(mc_UT)+length(mc_S), -msel_res_UT.LL[1]-msel_res_S.LL[1])
         end_time = time()
         total_time = msel_res_UT.calc_time[1]+msel_res_S.calc_time[1] + (end_time-start_time)
         msel_res[1,6:end] = [msel_res_UT.LL[1]+msel_res_S.LL[1], 1 - ecdf(LLs_UT.+LLs_S)(-msel_res_UT.LL[1]-msel_res_S.LL[1]), -1, NaN, total_time]
