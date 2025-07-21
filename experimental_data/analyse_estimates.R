@@ -147,9 +147,15 @@ df_strict$M_AIC_corr.3[df_strict$p_value_test_min >= 0.05] <- 1.
 df_strict$M_HOM0.1[df_strict$p_value_test_min >= 0.05] <- 1.
 df_strict$M_HOM0.2[df_strict$p_value_test_min >= 0.05] <- 1.
 df_strict$M_HOM0.3[df_strict$p_value_test_min >= 0.05] <- 1.
+levels(df_strict$hom_by_AIC) <- c(levels(df_strict$hom_by_AIC), "Failed GoF test")
+df_strict$hom_by_AIC[df_strict$p_value_test_min >= 0.05] <- "Failed GoF test"
+levels(df_strict$hom_by_AIC_corr) <- c(levels(df_strict$hom_by_AIC_corr), "Failed GoF test")
+df_strict$hom_by_AIC_corr[df_strict$p_value_test_min >= 0.05] <- "Failed GoF test"
+df_strict$H0 <- "HOM0"
+df_strict$H0[df_strict$p_value_test_min >= 0.05] <- "Failed GoF test"
 
 # Evaluate the model fits using goodness-of-fit tests
-# Print: experiments for which the model with the lowest AIC is a poor fit to the data
+# Print: experiments for which the model with the lowest AIC is a poor fit to the data (none as of 21/07/2025)
 print(as.character(subset(df_strict, p_value_UT_hom_AIC < 0.05)$ID)) # AIC in the UT condition
 print(as.character(subset(df_strict, p_value_S_hom_AIC < 0.05)$ID))  # AIC in the S condition
 print(as.character(subset(df_strict, p_value_UT_hom_AIC_corr < 0.05)$ID)) # AIC_corr in the UT condition
@@ -170,52 +176,37 @@ p_M_DNA <- ggplot(data = df_p_value_UT_S, aes(x=condition, y=p_values)) +
   stat_compare_means(label.y = 1) + theme(legend.position = "right")
 p_M_DNA
 
-# Generate separate data frames to mark experiments for which H0 cannot be rejected or the model fits under UT/S conditions are poor
-df_strict_AIC <- subset(df_strict, p_value_S_hom_AIC < 0.05 | p_value_UT_hom_AIC < 0.05 | p_value_test_min >= 0.05)
-levels(df_strict_AIC$hom_by_AIC) <- c(levels(df_strict_AIC$hom_by_AIC), "H0 not rejected", "Poor fit UT cond", "Poor fit S cond")
-df_strict_AIC$hom_by_AIC[df_strict_AIC$p_value_test_min >= 0.05] <- "H0 not rejected"
-df_strict_AIC$hom_by_AIC[df_strict_AIC$p_value_UT_hom_AIC < 0.05] <- "Poor fit UT cond"
-df_strict_AIC$hom_by_AIC[df_strict_AIC$p_value_S_hom_AIC < 0.05] <- "Poor fit S cond"
-df_strict_AIC_corr <- subset(df_strict, p_value_S_hom_AIC_corr < 0.05 | p_value_UT_hom_AIC_corr < 0.05 | p_value_test_min >= 0.05)
-levels(df_strict_AIC_corr$hom_by_AIC_corr) <- c(levels(df_strict_AIC_corr$hom_by_AIC_corr), "H0 not rejected", "Poor fit UT cond", "Poor fit S cond")
-df_strict_AIC_corr$hom_by_AIC_corr[df_strict_AIC_corr$p_value_test_min >= 0.05] <- "H0 not rejected"
-df_strict_AIC_corr$hom_by_AIC_corr[df_strict_AIC_corr$p_value_UT_hom_AIC_corr < 0.05] <- "Poor fit UT cond"
-df_strict_AIC_corr$hom_by_AIC_corr[df_strict_AIC_corr$p_value_S_hom_AIC_corr < 0.05] <- "Poor fit S cond"
-
 # Same as Fig1 version (i), but marking experiments with H0 not rejected, or poor model fits
-p_M_HOM0_GoF <- ggplot(data = df_strict, aes(x=ID, y=M_HOM0.1, group=antibiotic, shape = hom_by_AIC)) + 
-  geom_point(aes(color=antibiotic), shape = 17) + geom_errorbar(aes(ymin=M_HOM0.2, ymax=M_HOM0.3, color=antibiotic)) +
-  geom_hline(yintercept = 1) + scale_shape_manual(values = c(2,5,0,17,18,15,4), name = "Selected model") +
+p_M_HOM0_GoF <- ggplot(data = df_strict, aes(x=ID, y=M_HOM0.1, group=antibiotic, shape = factor(H0))) + 
+  geom_point(aes(color=antibiotic)) + geom_errorbar(aes(ymin=M_HOM0.2, ymax=M_HOM0.3, color=antibiotic)) +
+  geom_hline(yintercept = 1) + scale_shape_manual(values = c(8,17), name = "Selected model") +
   scale_color_manual(values = subset(antibiotic_classes, is.element(antibiotic_abbr, unique(df$antibiotic)))$color, name = "Antimicrobial (abbr)") + 
   scale_y_continuous(trans="log10", limits = c(1.4*10^-4, 7.2*10^5)) + 
   theme(axis.text.x = element_text(angle = 90), plot.margin = margin(3.5,0.5,0.5,0.5, "cm")) +
   ylab("Fold-change population-wide mutation rate") + xlab("Experiment ID") +
-  theme(axis.text.x = element_text(vjust = 0.5)) +
-  geom_point(data = df_strict_AIC, aes(x=ID, y=100*M_AIC.3, color=antibiotic, group=antibiotic))
+  theme(axis.text.x = element_text(vjust = 0.5))
 p_M_HOM0_GoF
 
 # Same as Fig1 version (ii) but marking experiments with H0 not rejected, or poor model fits
 p_M_AIC_GoF <- ggplot(data = df_strict, aes(x=ID, y=M_AIC.1, group=antibiotic, shape = hom_by_AIC)) + 
   geom_point(aes(color=antibiotic)) + geom_errorbar(aes(ymin=M_AIC.2, ymax=M_AIC.3, color=antibiotic)) +
-  geom_hline(yintercept = 1) + scale_shape_manual(values = c(2,5,0,17,18,15,4), name = "Selected model") +
+  geom_hline(yintercept = 1) + scale_shape_manual(values = c(2,5,0,17,18,15,8), name = "Selected model") +
   scale_color_manual(values = subset(antibiotic_classes, is.element(antibiotic_abbr, unique(df$antibiotic)))$color, name = "Antimicrobial (abbr)") + 
   scale_y_continuous(trans="log10", limits = c(1.4*10^-4, 7.2*10^5)) + 
   theme(axis.text.x = element_text(angle = 90), plot.margin = margin(3.5,0.5,0.5,0.5, "cm")) +
   ylab("Fold-change population-wide mutation rate") + xlab("Experiment ID") +
-  theme(axis.text.x = element_text(vjust = 0.5)) +
-  geom_point(data = df_strict_AIC, aes(x=ID, y=100*M_AIC.3, color=antibiotic, group=antibiotic))
+  theme(axis.text.x = element_text(vjust = 0.5))
 p_M_AIC_GoF
 
 # Same as Fig1 version (iii) but marking experiments with H0 not rejected, or poor model fits
 p_M_AIC_corr_GoF <- ggplot(data = df_strict, aes(x=ID, y=M_AIC_corr.1, group=antibiotic, shape = hom_by_AIC_corr)) + 
   geom_point(aes(color=antibiotic)) + geom_errorbar(aes(ymin=M_AIC_corr.2, ymax=M_AIC_corr.3, color=antibiotic)) +
-  geom_hline(yintercept = 1) + scale_shape_manual(values = c(2,5,0,17,18,15,4), name = "Selected model") +
+  geom_hline(yintercept = 1) + scale_shape_manual(values = c(2,5,0,17,18,15,8), name = "Selected model") +
   scale_color_manual(values = subset(antibiotic_classes, is.element(antibiotic_abbr, unique(df$antibiotic)))$color, name = "Antimicrobial (abbr)") + 
   scale_y_continuous(trans="log10", limits = c(1.4*10^-4, 7.2*10^5)) + 
   theme(axis.text.x = element_text(angle = 90), plot.margin = margin(3.5,0.5,0.5,0.5, "cm")) +
   ylab("Fold-change population-wide mutation rate") + xlab("Experiment ID") +
-  theme(axis.text.x = element_text(vjust = 0.5)) +
-  geom_point(data = df_strict_AIC_corr, aes(x=ID, y=100*M_AIC.3, color=antibiotic, group=antibiotic))
+  theme(axis.text.x = element_text(vjust = 0.5))
 p_M_AIC_corr_GoF
 
 
@@ -248,20 +239,25 @@ length(subset(df_Ecoli, target=="Ribosome")$ID)
 # Testing for normality of the estimated increase M
 shapiro.test(df_Ecoli$M_HOM0.1)                                                     # All E. coli experiments
 shapiro.test(subset(df_Ecoli, is.element(target, c("DNA", "DNA gyrase")))$M_HOM0.1) # E. coli experiments using a DNA/DNA gyrase-targeting antibiotic
-shapiro.test(subset(df_Ecoli, target == "Ribosome")$M_HOM0.1)                       # E. coli experiments using a ribosome targeting antibiotic
+shapiro.test(subset(df_Ecoli, target == "Ribosome")$M_HOM0.1)                       # E. coli experiments using a ribosome-targeting antibiotic
 
-# Kruskal-Wallis test -> Is the estimated M significantly different for DNA/DNA gyrase vs. ribosome-targeting antibiotics?
-kruskal.test(M_HOM0.1 ~ target, data = df_Ecoli_strict)
-df_KW <- subset(df_Ecoli_strict, is.element(target, c("DNA", "DNA gyrase", "Ribosome")))
+# Kruskal-Wallis test -> Does the estimated M depend on the antibiotic target?
+kruskal.test(M_HOM0.1 ~ target, data = df_Ecoli)
+# More specifically, is M significantly different for DNA/DNA gyrase vs. ribosome-targeting antibiotics?
+df_KW <- subset(df_Ecoli, is.element(target, c("DNA", "DNA gyrase", "Ribosome")))
 df_KW$group <- character(length(df_KW$target))
 df_KW$group[is.element(df_KW$target, c("DNA", "DNA gyrase"))] <- "DNA/DNA gyrase"
 df_KW$group[df_KW$target == "Ribosome"] <- "Ribosome"
-kruskal.test(df_KW$M_HOM0.1, df_KW$group)
 wilcox.test(M_HOM0.1 ~ group, data = df_KW)
 median(subset(df_KW, group == "DNA/DNA gyrase")$M_HOM0.1)
 median(subset(df_KW, group == "Ribosome")$M_HOM0.1)
+# We also plot experiments for which SIM is detected here (defined as model with lowest AIC_corr estimates M>1 and H0 is rejected)
+df_KW$SIM <- subset(df_Ecoli_strict, is.element(target, c("DNA", "DNA gyrase", "Ribosome")))$SIM_AIC_corr
+# For how many experiments do we detect SIM, depending on the target?
+sum(subset(df_KW, group == "DNA/DNA gyrase")$SIM) # DNA/DNA gyrase-targeting 
+sum(subset(df_KW, group == "Ribosome")$SIM)       # Ribosome-targeting
 p_M_DNA <- ggplot(data = df_KW, aes(x=group, y=M_HOM0.1)) + geom_boxplot(aes(fill=group), show.legend = FALSE, outlier.shape = NA) + 
-  geom_jitter(aes(color = SIM_AIC_corr), width = 0.25, alpha = 0.8) + scale_color_manual(values = c("TRUE" = "red", "FALSE" = "darkgrey")) +
+  geom_jitter(aes(color = SIM), width = 0.25, alpha = 0.8) + scale_color_manual(values = c("TRUE" = "red", "FALSE" = "darkgrey")) +
   coord_trans(y = "log10", ylim = c(5*10^-2,5*10^2)) + scale_y_continuous(breaks = c(0.1,1,10,100), labels = c(0.1,1,10,100)) +
   scale_fill_manual(values = c("DNA/DNA gyrase" = "#4E6ADB", "Ribosome" = "#FE9B2D")) + 
   theme(plot.margin = margin(0.5,0.5,2.5,0.5, "cm")) + 
@@ -270,77 +266,135 @@ p_M_DNA <- ggplot(data = df_KW, aes(x=group, y=M_HOM0.1)) + geom_boxplot(aes(fil
 p_M_DNA
 print(chisq.test(df_KW$group, df_KW$SIM_AIC_corr))
 
+# What else does detection of SIM depend on?
+# For our generalised linear mixed model, we again define SIM as 'model with the lowest AIC_corr estimates M>1 and H0 is rejected'
 df_glmm <- df_strict
+# The antibiotic dose in units of the MIC is a predictor variable, so we consider only experiments for which the MIC was measured
 df_glmm <- subset(df_glmm, !is.na(of_MIC))
+length(df_strict$ID) # All experiments
+length(df_glmm$ID)   # Experiments for which the MIC was measured
+# Grouping the target into 'DNA/DNA gyrase', 'Ribosome' and 'Other'
 df_glmm$group <- character(length(df_glmm$target))
 df_glmm$group[is.element(df_glmm$target, c("DNA", "DNA gyrase"))] <- "DNA/DNA gyrase"
 df_glmm$group[df_glmm$target == "Ribosome"] <- "Ribosome"
 df_glmm$group[!is.element(df_glmm$target, c("DNA", "DNA gyrase", "Ribosome"))] <- "Other"
-glmm <- glmer(SIM ~ of_MIC + group + log10(plated_fraction) + (1|baseline_ID), data = df_glmm, family=binomial)
+df_glmm$group <- relevel(factor(df_glmm$group), ref = "Ribosome")
+# Fitting a linear model with detection of SIM as a predicted variable
+# and the antibiotic dose, the target group and the log-plated fraction as fixed effects
+# and the baseline ID as random effect
+glmm <- glmer(SIM_AIC_corr ~ of_MIC + group + log10(plated_fraction) + (1|baseline_ID), data = df_glmm, family=binomial)
 summary(glmm)
 
-lmer_p <- lmer(p_value_test_min ~ of_MIC + group + log10(plated_fraction) + log10(n_cultures) + (1|baseline_ID), data = df_glmm)
+# Fitting a linear mixed model with the p-value of testing H0 as a predicted variable 
+# and the antibiotic dose, the target group and the log-plated fraction as fixed effects
+# and the baseline ID as random effect
+lmer_p <- lmer(p_value_test_min ~ of_MIC + group + log10(plated_fraction) + (1|baseline_ID), data = df_glmm)
 summary(lmer_p)
 
-# Experiments for which SIM was detected
-df_SIM <- subset(df_Ecoli_strict, SIM == TRUE)
+# Experiments with E. coli for which SIM was detected (model with the lowest AIC_corr estimates M>1 and H0 is rejected)
+df_SIM <- subset(df_Ecoli_strict, SIM_AIC_corr == TRUE)
+length(df_SIM$ID)                       # Number of E. coli experiments with SIM
+length(subset(df_Ecoli, M_HOM0.1>1)$ID) # Number of E. coli experiments with M>1 estimated by model HOM0 (previous studies)
+
+# Estimating the mutation-supply ratio S (heterogeneous-response models) for experiments with detected SIM
+# No model selection between homogeneous and heterogeneous models yet!
+
+# Evaluate the heterogeneous model fits using goodness-of-fit tests
+# Print: E. coli experiments for which the heterogeneous model with the lowest AIC is a poor fit to the data
+print(as.character(subset(df_SIM, p_value_UT_het_AIC < 0.05)$ID)) # AIC in the UT condition
+print(as.character(subset(df_SIM, p_value_S_het_AIC < 0.05)$ID))  # AIC in the S condition
+print(as.character(subset(df_SIM, p_value_UT_het_AIC_corr < 0.05)$ID)) # AIC_corr in the UT condition
+print(as.character(subset(df_SIM, p_value_S_het_AIC_corr < 0.05)$ID))  # AIC_corr in the S condition
+# Print: all experiments for which the heterogeneous model with the lowest AIC is a poor fit to the data
+print(as.character(subset(df, p_value_UT_het_AIC < 0.05)$ID)) # AIC in the UT condition
+print(as.character(subset(df, p_value_S_het_AIC < 0.05)$ID))  # AIC in the S condition
+print(as.character(subset(df, p_value_UT_het_AIC_corr < 0.05)$ID)) # AIC_corr in the UT condition
+print(as.character(subset(df, p_value_S_het_AIC_corr < 0.05)$ID))  # AIC_corr in the S condition
+
+# Generate separate data frames to mark experiments for which the model fits under UT/S conditions are poor
+df_SIM_GoF <- subset(df_SIM, p_value_UT_het_AIC < 0.05 | p_value_S_het_AIC < 0.05)
+levels(df_SIM_GoF$het_by_AIC) <- c(levels(df_SIM_GoF$het_by_AIC), "Poor fit UT cond", "Poor fit S cond")
+df_SIM_GoF$het_by_AIC[df_SIM_GoF$p_value_UT_het_AIC < 0.05] <- "Poor fit UT cond"
+df_SIM_GoF$het_by_AIC[df_SIM_GoF$p_value_S_het_AIC < 0.05] <- "Poor fit S cond"
+df_SIM_GoF_corr <- subset(df_SIM, p_value_UT_het_AIC_corr < 0.05 | p_value_S_het_AIC_corr < 0.05)
+levels(df_SIM_GoF_corr$het_by_AIC_corr) <- c(levels(df_SIM_GoF_corr$het_by_AIC_corr), "Poor fit UT cond", "Poor fit S cond")
+df_SIM_GoF_corr$het_by_AIC_corr[df_SIM_GoF_corr$p_value_UT_het_AIC_corr < 0.05] <- "Poor fit UT cond"
+df_SIM_GoF_corr$het_by_AIC_corr[df_SIM_GoF_corr$p_value_S_het_AIC_corr < 0.05] <- "Poor fit S cond"
+
+p_S_SIM_all <- ggplot(data = df_SIM, aes(x=ID, y=S_AIC_corr.1, group=antibiotic)) + 
+  geom_point(aes(color=antibiotic, shape = het_by_AIC_corr), size=2) + scale_shape_manual(values = c(1,16,2,4,3), name = "Selected model") +
+  geom_errorbar(aes(ymin=S_AIC_corr.2, ymax=S_AIC_corr.3, color=antibiotic)) + geom_hline(yintercept = 1) +
+  scale_colour_manual(values = subset(antibiotic_classes, is.element(antibiotic_abbr, unique(df_SIM$antibiotic)))$color, name = "Antimicrobial (abbr)") +
+  scale_y_continuous(trans="log10") + theme(axis.text.x = element_text(angle = 60, vjust = 0.9, hjust = 0.9), plot.margin = margin(3.5,0.5,0.5,0.5, "cm")) +
+  ylab("Mutation-supply ratio") + xlab("Experiment ID") + geom_point(data = df_SIM_GoF_corr, aes(x=ID, y=S_AIC_corr.1, group=antibiotic, shape=het_by_AIC_corr), size = 3)
+p_S_SIM_all
+
+# Including model selection between selected homogeneous/heterogeneous-response models (criterion = lowest AIC_corr)
+print(df_SIM$by_AIC_corr)
 df_SIM <- arrange(df_SIM, target)
 df_SIM$ID <- factor(df_SIM$ID, levels = unique(df_SIM$ID), ordered = TRUE)
-df_SIM$homhet <- character(length(df_SIM$by_AIC))
-df_SIM$homhet[is.element(df_SIM$by_AIC, c("HOM0", "HOM1", "HOM2"))] <- "Homogeneous"
-df_SIM$homhet[is.element(df_SIM$by_AIC, c("het_zero_div", "het_div"))] <- "Heterogeneous"
-print(c(length(df_SIM$ID), length(subset(df_Ecoli, M_HOM0.1>1)$ID)))
-print(c(length(subset(df_SIM, is.element(target, c("DNA", "DNA gyrase")))$ID),length(subset(df_SIM, target=="Ribosome")$ID)))
-p_M_antibiotic <- ggplot(data = df_SIM, aes(x=ID, y=M_AIC.1, group=target)) + 
-  geom_point(aes(color=target, shape = homhet), size=2) + scale_shape_manual(values = c(16, 17), name = "Model w lowest AIC") +
-  geom_errorbar(aes(ymin=M_AIC.2, ymax=M_AIC.3, color=target)) +
-  geom_hline(yintercept = 1) +
+
+# Estimated increase M for E. coli experiments with SIM
+# Estimates for which a heterogeneous is selected over a homogeneous response overall are shown in dashed lines
+df_SIM$homhet <- character(length(df_SIM$by_AIC_corr))
+df_SIM$homhet[is.element(df_SIM$by_AIC_corr, c("HOM0", "HOM1", "HOM2"))] <- "Homogeneous"
+df_SIM$homhet[is.element(df_SIM$by_AIC_corr, c("N0", "HET0", "HET2"))] <- "Heterogeneous"
+df_SIM$homhet_sel <- df_SIM$hom_by_AIC_corr == df_SIM$by_AIC_corr
+p_M_SIM <- ggplot(data = df_SIM, aes(x=ID, y=M_AIC_corr.1, group=target)) + 
+  geom_point(aes(color=target, shape = hom_by_AIC_corr), size=2) + scale_shape_manual(values = c(17,18,15), name = "Selected model") +
+  geom_errorbar(aes(ymin=M_AIC_corr.2, ymax=M_AIC_corr.3, color=target, linetype = homhet_sel)) + geom_hline(yintercept = 1) +
   scale_colour_manual(values = turbo(length(unique(df_SIM$target))), name = "Target") +
+  scale_linetype_manual(values = c("dashed", "solid"), name = "Overall selected") +
   scale_y_continuous(trans="log10") + theme(axis.text.x = element_text(angle = 60, vjust = 0.9, hjust = 0.9), plot.margin = margin(3.5,0.5,0.5,0.5, "cm")) +
   ylab("Increase population-wide mutation rate") + xlab("Experiment ID")
-p_M_antibiotic
+p_M_SIM
 
-# Mutant fitness cost or heterogeneous stress responses explaining the data?
-print(df_SIM$by_AIC)
-
-p_S_antibiotic <- ggplot(data = df_SIM, aes(x=ID, y=S_AIC.1, group=target)) + 
-  geom_point(aes(color=target, shape = homhet), size=2) + scale_shape_manual(values = c(16, 17), name = "Model w lowest AIC") +
-  geom_errorbar(aes(ymin=S_AIC.2, ymax=S_AIC.3, color=target)) +
-  geom_hline(yintercept = 1) +
-  scale_colour_manual(values = turbo(length(unique(df_SIM$target))), name = "Target") +
+# Estimated increase S for E. coli experiments with SIM
+# Estimates for which a homogeneous is selected over a heterogeneous response overall are shown in dashed lines
+p_S_SIM <- ggplot(data = df_SIM, aes(x=ID, y=S_AIC_corr.1, group=target)) + 
+  geom_point(aes(color=target, shape = het_by_AIC_corr), size=2) + scale_shape_manual(values = c(1,16,2), name = "Selected model") +
+  geom_errorbar(aes(ymin=S_AIC_corr.2, ymax=S_AIC_corr.3, color=target, linetype = !homhet_sel)) +
+  scale_linetype_manual(values = c("dashed", "solid"), name = "Overall selected") +
+  scale_colour_manual(values = turbo(length(unique(df_SIM$target))), name = "Target") + #values = subset(antibiotic_classes, is.element(antibiotic_abbr, unique(df_SIM$antibiotic)))$color, name = "Antimicrobial (abbr)") + 
   scale_y_continuous(trans="log10") + theme(axis.text.x = element_text(angle = 60, vjust = 0.9, hjust = 0.9), plot.margin = margin(3.5,0.5,0.5,0.5, "cm")) +
-  ylab("Increase population-wide mutation rate") + xlab("Experiment ID")
-p_S_antibiotic
+  ylab("Mutation-supply ratio") + xlab("Experiment ID") #+ geom_point(data = df_SIM_GoF_corr, aes(x=ID, y=S_AIC_corr.1, group=antibiotic, shape=het_by_AIC_corr))
+p_S_SIM
 
-# Model selection for experiments with significant increase in population-wide mutation rate
-selected_models <- data.frame(antibiotic=rep(unique(df_SIM$antibiotic), each=2))
-selected_models$target <- mapvalues(selected_models$antibiotic, from = antibiotic_classes$antibiotic_abbr, to = as.character(antibiotic_classes$target_group))
-selected_models$m <- rep(c("hom","het"), length(unique(df_SIM$antibiotic)))
-criterion <- "by_AIC_corr"
-n <- match(criterion, names(df_SIM))
-v <- numeric(length(selected_models$antibiotic))
+# Combining M und S plot with two y axes?
+p_M_S_SIM <- ggplot(data = df_SIM, aes(x = ID)) +
+  geom_point(aes(x = as.numeric(ID)-0.2, y = M_AIC_corr.1, color = target, shape = hom_by_AIC_corr), size = 2) +
+  geom_errorbar(aes(x = as.numeric(ID)-0.2, ymin = M_AIC_corr.2, ymax = M_AIC_corr.3, color = target, linetype = homhet_sel), width = 0.5) +
+  geom_point(aes(x = as.numeric(ID)+0.2, y = S_AIC_corr.1, color = target, shape = het_by_AIC_corr)) + 
+  geom_errorbar(aes(x = as.numeric(ID)+0.2, ymin = S_AIC_corr.2, ymax = S_AIC_corr.3, color = target, linetype = !homhet_sel), width = 0.5) +
+  scale_linetype_manual(values = c("dashed", "solid"), name = "Overall selected") +
+  scale_shape_manual(values = c(17,18,15,1,16,2), name = "Selected model") +
+  scale_colour_manual(values = turbo(length(unique(df_SIM$target))), name = "Target") +
+  scale_y_continuous(trans="log10", "Increase population-wide mutation rate", sec.axis = sec_axis(~ ., name = "Mutation-supply ratio")) +
+  theme(axis.text.x = element_text(angle = 60, vjust = 0.9, hjust = 0.9), plot.margin = margin(3.5, 0.5, 0.5, 0.5, "cm")) +
+  xlab("Experiment ID") + scale_x_continuous(breaks = as.numeric(df_SIM$ID), labels = df_SIM$ID) #+ geom_hline(yintercept = 1)
+p_M_S_SIM
+
+# Model selection (criterion = lowest AIC_corr) between homogeneous- and heterogeneous-response models for E. coli experiments with SIM 
+df_sel <- data.frame(antibiotic=rep(unique(df_SIM$antibiotic), each=2))
+df_sel$target <- mapvalues(df_sel$antibiotic, from = antibiotic_classes$antibiotic_abbr, to = as.character(antibiotic_classes$target_group))
+df_sel$homhet <- factor(rep(c("Homogeneous","Heterogeneous"), length(unique(df_SIM$antibiotic))))
+v <- numeric(length(df_sel$antibiotic))
 for (i in 1:length(unique(df_SIM$antibiotic))) {
-  v[2*i-1] <- sum(is.element(subset(df_SIM, antibiotic == selected_models$antibiotic[2*i])[,n], c("HOM0","HOM1","HOM2"))) 
-  v[2*i] <- sum(is.element(subset(df_SIM, antibiotic == selected_models$antibiotic[2*i])[,n], c("het_zero_div","het_div","het_div_fon")))
+  v[2*i-1] <- sum(subset(df_SIM, antibiotic == df_sel$antibiotic[2*i])$homhet == "Homogeneous") 
+  v[2*i] <- sum(subset(df_SIM, antibiotic == df_sel$antibiotic[2*i])$homhet == "Heterogeneous")
 }
-selected_models$prevalence <- v
+df_sel$prevalence <- v
+p_sel_t <- ggplot(data = df_sel, aes(x=homhet, y=prevalence, fill=target)) + geom_bar(stat = "identity") + 
+  scale_fill_manual(values = turbo(length(unique(df_SIM$target))), name = "Target") +
+  xlab("Overall selected") + ggtitle(criterion) + ylab("Number of experiments") + ggtitle("")#"E. coli experiments with detected SIM")
+p_sel_t
 
-p_msel_a <- ggplot(data = selected_models, aes(x=factor(m, c("hom","het")), y=prevalence, fill=antibiotic)) + geom_bar(stat = "identity") + 
-  scale_fill_manual(values = subset(antibiotic_classes, is.element(antibiotic_abbr, unique(df_SIM$antibiotic)))$color, name = "Antimicrobial") +
-  xlab("Selected model") + ylab("Number of experiments") + scale_x_discrete(labels = c("homogeneous", "heterogeneous"))
-p_msel_a
-
-p_msel_t <- ggplot(data = selected_models, aes(x=factor(m, c("hom","het")), y=prevalence, fill=target)) + geom_bar(stat = "identity") + 
-  scale_fill_manual(values = turbo(length(unique(df_SIM$target)))) +
-  xlab("Selected model") + ggtitle(criterion) + ylab("Number of experiments") 
-p_msel_t
-
-# Difference in AIC_corr between homogeneous and heterogeneous-response model
-p_Delta <- ggplot(data = df_SIM, aes(x=ID, y=Delta_AIC_corr, group=antibiotic)) + geom_point(aes(color=antibiotic, shape=homhet)) +
-  scale_color_manual(values = subset(antibiotic_classes, is.element(antibiotic_abbr, unique(df_SIM$antibiotic)))$color, name = "Antimicrobial") +
+# Difference in AIC_corr between homogeneous and heterogeneous-response models
+p_Delta <- ggplot(data = df_SIM, aes(x=ID, y=Delta_AIC_corr, group=antibiotic)) + geom_point(aes(color=antibiotic, shape=by_AIC_corr)) +
+  scale_color_manual(values = subset(antibiotic_classes, is.element(antibiotic_abbr, unique(df_SIM$antibiotic)))$color, name = "Antimicrobial (abbr)") +
   theme(axis.text.x = element_text(angle = 60, vjust = 0.9, hjust = 0.9), plot.margin = margin(3.5,0.5,0.5,0.5, "cm")) +
   geom_hline(yintercept = 2, linetype = "dashed") + geom_hline(yintercept = -2, linetype = "dashed") + 
-  ylab("Difference in AIC") + xlab("Experiment ID") + scale_shape_manual(values = c(16, 17), name = "Model w lowest AIC") 
+  ylab("Difference in AIC") + xlab("Experiment ID") + scale_shape_manual(values = c(1, 17,18,15), name = "Overall selected") 
 p_Delta
 
 # Case studies

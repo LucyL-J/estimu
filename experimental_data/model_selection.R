@@ -88,6 +88,10 @@ min_AIC_corr_het <- pmin(
   subset(est_paras_het_only, model==m_het[3])$AIC_corr)
 est_paras_het_AIC_corr <- est_paras_het_only[est_paras_het_only$AIC_corr == rep(min_AIC_corr_het, each = length(m_het)), ]
 est_sum$het_by_AIC_corr <- est_paras_het_AIC_corr$model
+est_sum$S_AIC_corr <- cbind(
+  est_paras_het_AIC_corr$S_MLE,
+  est_paras_het_AIC_corr$S_lower_bound,
+  est_paras_het_AIC_corr$S_upper_bound)
 est_sum$rel_div_on_AIC_corr <- cbind(
   est_paras_het_AIC_corr$rel_div_on_MLE,
   est_paras_het_AIC_corr$rel_div_on_lower_bound,
