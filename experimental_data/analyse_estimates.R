@@ -72,7 +72,7 @@ p_M_HOM0 <- ggplot(data = df, aes(x=ID, y=M_HOM0.1, group=antibiotic)) +
   scale_color_manual(values = subset(antibiotic_classes, is.element(antibiotic_abbr, unique(df$antibiotic)))$color, name = "Antimicrobial (abbr)") + 
   scale_y_continuous(trans="log10", limits = c(1.4*10^-4, 7.2*10^5)) + theme(axis.text.x = element_text(angle = 90), plot.margin = margin(3.5,0.5,0.5,0.5, "cm")) +
   ylab("Fold-change population-wide mutation rate") + xlab("Experiment ID") +
-  theme(axis.text.x = element_text(vjust = 0.5))
+  theme(axis.text.x = element_text(vjust = 0.5)) + ggtitle("Estimates by model HOM0")
 p_M_HOM0
 # Print experiments for which an increase in mutation rate is estimated (model = homogeneous-response without differential mutant fitness)
 print(length(subset(df, M_HOM0.1 > 1)$ID))
@@ -85,7 +85,7 @@ p_M_AIC <- ggplot(data = df, aes(x=ID, y=M_AIC.1, group=antibiotic, shape = hom_
   scale_y_continuous(trans="log10", limits = c(1.4*10^-4, 7.2*10^5)) + 
   theme(axis.text.x = element_text(angle = 90), plot.margin = margin(3.5,0.5,0.5,0.5, "cm")) +
   ylab("Fold-change population-wide mutation rate") + xlab("Experiment ID") +
-  theme(axis.text.x = element_text(vjust = 0.5))
+  theme(axis.text.x = element_text(vjust = 0.5)) + ggtitle("Estimates by model with lowest AIC")
 p_M_AIC
 # Print experiments for which an increase in mutation rate is estimated (model selection criterion: lowest AIC)
 print(length(subset(df, M_AIC.1 > 1)$ID))
@@ -99,7 +99,7 @@ p_M_AIC_corr <- ggplot(data = df, aes(x=ID, y=M_AIC_corr.1, group=antibiotic, sh
   scale_y_continuous(trans="log10", limits = c(1.4*10^-4, 7.2*10^5)) + 
   theme(axis.text.x = element_text(angle = 90), plot.margin = margin(3.5,0.5,0.5,0.5, "cm")) +
   ylab("Fold-change population-wide mutation rate") + xlab("Experiment ID") +
-  theme(axis.text.x = element_text(vjust = 0.5))
+  theme(axis.text.x = element_text(vjust = 0.5)) + ggtitle("Estimates by model with lowest AIC_corr")
 p_M_AIC_corr
 # Print experiments for which an increase in mutation rate is estimated (model selection criterion: lowest AIC_corr)
 print(length(subset(df, M_AIC_corr.1 > 1)$ID))
@@ -116,7 +116,8 @@ summary(lm_HOM0)
 p_CI_HOM0 <- ggplot(data = df, aes(x=(plated_fraction), y=(width_CI_HOM0))) + #+log10(n_cultures)
   geom_point(aes(color=log10(n_cultures))) + #geom_smooth(method = "lm") + 
   scale_x_continuous(trans = "log10") + scale_y_continuous(trans="log10") +
-  labs(x="Plated fraction", y="Normalised width of 95% CI around MLE estimate", color=TeX("$log_{10}(c_s)$"))
+  labs(x="Plated fraction", y="Normalised width of 95% CI around MLE estimate", color=TeX("$log_{10}(c_s)$")) +
+  ggtitle("Estimates by model HOM0")
 p_CI_HOM0
 # Correlation between the plated fraction and the number of parallel cultures
 cor.test(df$plated_fraction, df$n_cultures, method = "kendall")
@@ -128,7 +129,8 @@ summary(lm_AIC_corr)
 p_CI_AIC_corr <- ggplot(data = subset(df, width_CI_AIC_corr > 0), aes(x=(n_cultures), y=(width_CI_AIC_corr))) + #+log10(n_cultures)
   geom_point(aes(color=log10(plated_fraction))) + #geom_smooth(method = "lm") + 
   scale_x_continuous(trans = "log10") + scale_y_continuous(trans="log10") +
-  labs(x="Number of parallel cultures", y="Normalised width of 95% CI around MLE estimate", color=TeX("$log_{10}(E)$"))
+  labs(x="Number of parallel cultures", y="Normalised width of 95% CI around MLE estimate", color=TeX("$log_{10}(E)$")) +
+  ggtitle("Estimates by model with lowest AIC_corr")
 p_CI_AIC_corr
 # Correlation between the plated fraction and the number of parallel cultures
 cor.test(subset(df, width_CI_AIC_corr > 0)$plated_fraction, subset(df, width_CI_AIC_corr > 0)$n_cultures, method = "kendall")
@@ -169,12 +171,12 @@ df_strict$M_AIC_corr.3[df_strict$p_value_test_min >= 0.05] <- 1.
 df_strict$M_HOM0.1[df_strict$p_value_test_min >= 0.05] <- 1.
 df_strict$M_HOM0.2[df_strict$p_value_test_min >= 0.05] <- 1.
 df_strict$M_HOM0.3[df_strict$p_value_test_min >= 0.05] <- 1.
-levels(df_strict$hom_by_AIC) <- c(levels(df_strict$hom_by_AIC), "Failed GoF test")
-df_strict$hom_by_AIC[df_strict$p_value_test_min >= 0.05] <- "Failed GoF test"
-levels(df_strict$hom_by_AIC_corr) <- c(levels(df_strict$hom_by_AIC_corr), "Failed GoF test")
-df_strict$hom_by_AIC_corr[df_strict$p_value_test_min >= 0.05] <- "Failed GoF test"
+levels(df_strict$hom_by_AIC) <- c(levels(df_strict$hom_by_AIC), "S/UT not s. different")
+df_strict$hom_by_AIC[df_strict$p_value_test_min >= 0.05] <- "S/UT not s. different"
+levels(df_strict$hom_by_AIC_corr) <- c(levels(df_strict$hom_by_AIC_corr), "S/UT not s. different")
+df_strict$hom_by_AIC_corr[df_strict$p_value_test_min >= 0.05] <- "S/UT not s. different"
 df_strict$H0 <- "HOM0"
-df_strict$H0[df_strict$p_value_test_min >= 0.05] <- "Failed GoF test"
+df_strict$H0[df_strict$p_value_test_min >= 0.05] <- "S/UT not s. different"
 
 # Evaluate the model fits using goodness-of-fit tests
 # Print: experiments for which the model with the lowest AIC is a poor fit to the data (none as of 21/07/2025)
@@ -201,12 +203,12 @@ p_M_DNA
 # Same as Fig1 version (i), but marking experiments with H0 not rejected, or poor model fits
 p_M_HOM0_GoF <- ggplot(data = df_strict, aes(x=ID, y=M_HOM0.1, group=antibiotic, shape = factor(H0))) + 
   geom_point(aes(color=antibiotic)) + geom_errorbar(aes(ymin=M_HOM0.2, ymax=M_HOM0.3, color=antibiotic)) +
-  geom_hline(yintercept = 1) + scale_shape_manual(values = c(8,17), name = "Selected model") +
+  geom_hline(yintercept = 1) + scale_shape_manual(values = c(17,8), name = "GoF test resulted in") +
   scale_color_manual(values = subset(antibiotic_classes, is.element(antibiotic_abbr, unique(df$antibiotic)))$color, name = "Antimicrobial (abbr)") + 
   scale_y_continuous(trans="log10", limits = c(1.4*10^-4, 7.2*10^5)) + 
   theme(axis.text.x = element_text(angle = 90), plot.margin = margin(3.5,0.5,0.5,0.5, "cm")) +
   ylab("Fold-change population-wide mutation rate") + xlab("Experiment ID") +
-  theme(axis.text.x = element_text(vjust = 0.5))
+  theme(axis.text.x = element_text(vjust = 0.5)) + ggtitle("Estimates by model HOM0")
 p_M_HOM0_GoF
 
 # Same as Fig1 version (ii) but marking experiments with H0 not rejected, or poor model fits
@@ -217,7 +219,7 @@ p_M_AIC_GoF <- ggplot(data = df_strict, aes(x=ID, y=M_AIC.1, group=antibiotic, s
   scale_y_continuous(trans="log10", limits = c(1.4*10^-4, 7.2*10^5)) + 
   theme(axis.text.x = element_text(angle = 90), plot.margin = margin(3.5,0.5,0.5,0.5, "cm")) +
   ylab("Fold-change population-wide mutation rate") + xlab("Experiment ID") +
-  theme(axis.text.x = element_text(vjust = 0.5))
+  theme(axis.text.x = element_text(vjust = 0.5)) + ggtitle("Estimates by model with lowest AIC and S/UT s. different")
 p_M_AIC_GoF
 
 # Same as Fig1 version (iii) but marking experiments with H0 not rejected, or poor model fits
@@ -228,7 +230,7 @@ p_M_AIC_corr_GoF <- ggplot(data = df_strict, aes(x=ID, y=M_AIC_corr.1, group=ant
   scale_y_continuous(trans="log10", limits = c(1.4*10^-4, 7.2*10^5)) + 
   theme(axis.text.x = element_text(angle = 90), plot.margin = margin(3.5,0.5,0.5,0.5, "cm")) +
   ylab("Fold-change population-wide mutation rate") + xlab("Experiment ID") +
-  theme(axis.text.x = element_text(vjust = 0.5))
+  theme(axis.text.x = element_text(vjust = 0.5)) + ggtitle("Estimates by model with lowest AIC_corr and S/UT s. different")
 p_M_AIC_corr_GoF
 
 
@@ -276,7 +278,7 @@ sum(subset(df_Ecoli_strict, target_group == "DNA/DNA gyrase")$SIM_AIC_corr) # DN
 sum(subset(df_Ecoli_strict, target_group == "Ribosome")$SIM_AIC_corr)       # Ribosome-targeting
 sum(subset(df_Ecoli_strict, target_group == "Other")$SIM_AIC_corr)          # Others
 p_M_DNA <- ggplot(data = df_Ecoli, aes(x=target_group, y=M_HOM0.1)) + geom_boxplot(aes(fill=target_group), show.legend = FALSE, outlier.shape = NA) + 
-  geom_jitter(aes(color = SIM_AIC_corr), width = 0.25, alpha = 0.8) + scale_color_manual(values = c("TRUE" = "red", "FALSE" = "darkgrey")) +
+  geom_jitter(aes(color = SIM_AIC_corr), width = 0.25, alpha = 0.8) + scale_color_manual(values = c("TRUE" = "red", "FALSE" = "darkgrey"), name = "SIM") +
   coord_trans(y = "log10", ylim = c(5*10^-2,5*10^2)) + scale_y_continuous(breaks = c(0.1,1,10,100), labels = c(0.1,1,10,100)) +
   scale_fill_manual(values = c("DNA/DNA gyrase" = all_colours[round(n_DNA)], "Other" = all_colours[round(n_DNA+n_Other)], "Ribosome" = all_colours[round(n_DNA+n_Other+n_Ribosome)])) + 
   theme(plot.margin = margin(0.5,0.5,2.5,0.5, "cm")) + 
@@ -286,30 +288,39 @@ p_M_DNA
 print(chisq.test(df_Ecoli_strict$target_group, df_Ecoli_strict$SIM_AIC_corr))
 
 
-# What else does detection of SIM depend on?
-# For our generalised linear mixed model, we again define SIM as 'model with the lowest AIC_corr estimates M>1 and H0 is rejected'
+# What else does detection of SIM depend on? Target/experimental design?
+# For our linear mixed model, we again define SIM as 'model with the lowest AIC_corr estimates M>1 and H0 is rejected'
+# and restrict the analysis to experiments using E. coli wt strains
 df_glmm <- df_Ecoli_strict
-# The antibiotic dose in units of the MIC is a predictor variable, so we consider only experiments for which the MIC was measured
+df_glmm$target_group <- relevel(factor(df_glmm$target_group), ref = "Ribosome")
+# Fitting a linear mixed model with detection of SIM as a predicted variable
+# and the target group and the log-plated fraction as fixed effects
+glm <- glm(SIM_AIC_corr ~ target_group + log10(n_cultures) + log10(plated_fraction), data = df_glmm)
+summary(glm)
+
+# Previously, I tried fitting a generalised linear mixed model with 
+# the antibiotic concentration in units of the MIC as another fixed effect
+# and the baseline_ID as a random effect
+# Problems: for the E. coli experiments with known MIC alone, baseline_ID did not account for any variance
+# and complete separate occurred because no SIM is detected for any ribosome-targeting antibiotic
+# Problems did not occur when using experiments with all species
 df_glmm <- subset(df_glmm, !is.na(of_MIC))
-length(df_strict$ID) # All experiments
-length(df_glmm$ID)   # Experiments for which the MIC was measured
-# Grouping the target into 'DNA/DNA gyrase', 'Ribosome' and 'Other'
-df_glmm$group <- character(length(df_glmm$target))
-df_glmm$group[is.element(df_glmm$target, c("DNA", "DNA gyrase"))] <- "DNA/DNA gyrase"
-df_glmm$group[df_glmm$target == "Ribosome"] <- "Ribosome"
-df_glmm$group[!is.element(df_glmm$target, c("DNA", "DNA gyrase", "Ribosome"))] <- "Other"
-df_glmm$group <- relevel(factor(df_glmm$group), ref = "Ribosome")
-# Fitting a linear model with detection of SIM as a predicted variable
-# and the antibiotic dose, the target group and the log-plated fraction as fixed effects
-# and the baseline ID as random effect
-glmm <- glmer(SIM_AIC_corr ~ of_MIC + group + log10(n_cultures) + log10(plated_fraction) + (1|ID), data = df_glmm, family=binomial)
+length(df_Ecoli_strict$ID) # All E. coli experiments
+length(df_glmm$ID)         # Experiments for which the MIC was measured
+table(df_glmm$baseline_ID)
+df_glmm <- subset(df_glmm, !is.element(baseline_ID, c("Bulssico_LB", "Giroux_LB")))
+glmm <- glm(SIM_AIC_corr ~ target_group + log10(n_cultures) + log10(plated_fraction) + (1|baseline_ID), data = df_glmm)
 summary(glmm)
 
-# Fitting a linear mixed model with the p-value of testing H0 as a predicted variable 
+# I also tried fitting a linear mixed model with the p-value of testing H0 as a predicted variable 
 # and the antibiotic dose, the target group and the log-plated fraction as fixed effects
 # and the baseline ID as random effect
-lmer_p <- lmer(p_value_test_min ~ of_MIC + group + log10(plated_fraction) + (1|baseline_ID), data = df_glmm)
+lmer_p <- lmer(p_value_test_min ~ of_MIC + target_group + log10(plated_fraction) + log10(n_cultures) + (1|baseline_ID), data = df_glmm)
 summary(lmer_p)
+# As well as M estimated by HOM0
+# But the same problems occurred
+lmer_M <- lmer(M_HOM0.1 ~ of_MIC + target_group + log10(plated_fraction) + log10(n_cultures) + (1|baseline_ID), data = df_glmm)
+summary(lmer_M)
 
 # Experiments with E. coli for which SIM was detected (model with the lowest AIC_corr estimates M>1 and H0 is rejected)
 df_SIM <- subset(df_Ecoli_strict, SIM_AIC_corr == TRUE)
