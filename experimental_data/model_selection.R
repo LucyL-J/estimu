@@ -35,10 +35,6 @@ est_sum$M_AIC <- cbind(
   est_paras_hom_AIC$M_MLE,
   est_paras_hom_AIC$M_lower_bound,
   est_paras_hom_AIC$M_upper_bound)
-est_sum$fitm_ratio_AIC <- cbind(
-  est_paras_hom_AIC$fitm_ratio_MLE,
-  est_paras_hom_AIC$fitm_ratio_lower_bound,
-  est_paras_hom_AIC$fitm_ratio_upper_bound)
 est_sum$p_value_UT_hom_AIC <- est_paras_hom_AIC$p_value_UT
 est_sum$p_value_S_hom_AIC <- est_paras_hom_AIC$p_value_S
 
@@ -55,10 +51,6 @@ est_sum$M_AIC_corr <- cbind(
   est_paras_hom_AIC_corr$M_MLE,
   est_paras_hom_AIC_corr$M_lower_bound,
   est_paras_hom_AIC_corr$M_upper_bound)
-est_sum$fitm_ratio_AIC_corr <- cbind(
-  est_paras_hom_AIC_corr$fitm_ratio_MLE,
-  est_paras_hom_AIC_corr$fitm_ratio_lower_bound,
-  est_paras_hom_AIC_corr$fitm_ratio_upper_bound)
 est_sum$p_value_UT_hom_AIC_corr <- est_paras_hom_AIC_corr$p_value_UT
 est_sum$p_value_S_hom_AIC_corr <- est_paras_hom_AIC_corr$p_value_S
 
@@ -75,10 +67,6 @@ est_sum$S_AIC <- cbind(
   est_paras_het_AIC$S_MLE,
   est_paras_het_AIC$S_lower_bound,
   est_paras_het_AIC$S_upper_bound)
-est_sum$rel_div_on_AIC <- cbind(
-  est_paras_het_AIC$rel_div_on_MLE,
-  est_paras_het_AIC$rel_div_on_lower_bound,
-  est_paras_het_AIC$rel_div_on_upper_bound)
 est_sum$p_value_UT_het_AIC <- est_paras_het_AIC$p_value_UT
 est_sum$p_value_S_het_AIC <- est_paras_het_AIC$p_value_S
 
@@ -92,10 +80,6 @@ est_sum$S_AIC_corr <- cbind(
   est_paras_het_AIC_corr$S_MLE,
   est_paras_het_AIC_corr$S_lower_bound,
   est_paras_het_AIC_corr$S_upper_bound)
-est_sum$rel_div_on_AIC_corr <- cbind(
-  est_paras_het_AIC_corr$rel_div_on_MLE,
-  est_paras_het_AIC_corr$rel_div_on_lower_bound,
-  est_paras_het_AIC_corr$rel_div_on_upper_bound)
 est_sum$p_value_UT_het_AIC_corr <- est_paras_het_AIC_corr$p_value_UT
 est_sum$p_value_S_het_AIC_corr <- est_paras_het_AIC_corr$p_value_S
 
