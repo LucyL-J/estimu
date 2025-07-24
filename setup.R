@@ -85,8 +85,8 @@ check_input <- function(mc, Nf, plateff=1, fit_m=1., rel_div_on=FALSE, f_on=0.1)
   return(list(status, mc, as.numeric(Nf), plateff, fit_m, f_on, rel_div_on))
 }
 
-estimu <- function(mc_UT, Nf_UT, mc_S, Nf_S, plateff=1, fit_m=1., f_on=FALSE, rel_div_on=0., mod="selection", criterion="AIC_corr"){
-  res <- "Warning: Model has to be one of the following 'standard', 'null', 'hom', 'het', or 'selection' (the default)."
+estimu <- function(mc_UT, Nf_UT, mc_S, Nf_S, plateff=1, fit_m=1., f_on=FALSE, rel_div_on=0., mod="all", criterion="AIC_corr"){
+  res <- "Warning: Model has to be one of the following 'standard', 'null', 'hom', 'het', or 'all' (the default)."
   if(!is.element(criterion, c("AIC_corr", "AIC", "BIC"))){
     criterion <- "AI_corr"
     print("Warning: selection criterion must be either 'AIC_corr', 'AIC' or 'BIC'. Using the default AIC_corr.")
@@ -146,7 +146,7 @@ estimu <- function(mc_UT, Nf_UT, mc_S, Nf_S, plateff=1, fit_m=1., f_on=FALSE, re
       res <- list(res[[1]], res[[2]])
     }
   }
-  if(mod == "selection"){
+  if(mod == "all"){
     conv_input_UT <- check_input(mc_UT, Nf_UT, plateff = plateff, fit_m = fit_m)
     conv_input_S <- check_input(mc_S, Nf_S, rel_div_on = rel_div_on)
     if(conv_input_UT[[1]]&&conv_input_S[[1]]){
