@@ -160,12 +160,6 @@ cor.test(subset(df, width_CI_AIC_corr > 0)$plated_fraction, subset(df, width_CI_
 # Print: experiments for which the S condition is significant different from the UT condition (criterion: p<0.05 in GoF)
 print(length(subset(df, p_value_test_min < 0.05)$ID))
 
-# Comparison: experiments with an estimated change in mutation rate (M!=1), but S/UT not significantly different
-setdiff(subset(df, M_AIC.1 != 1)$ID, subset(df, p_value_test_min >= 0.05)$ID)      # AIC
-setdiff(subset(df, M_AIC_corr.1 != 1)$ID, subset(df, p_value_test_min >= 0.05)$ID) # AIC_corr
-# and the other way round
-setdiff(subset(df, p_value_test_min >= 0.05)$ID, subset(df, M_AIC.1 != 1)$ID)      # AIC
-setdiff(subset(df, p_value_test_min >= 0.05)$ID, subset(df, M_AIC_corr.1 != 1)$ID) # AIC_corr
 
 # Restriction to experiments for which we S is significantly different from UT
 # (setting the estimated change in mutation rate to M=1, and the estimated supply-ration to S=0, if not)
@@ -488,9 +482,9 @@ print(c(sum(subset(df_sel, target_group=="DNA/DNA gyrase" & nullhomhet=="Heterog
 
 # Case studies
 # Experiments for which the selected homogeneous/heterogeneous models have comparable AIC_corrs
-print(as.character(subset(df_SIM_Ecoli, Delta_AIC_corr > 0)$ID))
+print(as.character(subset(df_Ecoli_sel, Delta_AIC_corr > 0)$ID))
 # Experiments for which the homogeneous model with unconstrained mutant fitness is selected
-print(as.character(subset(df_SIM_Ecoli, null_hom_by_AIC_corr == "HOM2")$ID))
+print(as.character(subset(df_Ecoli_sel, null_hom_by_AIC_corr == "HOM2")$ID))
 
 
 # Frenoy et al. norfloxacin: the homogeneous model with unconstrained mutant fitness (HOM2) is selected 
@@ -568,33 +562,52 @@ msel_HET2_fitm$AIC_corr[1]    # HET2 with differential mutant fitness from HOM2 
 msel_HET1_fitm_64$AIC_corr[1] # HET2 with differential mutant fitness from HOM2 (UT condition) and f_on=64%
 msel_HET1_fitm_5$AIC_corr[1]  # HET2 with differential mutant fitness from HOM2 (UT condition) and f_on=5%
 
+# If we constrain the differential mutant fitness to be the same under UT and S conditions, the best homogeneous model is HOM1
+# Estimation under model HOM1 (by setting fit_m = FALSE the mutant fitness is jointly inferred in UT and S conditions)
+res <- estimu(mc_UT, Nf_UT, mc_S, Nf_S, plateff = c(eff_UT, eff_S), fit_m = FALSE, mod = "hom")
+paras_HOM1 <- res[[1]]
+print(paras_HOM1)
+msel_HOM1 <- res[[2]]
+print(msel_HOM1)
+
 df_Nor <- subset(est_paras, ID == "Frenoy_Nor")
-p_mc_hom_UT <- pMudi(max(mc_UT), Nf_UT, df_Nor$mu_UT_MLE[6], plateff=eff_UT, fit_m=df_Nor$fitm_UT_MLE[6]) * length(mc_UT)
-p_mc_hom_constr_UT <- pMudi(max(mc_UT), Nf_UT, df_Nor$mu_UT_MLE[4], plateff=eff_UT) * length(mc_UT)
-p_mc_het_UT <- pMudi(max(mc_UT), Nf_UT, df_Nor$mu_off_MLE[8], plateff=eff_UT) * length(mc_UT)
-print(c(df_Nor$mu_UT_MLE[6], df_Nor$fitm_UT_MLE[6], df_Nor$mu_UT_MLE[4]))
-print(df_Nor$mu_off_MLE[8])
+# UT condition: calculate the mutant count distributions under HOM2, HOM1, HET2 and HET2 with mutant fitness as estimated by HOM2
+p_mc_HOM2_UT <- pMudi(max(mc_UT), Nf_UT, paras_HOM2$MLE[1], plateff=eff_UT, fit_m=paras_HOM2$MLE[2]) * length(mc_UT)
+p_mc_HOM1_UT <- pMudi(max(mc_UT), Nf_UT, paras_HOM1$MLE[1], plateff=eff_UT, fit_m=paras_HOM1$MLE[2]) * length(mc_UT)
+p_mc_HET2_UT <- pMudi(max(mc_UT), Nf_UT, paras_HET2$MLE[1], plateff=eff_UT) * length(mc_UT)
+p_mc_HET2_fitm_UT <- pMudi(max(mc_UT), Nf_UT, paras_HET2_fitm$MLE[1], plateff=eff_UT, fit_m=paras_HET2_fitm$MLE[2]) * length(mc_UT)
+# Estimated mutation rate and mutant fitness under HOM2, and estimated mutation rate and mutant fitness under HOM1
+print(c(paras_HOM2$MLE[1], paras_HOM2$MLE[2], paras_HOM1$MLE[1], paras_HOM1$MLE[2]))
+# Estimated mutation rate off-cells and fixed mutant fitness under HET2, and estimated mutation rate off-cells and fixed mutant fitness under HET2 with mutant fitness from HOM2
+print(paras_HET2$MLE[1], paras_HET2$MLE[2], paras_HET2_fitm$MLE[1], paras_HET2_fitm$MLE[2])
 p_mc_UT <- ggplot() + geom_histogram(aes(mc_UT, y=after_stat(density) * length(mc_UT)), fill="#1C458A", bins = 50) + 
-  geom_line(aes(x=0:max(mc_UT), y=p_mc_hom_UT), color="#F0E442", linewidth = 1.) + 
-  geom_line(aes(x=0:max(mc_UT), y=p_mc_hom_constr_UT), color="#E69F00", linewidth = 1.) + 
-  geom_line(aes(x=0:max(mc_UT), y=p_mc_het_UT), color="#CC79A7", linewidth = 1., linetype = "dashed") + 
+  geom_line(aes(x=0:max(mc_UT), y=p_mc_HOM2_UT), color="#F0E442", linewidth = 1.) + 
+  geom_line(aes(x=0:max(mc_UT), y=p_mc_HOM1_UT), color="#E69F00", linewidth = 1.) + 
+  geom_line(aes(x=0:max(mc_UT), y=p_mc_HET2_UT), color="#CC79A7", linewidth = 1., linetype = "dashed") + 
+  geom_line(aes(x=0:max(mc_UT), y=p_mc_HET2_fitm_UT), color="#7570B3", linewidth = 1., linetype = "dashed") + 
   ggtitle("Untreated experiments") + xlab("Number of colonies") + ylab("Number of plates") + ylim(-0.1, 7.1)
 p_mc_UT
-"#7570B3" 
-# Stressful condition: 0.05 mug/mL Norfloxacin
+ 
+# S condition: 0.05 mug/mL norfloxacin: calculate the mutant count distributions under the same models as above
 mc_data <- read.table(paste0("experimental_data/raw_counts/Frenoy_Nor.txt"), header = FALSE, sep = ",", fill = TRUE)
 mc_S <- read_counts(mc_data[2,])
 Nf_S <- mean(read_counts(mc_data[3,]))
 eff_S <- as.numeric(mc_data[4,1])
-p_mc_hom_S <- pMudi(max(mc_S), Nf_S, df_Nor$mu_S_MLE[6], plateff=eff_S, fit_m=df_Nor$fitm_S_MLE[6]) * length(mc_S)
-p_mc_hom_constr_S <- pMudi(max(mc_S), Nf_S, df_Nor$mu_S_MLE[4], plateff=eff_S) * length(mc_S)
-p_mc_het_S <- pMudi(max(mc_S), Nf_S, df_Nor$mu_off_MLE[8], plateff=eff_S, S=df_Nor$S_MLE[8], f_on=df_Nor$f_on_MLE[8], rel_div_on=df_Nor$rel_div_on_MLE[8]) * length(mc_S)
-print(c(df_Nor$mu_S_MLE[6], df_Nor$fitm_S_MLE[6], df_Nor$mu_S_MLE[4]))
-print(c(df_Nor$mu_off_MLE[8], df_Nor$S_MLE[8], df_Nor$f_on_MLE[8], df_Nor$rel_div_on_MLE[8]))
+p_mc_HOM2_S <- pMudi(max(mc_S), Nf_S, paras_HOM2$MLE[3], plateff=eff_S, fit_m=paras_HOM2$MLE[4]) * length(mc_S)
+p_mc_HOM1_S <- pMudi(max(mc_S), Nf_S, paras_HOM1$MLE[3], plateff=eff_S, fit_m=paras_HOM1$MLE[4]) * length(mc_S)
+p_mc_HET2_S <- pMudi(max(mc_S), Nf_S, paras_HET2$MLE[1], plateff=eff_S, S=paras_HET2$MLE[4], f_on=paras_HET2$MLE[6], rel_div_on=paras_HET2$MLE[5]) * length(mc_S)
+p_mc_HET2_fitm_S <- pMudi(max(mc_S), Nf_S, paras_HET2$MLE[1], plateff=eff_S, S=paras_HET2$MLE[4], f_on=paras_HET2$MLE[6], rel_div_on=paras_HET2$MLE[5], fit_m=paras_HET2_fitm$MLE[2]) * length(mc_S)
+# Estimated mutation rate and mutant fitness under HOM2, and estimated mutation rate and mutant fitness under HOM1
+print(c(paras_HOM2$MLE[3], paras_HOM2$MLE[4], paras_HOM1$MLE[3], paras_HOM2$MLE[4]))
+# Estimated mutation rate off-cells and fixed mutant fitness, and estimated mutation-supply ratio, fraction on-cells and relative division rate on-cells under HET2
+print(c(paras_HET2$MLE[1], paras_HET2$MLE[3], paras_HET2$MLE[4], paras_HET2$MLE[6], paras_HET2$MLE[5]))
+# Estimated mutation rate off-cells and fixed mutant fitness, and estimated mutation-supply ratio, fraction on-cells and relative division rate on-cells under HET2 with mutant fitness cost from HOM2
+print(c(paras_HET2_fitm$MLE[1], paras_HET2_fitm$MLE[3], paras_HET2_fitm$MLE[4], paras_HET2_fitm$MLE[6], paras_HET2_fitm$MLE[5]))
 p_mc_s <- ggplot() + geom_histogram(aes(mc_S, y=..density.. *length(mc_S)), fill="#8EC44F", bins = 20) + 
-  geom_line(aes(x=0:max(mc_S), y=p_mc_hom_S), color="#8F3F8C", linewidth = 1.) + 
-  geom_line(aes(x=0:max(mc_S), y=p_mc_hom_constr_S), color="#E0B0FF", linewidth = 1.) + 
-  geom_line(aes(x=0:max(mc_S), y=p_mc_het_S), color="#FFD300", linewidth = 1., linetype = "dashed") +
+  geom_line(aes(x=0:max(mc_S), y=p_mc_HOM2_S), color="#F0E442", linewidth = 1.) + 
+  geom_line(aes(x=0:max(mc_S), y=p_mc_HOM1_S), color="#E69F00", linewidth = 1.) + 
+  geom_line(aes(x=0:max(mc_S), y=p_mc_HET2_S), color="#CC79A7", linewidth = 1., linetype = "dashed") +
+  geom_line(aes(x=0:max(mc_S), y=p_mc_HET2_fitm_S), color="#7570B3", linewidth = 1., linetype = "dashed") +
   xlab("Number of colonies") + ylab("Number of plates") + ggtitle("Experiments with norfloxacin") + ylim(-0.5,34)
 p_mc_s
 
@@ -660,6 +673,7 @@ paras_HETF0_5$MLE[8]  # Heterogeneous with f_on=5% and rel_div_on inferred
 paras_HETF0_64$MLE[9] # Heterogeneous with f_on=64% and rel_div_on inferred
 paras_HETF0_5$MLE[9]  # Heterogeneous with f_on=5% and rel_div_on inferred
 paras_HOM0$MLE[6]     # Homogeneous (without differential mutant fitness)
+
 
 
 
