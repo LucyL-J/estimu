@@ -159,29 +159,29 @@ df_strict$M_HOM0.2[df_strict$p_value_test_min >= 0.05] <- 1.
 df_strict$M_HOM0.3[df_strict$p_value_test_min >= 0.05] <- 1.
 # Creating new column to indicate whether S/UT significantly different (and we continue using HOM0) or not
 df_strict$H0 <- "HOM0"
-df_strict$H0[df_strict$p_value_test_min >= 0.05] <- "S/UT not s. different"
+df_strict$H0[df_strict$p_value_test_min >= 0.05] <- "S/UT n.s. different"
 # Setting M=1 for the model with the lowest AIC (and AIC_corr) if S/UT not significantly
 df_strict$M_AIC.1[df_strict$p_value_test_min >= 0.05] <- 1.
 df_strict$M_AIC.3[df_strict$p_value_test_min >= 0.05] <- 1.
 df_strict$M_AIC.2[df_strict$p_value_test_min >= 0.05] <- 1.
-levels(df_strict$null_hom_by_AIC) <- c(levels(df_strict$null_hom_by_AIC), "S/UT not s. different")
-df_strict$null_hom_by_AIC[df_strict$p_value_test_min >= 0.05] <- "S/UT not s. different"
+levels(df_strict$null_hom_by_AIC) <- c(levels(df_strict$null_hom_by_AIC), "S/UT n.s. different")
+df_strict$null_hom_by_AIC[df_strict$p_value_test_min >= 0.05] <- "S/UT n.s. different"
 df_strict$M_AIC_corr.1[df_strict$p_value_test_min >= 0.05] <- 1.
 df_strict$M_AIC_corr.2[df_strict$p_value_test_min >= 0.05] <- 1.
 df_strict$M_AIC_corr.3[df_strict$p_value_test_min >= 0.05] <- 1.
-levels(df_strict$null_hom_by_AIC_corr) <- c(levels(df_strict$null_hom_by_AIC_corr), "S/UT not s. different")
-df_strict$null_hom_by_AIC_corr[df_strict$p_value_test_min >= 0.05] <- "S/UT not s. different"
+levels(df_strict$null_hom_by_AIC_corr) <- c(levels(df_strict$null_hom_by_AIC_corr), "S/UT n.s. different")
+df_strict$null_hom_by_AIC_corr[df_strict$p_value_test_min >= 0.05] <- "S/UT n.s. different"
 # And setting S=0 for the model with the lowest AIC (and AIC_corr) if S/UT not significantly
 df_strict$S_AIC.1[df_strict$p_value_test_min >= 0.05] <- 0.
 df_strict$S_AIC.3[df_strict$p_value_test_min >= 0.05] <- 0.
 df_strict$S_AIC.2[df_strict$p_value_test_min >= 0.05] <- 0.
-levels(df_strict$null_het_by_AIC) <- c(levels(df_strict$null_het_by_AIC), "S/UT not s. different")
-df_strict$null_het_by_AIC[df_strict$p_value_test_min >= 0.05] <- "S/UT not s. different"
+levels(df_strict$null_het_by_AIC) <- c(levels(df_strict$null_het_by_AIC), "S/UT n.s. different")
+df_strict$null_het_by_AIC[df_strict$p_value_test_min >= 0.05] <- "S/UT n.s. different"
 df_strict$S_AIC_corr.1[df_strict$p_value_test_min >= 0.05] <- 0.
 df_strict$S_AIC_corr.2[df_strict$p_value_test_min >= 0.05] <- 0.
 df_strict$S_AIC_corr.3[df_strict$p_value_test_min >= 0.05] <- 0.
-levels(df_strict$null_het_by_AIC_corr) <- c(levels(df_strict$null_het_by_AIC_corr), "S/UT not s. different")
-df_strict$null_het_by_AIC_corr[df_strict$p_value_test_min >= 0.05] <- "S/UT not s. different"
+levels(df_strict$null_het_by_AIC_corr) <- c(levels(df_strict$null_het_by_AIC_corr), "S/UT n.s. different")
+df_strict$null_het_by_AIC_corr[df_strict$p_value_test_min >= 0.05] <- "S/UT n.s. different"
 
 # Evaluate the model fits using goodness-of-fit tests
 # Print: experiments for which the homogeneous model with the lowest AIC is a poor fit to the data (none as of 21/07/2025)
@@ -228,8 +228,8 @@ p_M_AIC_corr_GoF
 
 # Create a new data frame to mark if S/UT is not significantly different
 df_strict_GoF <- subset(df_strict, p_value_test_min >= 0.05)
-levels(df_strict_GoF$by_AIC_corr_NH) <- c(levels(df_strict_GoF$by_AIC_corr_NH), "S/UT not s. different")
-df_strict_GoF$by_AIC_corr_NH[df_strict_GoF$p_value_test_min >= 0.05] <- "S/UT not s. different"
+levels(df_strict_GoF$by_AIC_corr_NH) <- c(levels(df_strict_GoF$by_AIC_corr_NH), "S/UT n.s. different")
+df_strict_GoF$by_AIC_corr_NH[df_strict_GoF$p_value_test_min >= 0.05] <- "S/UT n.s. different"
 
 # Delta AIC_corr between the best model with M>1 (HOM0, HOM1 or HOM2) and the best null model (N0, N1, N2)
 # Taking into account GoF test whether S/UT are significanlty different
@@ -352,10 +352,10 @@ p_M_SIM
 # Estimated M for experiments with detected SIM in any form (homogeneous or heterogeneous)
 
 # Again, generate a separate data frame to mark experiments for which the heterogeneous model fits under UT/S conditions are poor
-df_SIM_GoF_UT <- subset(df_SIM, p_value_UT_het_AIC_corr < 0.05)
+df_SIM_GoF_UT <- subset(df_SIM_1, p_value_UT_het_AIC_corr < 0.05)
 levels(df_SIM_GoF_UT$null_het_by_AIC_corr) <- c(levels(df_SIM_GoF_UT$null_het_by_AIC_corr), "Poor fit UT cond")
 df_SIM_GoF_UT$null_het_by_AIC_corr[df_SIM_GoF_UT$p_value_UT_het_AIC_corr < 0.05] <- "Poor fit UT cond"
-df_SIM_GoF_S <- subset(df_SIM, p_value_S_het_AIC_corr < 0.05)
+df_SIM_GoF_S <- subset(df_SIM_1, p_value_S_het_AIC_corr < 0.05)
 levels(df_SIM_GoF_S$null_het_by_AIC_corr) <- c(levels(df_SIM_GoF_S$null_het_by_AIC_corr), "Poor fit S cond")
 df_SIM_GoF_S$null_het_by_AIC_corr[df_SIM_GoF_S$p_value_S_het_AIC_corr < 0.05] <- "Poor fit S cond"
 
