@@ -32,6 +32,7 @@ df$null_hom_by_AIC <- factor(df$null_hom_by_AIC, levels = c("N0", "N1", "N2", "H
 df$null_hom_by_AIC_corr <- factor(df$null_hom_by_AIC_corr, levels = c("N0", "N1", "N2", "HOM0", "HOM1", "HOM2"))
 df$null_het_by_AIC <- factor(df$null_het_by_AIC, levels = c("N0", "HET0", "HET2"))
 df$null_het_by_AIC_corr <- factor(df$null_het_by_AIC_corr, levels = c("N0", "HET0", "HET2"))
+df$by_AIC_corr_NH <- factor(df$by_AIC_corr_NH, levels = c("N0", "N1", "N2", "HOM0", "HOM1", "HOM2"))
 
 # Color-coding antibiotics used in the studies (sorted by target with a gap between groups)
 g <- 3
@@ -108,19 +109,6 @@ p_M_AIC_corr
 # Print experiments for which an increase in mutation rate is estimated (model selection criterion: lowest AIC_corr)
 print(length(subset(df, M_AIC_corr.1 > 1)$ID))
 
-# Null vs. HOM SI Figure version (i)
-# Delta AIC_corr between the best model with M>1 (HOM0, HOM1 or HOM2) and the best null model (N0, N1, N2)
-p_Delta_AIC_corr_NH <- ggplot(data = df, aes(x=ID, y=Delta_AIC_corr_NH, group=antibiotic)) + geom_point(aes(color=antibiotic, shape=by_AIC_corr_NH), size = 2) +
-  scale_color_manual(values = subset(antibiotic_classes, is.element(antibiotic_abbr, unique(df$antibiotic)))$color, name = "Antimicrobial (abbr)") +
-  theme(axis.text.x = element_text(angle = 90, vjust = 0.5), plot.margin = margin(3.5,0.5,0.5,0.5, "cm")) +
-  scale_y_continuous(limits = c(-10, 27)) + geom_point(data = subset(df, Delta_AIC_corr_NH > 27), aes(x=ID, y=Inf, color=antibiotic, shape=by_AIC_corr_NH), size=2) +
-  geom_hline(yintercept = 2, linetype = "dashed") + geom_hline(yintercept = -2, linetype = "dashed") + 
-  ylab(TeX("Difference in $AIC_c$")) + xlab("Experiment ID") + scale_shape_manual(values = c(17,18,15,2,5,0), name = "Overall selected") 
-p_Delta_AIC_corr_NH
-# For some experiments, Delta_AIC_corr is extremely large and therefore not shown in this plot
-print(as.character(subset(df, Delta_AIC_corr_NH > 27)$ID))  # Experiment ID
-print(subset(df, Delta_AIC_corr_NH > 27)$Delta_AIC_corr_NH) # Delta_AIC_corr
-
 
 # Main/SI Figure: Experimental design impacting the results
 
@@ -172,11 +160,6 @@ df_strict$M_HOM0.3[df_strict$p_value_test_min >= 0.05] <- 1.
 # Creating new column to indicate whether S/UT significantly different (and we continue using HOM0) or not
 df_strict$H0 <- "HOM0"
 df_strict$H0[df_strict$p_value_test_min >= 0.05] <- "S/UT not s. different"
-# Setting the Delta_AIC (and Delta_AIC_corr) between null and homogeneous model with M>1 to -Inf if S/UT is not significantly different
-df_strict$Delta_AIC_NH[df_strict$p_value_test_min >= 0.05] <- -Inf
-df_strict$by_AIC_NH[df_strict$p_value_test_min >= 0.05] <- "S/UT not s. different"
-df_strict$Delta_AIC_corr_NH[df_strict$p_value_test_min >= 0.05] <- -Inf
-df_strict$by_AIC_corr_NH[df_strict$p_value_test_min >= 0.05] <- "S/UT not s. different"
 # Setting M=1 for the model with the lowest AIC (and AIC_corr) if S/UT not significantly
 df_strict$M_AIC.1[df_strict$p_value_test_min >= 0.05] <- 1.
 df_strict$M_AIC.3[df_strict$p_value_test_min >= 0.05] <- 1.
@@ -240,7 +223,14 @@ p_M_AIC_corr_GoF <- ggplot(data = df_strict, aes(x=ID, y=M_AIC_corr.1, group=ant
   ggtitle(TeX("Estimates from the homogeneous model with lowest $AIC_c$, if S significantly different from UT condition"))
 p_M_AIC_corr_GoF
 
-# Null vs. HOM SI Figure version (ii)
+
+# Null vs. HOM SI Figure version (i)
+
+# Create a new data frame to mark if S/UT is not significantly different
+df_strict_GoF <- subset(df_strict, p_value_test_min >= 0.05)
+levels(df_strict_GoF$by_AIC_corr_NH) <- c(levels(df_strict_GoF$by_AIC_corr_NH), "S/UT not s. different")
+df_strict_GoF$by_AIC_corr_NH[df_strict_GoF$p_value_test_min >= 0.05] <- "S/UT not s. different"
+
 # Delta AIC_corr between the best model with M>1 (HOM0, HOM1 or HOM2) and the best null model (N0, N1, N2)
 # Taking into account GoF test whether S/UT are significanlty different
 p_Delta_AIC_corr_GoF_NH <- ggplot(data = df_strict, aes(x=ID, y=Delta_AIC_corr_NH, group=antibiotic)) + geom_point(aes(color=antibiotic, shape=by_AIC_corr_NH), size = 2) +
@@ -248,7 +238,8 @@ p_Delta_AIC_corr_GoF_NH <- ggplot(data = df_strict, aes(x=ID, y=Delta_AIC_corr_N
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5), plot.margin = margin(3.5,0.5,0.5,0.5, "cm")) +
   scale_y_continuous(limits = c(-10, 27)) + geom_point(data = subset(df_strict, Delta_AIC_corr_NH > 27), aes(x=ID, y=Inf, color=antibiotic, shape=by_AIC_corr_NH), size=2) +
   geom_hline(yintercept = 2, linetype = "dashed") + geom_hline(yintercept = -2, linetype = "dashed") + 
-  ylab(TeX("Difference in $AIC_c$")) + xlab("Experiment ID") + scale_shape_manual(values = c(17,18,15,2,5,0,8), name = "Overall selected") 
+  ylab(TeX("Difference in $AIC_c$")) + xlab("Experiment ID") + scale_shape_manual(values = c(17,18,15,2,5,0,8), name = "Overall selected") +
+  geom_point(data = df_strict_GoF, aes(x=ID, y=Delta_AIC_corr_NH, shape=null_het_by_AIC_corr), size = 1.5)
 p_Delta_AIC_corr_GoF_NH
 # Same as before, for some experiments Delta_AIC_corr is extremely large and therefore not shown in this plot
 print(as.character(subset(df, Delta_AIC_corr_NH > 27)$ID))  # Experiment ID
@@ -260,7 +251,7 @@ print(subset(df, Delta_AIC_corr_NH > 27)$Delta_AIC_corr_NH) # Delta_AIC_corr
 print(as.character(subset(df_strict, p_value_UT_het_AIC_corr < 0.05)$ID)) # AIC_corr in the UT condition
 print(as.character(subset(df_strict, p_value_S_het_AIC_corr < 0.05)$ID))  # AIC_corr in the S condition
 
-# Generate a separate data frames to mark experiments for which the heterogeneous model fits under UT/S conditions are poor
+# Create separate data frames to mark experiments for which the heterogeneous model fits under UT/S conditions are poor
 df_strict_GoF_UT <- subset(df_strict, p_value_UT_het_AIC_corr < 0.05)
 levels(df_strict_GoF_UT$null_het_by_AIC_corr) <- c(levels(df_strict_GoF_UT$null_het_by_AIC_corr), "Poor fit UT cond")
 df_strict_GoF_UT$null_het_by_AIC_corr[df_strict_GoF_UT$p_value_UT_het_AIC_corr < 0.05] <- "Poor fit UT cond"
@@ -306,7 +297,7 @@ p_Delta_AIC_corr <- ggplot(data = df_SIM_1, aes(x=ID, y=Delta_AIC_corr, group=an
   scale_color_manual(values = subset(antibiotic_classes, is.element(antibiotic_abbr, unique(df_SIM_1$antibiotic)))$color, name = "Antimicrobial (abbr)") +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5), plot.margin = margin(3.5,0.5,0.5,0.5, "cm")) +
   geom_hline(yintercept = 2, linetype = "dashed") + geom_hline(yintercept = -2, linetype = "dashed") + 
-  ylab(TeX("Difference in $AIC_c$")) + xlab("Experiment ID") + scale_shape_manual(values = c(1,17,18,15,5,0,8,3,4), name = "Overall selected") 
+  ylab(TeX("Difference in $AIC_c$")) + xlab("Experiment ID") + scale_shape_manual(values = c(1,17,18,15,5,0,8,3,4), name = "Overall selected")
 p_Delta_AIC_corr
 
 # Exclude the experiments where there no evidence for an increase M>1 overall
@@ -479,6 +470,19 @@ print(as.character(subset(df_Ecoli_sel, null_hom_by_AIC_corr == "HOM2")$ID))
 
 
 # Further analysis
+
+# Null vs. HOM SI Figure version (ii)
+# Delta AIC_corr between the best model with M>1 (HOM0, HOM1 or HOM2) and the best null model (N0, N1, N2)
+p_Delta_AIC_corr_NH <- ggplot(data = df, aes(x=ID, y=Delta_AIC_corr_NH, group=antibiotic)) + geom_point(aes(color=antibiotic, shape=by_AIC_corr_NH), size = 2) +
+  scale_color_manual(values = subset(antibiotic_classes, is.element(antibiotic_abbr, unique(df$antibiotic)))$color, name = "Antimicrobial (abbr)") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5), plot.margin = margin(3.5,0.5,0.5,0.5, "cm")) +
+  scale_y_continuous(limits = c(-10, 27)) + geom_point(data = subset(df, Delta_AIC_corr_NH > 27), aes(x=ID, y=Inf, color=antibiotic, shape=by_AIC_corr_NH), size=2) +
+  geom_hline(yintercept = 2, linetype = "dashed") + geom_hline(yintercept = -2, linetype = "dashed") + 
+  ylab(TeX("Difference in $AIC_c$")) + xlab("Experiment ID") + scale_shape_manual(values = c(17,18,15,2,5,0), name = "Overall selected") 
+p_Delta_AIC_corr_NH
+# For some experiments, Delta_AIC_corr is extremely large and therefore not shown in this plot
+print(as.character(subset(df, Delta_AIC_corr_NH > 27)$ID))  # Experiment ID
+print(subset(df, Delta_AIC_corr_NH > 27)$Delta_AIC_corr_NH) # Delta_AIC_corr
 
 # Are p-values of the GoF tests different for the UT and S conditions?
 # My intuition here is that in the S condition it should be more likely that something completely different is going on, 
