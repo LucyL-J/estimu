@@ -238,7 +238,7 @@ p_Delta_AIC_corr_GoF_NH <- ggplot(data = df_strict, aes(x=ID, y=Delta_AIC_corr_N
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5), plot.margin = margin(3.5,0.5,0.5,0.5, "cm")) +
   scale_y_continuous(limits = c(-10, 27)) + geom_point(data = subset(df_strict, Delta_AIC_corr_NH > 27), aes(x=ID, y=Inf, color=antibiotic, shape=by_AIC_corr_NH), size=2) +
   geom_hline(yintercept = 2, linetype = "dashed") + geom_hline(yintercept = -2, linetype = "dashed") + 
-  ylab(TeX("Difference in $AIC_c$")) + xlab("Experiment ID") + scale_shape_manual(values = c(17,18,15,2,5,0,8), name = "Overall selected") +
+  ylab(TeX("Difference in $AIC_c$")) + xlab("Experiment ID") + scale_shape_manual(values = c(2,5,0,17,18,15,8), name = "Overall selected") +
   geom_point(data = df_strict_GoF, aes(x=ID, y=Delta_AIC_corr_NH, shape=null_het_by_AIC_corr), size = 1.5)
 p_Delta_AIC_corr_GoF_NH
 # Same as before, for some experiments Delta_AIC_corr is extremely large and therefore not shown in this plot
@@ -279,8 +279,11 @@ p_S_AIC_corr_GoF
 df_SIM_1 <- subset(df_strict, p_value_test_min < 0.05) 
 # Exclude experiments for which the null model is selected both within homogeneous and heterogeneous models
 df_SIM_1 <- subset(df_SIM_1, !(is.element(null_hom_by_AIC_corr, c("N0", "N1", "N2")) & null_het_by_AIC_corr == "N0"))
+print(length(df_SIM_1$ID))
 
 # Experiments where a differential mutant fitness is an alternative explanation to heterogeneity in mutation rates
+print(as.character(subset(df_SIM_1, null_hom_by_AIC_corr == "N0")$ID)) # N0 is the homogeneous model with the lowest AIC_corr
+print(as.character(subset(df_SIM_1, by_AIC_corr == "N0")$ID))          # N0 is selected overall
 print(as.character(subset(df_SIM_1, null_hom_by_AIC_corr == "N1")$ID)) # N1 is the homogeneous model with the lowest AIC_corr
 print(as.character(subset(df_SIM_1, by_AIC_corr == "N1")$ID))          # N1 is selected overall
 print(as.character(subset(df_SIM_1, null_hom_by_AIC_corr == "N2")$ID)) # N2 is the homogeneous model with the lowest AIC_corr
@@ -290,7 +293,7 @@ print(as.character(subset(df_SIM_1, is.element(null_hom_by_AIC_corr, c("N1","N2"
 print(as.character(subset(df_SIM_1, null_het_by_AIC_corr == "N0")$ID))
 
 # Reorder the IDs according to the different categories described above, for plotting
-df_SIM_1$ID <- factor(df_SIM_1$ID, levels = as.character(c(subset(df_SIM_1, null_het_by_AIC_corr=="N0")$ID, subset(df_SIM_1, null_het_by_AIC_corr!="N0" & !is.element(null_hom_by_AIC_corr, c("N1", "N2")))$ID, subset(df_SIM_1, is.element(null_hom_by_AIC_corr, c("N1", "N2")))$ID)))
+df_SIM_1$ID <- factor(df_SIM_1$ID, levels = as.character(c(subset(df_SIM_1, null_het_by_AIC_corr=="N0")$ID, subset(df_SIM_1, null_het_by_AIC_corr!="N0" & !is.element(null_hom_by_AIC_corr, c("N0", "N1", "N2")))$ID, subset(df_SIM_1, is.element(null_hom_by_AIC_corr, c("N0", "N1", "N2")))$ID)))
 
 # Difference in AIC_corr between selected homogeneous and heterogeneous-response models including null models with differential mutant fitness N1 and N2
 p_Delta_AIC_corr <- ggplot(data = df_SIM_1, aes(x=ID, y=Delta_AIC_corr, group=antibiotic)) + geom_point(aes(color=antibiotic, shape=by_AIC_corr), size = 2) +
@@ -331,8 +334,6 @@ print(as.character(setdiff(subset(df_SIM_1, null_hom_by_AIC_corr == "N0")$ID, df
 print(as.character(setdiff(subset(df_SIM_1, null_hom_by_AIC_corr == "N1")$ID, df_SIM_2$ID))) # N1 is selected over homogeneous models
 print(as.character(setdiff(subset(df_SIM_1, null_hom_by_AIC_corr == "N2")$ID, df_SIM_2$ID))) # N2 is selected over homogeneous models
 
-# Comparing to for how many experiments SIM would have been detected solely on the basis of estimating an increase M>1
-print(length(subset(df, M_HOM0.1 > 1)$ID))
 
 # Estimated M for experiments with detected SIM in any form (homogeneous or heterogeneous)
 # Estimates for which a heterogeneous is selected over a homogeneous response overall are shown in dashed lines
@@ -371,6 +372,14 @@ p_S_SIM <- ggplot(data = df_SIM_1, aes(x=ID, y=S_AIC_corr.1, group=antibiotic)) 
   geom_point(data = df_SIM_GoF_UT, aes(x=ID, y=S_AIC_corr.1, group=antibiotic, shape=null_het_by_AIC_corr), size = 2) +
   geom_point(data = df_SIM_GoF_S, aes(x=ID, y=S_AIC_corr.1, group=antibiotic, shape=null_het_by_AIC_corr), size = 2)
 p_S_SIM
+
+# For how many experiments do we detect SIM in form of M>1?
+print(length(subset(df_SIM_1, is.element(by_AIC_corr, c("HOM0", "HOM1", "HOM2")))$ID))
+# For how many in form of S>0?
+print(length(subset(df_SIM_1, is.element(by_AIC_corr, c("HET0", "HET2")))$ID))
+# Comparing to for how many experiments SIM would have been detected solely on the basis of estimating an increase M>1
+print(length(subset(df, M_HOM0.1 > 1)$ID))
+
 
 # We restrict the analysis about the target to experiments using E. coli MG1655 and TD2158 (no mutant strains)
 df_Ecoli <- subset(df, species == "E. coli" & is.element(strain, c("MG1655", "TD2158")))
