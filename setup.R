@@ -1,7 +1,7 @@
 library(JuliaCall)
-#julia_setup()
+julia_setup()
 # Run Sys.BINDIR in julia to get the full path to the directory containing the julia binary
-julia_setup(JULIA_HOME = "/Users/lucylansch-justen/.julia/juliaup/julia-1.11.3+0.aarch64.apple.darwin14/bin")
+#julia_setup(JULIA_HOME = "the folder that contains the julia binary")
 
 for (p in c("StatsBase", "Optim", "DataFrames", "Distributions", "HypergeometricFunctions", "Roots")) {
   julia_install_package_if_needed(p)
@@ -85,12 +85,12 @@ check_input <- function(mc, Nf, plateff=1, fit_m=1., rel_div_on=FALSE, f_on=0.1)
   return(list(status, mc, as.numeric(Nf), plateff, fit_m, f_on, rel_div_on))
 }
 
-estimu <- function(mc_UT, Nf_UT, mc_S, Nf_S, plateff=1, fit_m=1., f_on=FALSE, rel_div_on=0., mod="all", criterion="AIC_corr"){
+estimu <- function(mc_UT, Nf_UT, mc_S, Nf_S, plateff=1, fit_m=1., f_on=FALSE, rel_div_on=0., mod="all"){ #, criterion="AIC_corr"){
   res <- "Warning: Model has to be one of the following 'standard', 'null', 'hom', 'het', or 'all' (the default)."
-  if(!is.element(criterion, c("AIC_corr", "AIC", "BIC"))){
-    criterion <- "AI_corr"
-    print("Warning: selection criterion must be either 'AIC_corr', 'AIC' or 'BIC'. Using the default AIC_corr.")
-  }
+  #if(!is.element(criterion, c("AIC_corr", "AIC", "BIC"))){
+  #  criterion <- "AI_corr"
+  #  print("Warning: selection criterion must be either 'AIC_corr', 'AIC' or 'BIC'. Using the default AIC_corr.")
+  #}
   if(missing(mc_S) || missing(Nf_S)){
     mod <- "standard"
     print("Warning: No mutant counts or final population size under stressful condition given. Using the standard model to infer the mutation rate under permissive conditions.")
