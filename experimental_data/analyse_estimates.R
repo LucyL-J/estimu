@@ -57,9 +57,9 @@ df <- arrange(df, species, target_group, target, antibiotic)
 df$ID <- factor(df$ID, levels = unique(df$ID), ordered = TRUE)
 
 # Goodness-of-fit test for the UT condition (standard model without or with differential mutant fitness)
-# Print the experiments that fail both GoF tests (standard without/with differential mutant fitness, p<0.05)
+# Print: Experiments that fail both GoF tests (standard without/with differential mutant fitness, p<0.05)
 print(as.character(subset(df, p_value_UT_max < 0.05)$ID))
-# Restrict to experiments that pass at least one GoF test (p>=0.05, all experiments pass as of 24/07/2025)
+# Restrict to experiments that pass at least one GoF test (p>=0.05, all experiments pass as of 30/07/2025)
 df <- subset(df, p_value_UT_max >= 0.05)
 
 
@@ -77,7 +77,7 @@ p_M_HOM0 <- ggplot(data = df, aes(x=ID, y=M_HOM0.1, group=antibiotic)) +
   ylab("Fold-change population-wide mutation rate") + xlab("Experiment ID") +
   ggtitle("Estimated using model HOM0")
 p_M_HOM0
-# Print experiments for which an increase in mutation rate is estimated (model = homogeneous-response without differential mutant fitness)
+# How many experiments for which an increase in mutation rate is estimated (HOM0 model = homogeneous-response without differential mutant fitness)
 print(length(subset(df, M_HOM0.1 > 1)$ID))
 
 # Fig1 version (ii): panel in SI
@@ -91,7 +91,7 @@ p_M_AIC <- ggplot(data = df, aes(x=ID, y=M_AIC.1, group=antibiotic, shape = null
   ylab("Fold-change population-wide mutation rate") + xlab("Experiment ID") +
   ggtitle("Estimates from the homogeneous model with lowest AIC")
 p_M_AIC
-# Print experiments for which an increase in mutation rate is estimated (model selection criterion: lowest AIC)
+# How many experiments for which an increase in mutation rate is estimated (model selection criterion: lowest AIC)
 print(length(subset(df, M_AIC.1 > 1)$ID))
 
 # Fig1 version (iii): panel in SI
@@ -106,7 +106,7 @@ p_M_AIC_corr <- ggplot(data = df, aes(x=ID, y=M_AIC_corr.1, group=antibiotic, sh
   ylab("Fold-change population-wide mutation rate") + xlab("Experiment ID") +
   ggtitle(TeX("Estimates from the homogeneous model with lowest $AIC_c$"))
 p_M_AIC_corr
-# Print experiments for which an increase in mutation rate is estimated (model selection criterion: lowest AIC_corr)
+# How many experiments for which an increase in mutation rate is estimated (model selection criterion: lowest AIC_corr)
 print(length(subset(df, M_AIC_corr.1 > 1)$ID))
 
 
@@ -114,7 +114,7 @@ print(length(subset(df, M_AIC_corr.1 > 1)$ID))
 
 # Do the width of the confidence intervals of the estimated change in population-wide mutation rate M depend on the experimental desgin, 
 # i.e. plated fraction and number of parallel cultures
-# Print: how many experiments use a plated fraction smaller than 1
+# Print: How many experiments use a plated fraction smaller than 1
 print(length(subset(df, plated_fraction < 1)$ID))
 df$width_CI_HOM0 <- (df$M_HOM0.3-df$M_HOM0.2)/df$M_HOM0.1
 # Fitting a linear model with the log-width of the confidence interval of M estimated by model HOM0 as predicted variable
@@ -145,13 +145,14 @@ cor.test(subset(df, width_CI_AIC_corr > 0)$plated_fraction, subset(df, width_CI_
 
 
 # Goodness-of-fit test: could the data observed in the S condition have been generated under the parameters inferred from the UT condition?
-# Print: experiments for which the S condition is significant different from the UT condition (criterion: p<0.05 in GoF)
+# How many experiments for which the S condition is significant different from the UT condition (criterion: p<0.05 in GoF)
 print(length(subset(df, p_value_test_min < 0.05)$ID))
 
 
 # Restriction to experiments for which we S is significantly different from UT
 # (setting the estimated change in mutation rate to M=1, and the estimated supply-ration to S=0, if not)
 df_strict <- df
+# Print: Experiments for which S and UT are not significantly different
 print(as.character(subset(df_strict, p_value_test_min >= 0.05)$ID))
 # Set M estimated by HOM0 to 1 if S/UT not significantly different
 df_strict$M_HOM0.1[df_strict$p_value_test_min >= 0.05] <- 1.
@@ -184,7 +185,7 @@ levels(df_strict$null_het_by_AIC_corr) <- c(levels(df_strict$null_het_by_AIC_cor
 df_strict$null_het_by_AIC_corr[df_strict$p_value_test_min >= 0.05] <- "S/UT n.s. different"
 
 # Evaluate the model fits using goodness-of-fit tests
-# Print: experiments for which the homogeneous model with the lowest AIC is a poor fit to the data (none as of 21/07/2025)
+# Print: Experiments for which the homogeneous model with the lowest AIC is a poor fit to the data (none as of 30/07/2025)
 print(as.character(subset(df_strict, p_value_UT_hom_AIC < 0.05)$ID)) # AIC in the UT condition
 print(as.character(subset(df_strict, p_value_S_hom_AIC < 0.05)$ID))  # AIC in the S condition
 print(as.character(subset(df_strict, p_value_UT_hom_AIC_corr < 0.05)$ID)) # AIC_corr in the UT condition
@@ -200,6 +201,8 @@ p_M_HOM0_GoF <- ggplot(data = df_strict, aes(x=ID, y=M_HOM0.1, group=antibiotic,
   ylab("Fold-change population-wide mutation rate") + xlab("Experiment ID") +
   ggtitle("Estimated using model HOM0, if S significantly different from UT condition")
 p_M_HOM0_GoF
+# How many experiments for which an increase in mutation rate is estimated (HOM0 and S/UT significantly different)
+print(length(subset(df_strict, M_HOM0.1 > 1)$ID))
 
 # Same as Fig1 version (ii) but marking experiments with S/UT not significantly different
 p_M_AIC_GoF <- ggplot(data = df_strict, aes(x=ID, y=M_AIC.1, group=antibiotic, shape = null_hom_by_AIC)) + 
@@ -211,6 +214,8 @@ p_M_AIC_GoF <- ggplot(data = df_strict, aes(x=ID, y=M_AIC.1, group=antibiotic, s
   ylab("Fold-change population-wide mutation rate") + xlab("Experiment ID") +
   ggtitle("Estimates from the homogeneous model with lowest AIC, if S significantly different from UT condition")
 p_M_AIC_GoF
+# How many experiments for which an increase in mutation rate is estimated (model selection criterion: lowest AIC and S/UT s. different)
+print(length(subset(df_strict, M_AIC.1 > 1)$ID))
 
 # Same as Fig1 version (iii) but marking experiments with S/UT not significantly different, or poor model fits
 p_M_AIC_corr_GoF <- ggplot(data = df_strict, aes(x=ID, y=M_AIC_corr.1, group=antibiotic, shape = null_hom_by_AIC_corr)) + 
@@ -222,6 +227,8 @@ p_M_AIC_corr_GoF <- ggplot(data = df_strict, aes(x=ID, y=M_AIC_corr.1, group=ant
   ylab("Fold-change population-wide mutation rate") + xlab("Experiment ID") +
   ggtitle(TeX("Estimates from the homogeneous model with lowest $AIC_c$, if S significantly different from UT condition"))
 p_M_AIC_corr_GoF
+# How many experiments for which an increase in mutation rate is estimated (model selection criterion: lowest AIC_corr and S/UT s. different)
+print(length(subset(df_strict, M_AIC_corr.1 > 1)$ID))
 
 
 # Null vs. HOM SI Figure version (i)
@@ -231,8 +238,8 @@ df_strict_GoF <- subset(df_strict, p_value_test_min >= 0.05)
 levels(df_strict_GoF$by_AIC_corr_NH) <- c(levels(df_strict_GoF$by_AIC_corr_NH), "S/UT n.s. different")
 df_strict_GoF$by_AIC_corr_NH[df_strict_GoF$p_value_test_min >= 0.05] <- "S/UT n.s. different"
 
-# Delta AIC_corr between the best model with M>1 (HOM0, HOM1 or HOM2) and the best null model (N0, N1, N2)
-# Taking into account GoF test whether S/UT are significanlty different
+# Delta AIC_corr between the best homogeneous model (HOM0, HOM1 or HOM2) and the best null model (N0, N1, N2)
+# Taking into account GoF test whether S/UT are significantly different
 p_Delta_AIC_corr_GoF_NH <- ggplot(data = df_strict, aes(x=ID, y=Delta_AIC_corr_NH, group=antibiotic)) + geom_point(aes(color=antibiotic, shape=by_AIC_corr_NH), size = 2) +
   scale_color_manual(values = subset(antibiotic_classes, is.element(antibiotic_abbr, unique(df_strict$antibiotic)))$color, name = "Antimicrobial (abbr)") +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5), plot.margin = margin(3.5,0.5,0.5,0.5, "cm")) +
@@ -241,9 +248,14 @@ p_Delta_AIC_corr_GoF_NH <- ggplot(data = df_strict, aes(x=ID, y=Delta_AIC_corr_N
   ylab(TeX("Difference in $AIC_c$")) + xlab("Experiment ID") + scale_shape_manual(values = c(2,5,0,17,18,15,8), name = "Overall selected") +
   geom_point(data = df_strict_GoF, aes(x=ID, y=Delta_AIC_corr_NH, shape=null_het_by_AIC_corr), size = 1.5)
 p_Delta_AIC_corr_GoF_NH
-# Same as before, for some experiments Delta_AIC_corr is extremely large and therefore not shown in this plot
+# For some experiments Delta_AIC_corr is extremely large and therefore not shown in this plot
 print(as.character(subset(df, Delta_AIC_corr_NH > 27)$ID))  # Experiment ID
 print(subset(df, Delta_AIC_corr_NH > 27)$Delta_AIC_corr_NH) # Delta_AIC_corr
+
+# Print: Experiments for which a homogeneous model is clearly selected (Delta AIC > 2), but S/UT n.s. different
+print(as.character(subset(df_strict, Delta_AIC_corr_NH > 2 & p_value_test_min >= 0.05)$ID))
+# Print: Experiments for which S/UT n.s. different, but a null model other than N0 is clearly selected (Delta AIC < -2) -> none as of 30/07/2025
+print(as.character(subset(df_strict, Delta_AIC_corr_NH < -2 & p_value_test_min >= 0.05 & by_AIC_corr_NH != "N0")$ID))
 
 # Estimation of all experiments using heterogeneous-response models
 # Evaluate the heterogeneous model fits using goodness-of-fit tests
@@ -259,12 +271,10 @@ df_strict_GoF_S <- subset(df_strict, p_value_S_het_AIC_corr < 0.05)
 levels(df_strict_GoF_S$null_het_by_AIC_corr) <- c(levels(df_strict_GoF_S$null_het_by_AIC_corr), "Poor fit S cond")
 df_strict_GoF_S$null_het_by_AIC_corr[df_strict_GoF_S$p_value_S_het_AIC_corr < 0.05] <- "Poor fit S cond"
 
-print(as.character(subset(df_strict, M_HOM0.1 < 1)$ID))
-
 # Equivalent to the figure above, but for the heterogeneous models
 p_S_AIC_corr_GoF <- ggplot(data = df_strict, aes(x=ID, y=S_AIC_corr.1, group=antibiotic, shape = null_het_by_AIC_corr)) + 
   geom_point(aes(color=antibiotic)) + geom_errorbar(aes(ymin=S_AIC_corr.2, ymax=S_AIC_corr.3, color=antibiotic)) +
-  geom_hline(yintercept = 1, linetype = "dashed") + scale_shape_manual(values = c(2,1,16,8,3,4), name = "Selected model") +
+  scale_shape_manual(values = c(2,1,16,8,3,4), name = "Selected model") +
   scale_color_manual(values = subset(antibiotic_classes, is.element(antibiotic_abbr, unique(df$antibiotic)))$color, name = "Antimicrobial (abbr)") + 
   scale_y_continuous(trans="log10") + #, limits = c(1.4*10^-4, 7.2*10^5)) + 
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5), plot.margin = margin(3.5,0.5,0.5,0.5, "cm")) +
@@ -277,9 +287,16 @@ p_S_AIC_corr_GoF
 # Model selection between homogeneous and heterogeneous-response models
 # Only plot experiments for which S/UT is significantly different
 df_SIM_1 <- subset(df_strict, p_value_test_min < 0.05) 
+print(length(df_SIM_1$ID))
 # Exclude experiments for which the null model is selected both within homogeneous and heterogeneous models
+# Which experiments are those?
+print(as.character(subset(df_SIM_1, is.element(null_hom_by_AIC_corr, c("N0", "N1", "N2")) & null_het_by_AIC_corr == "N0")$ID))
 df_SIM_1 <- subset(df_SIM_1, !(is.element(null_hom_by_AIC_corr, c("N0", "N1", "N2")) & null_het_by_AIC_corr == "N0"))
 print(length(df_SIM_1$ID))
+
+# Exclude the experiments where a homogeneous-response model is selected overall, which estimates a decrease in mutation rate M<1
+print(as.character(subset(df_SIM_1, is.element(by_AIC_corr, c("HOM0", "HOM1", "HOM2")) & M_AIC_corr.1 < 1)$ID))
+df_SIM_1 <- subset(df_SIM_1, (is.element(by_AIC_corr, c("HOM0", "HOM1", "HOM2")) & M_AIC_corr.1 > 1) | is.element(by_AIC_corr, c("N1", "N2", "HET0", "HET2")))
 
 # Experiments where a differential mutant fitness is an alternative explanation to heterogeneity in mutation rates
 print(as.character(subset(df_SIM_1, null_hom_by_AIC_corr == "N0")$ID)) # N0 is the homogeneous model with the lowest AIC_corr
@@ -288,7 +305,7 @@ print(as.character(subset(df_SIM_1, null_hom_by_AIC_corr == "N1")$ID)) # N1 is t
 print(as.character(subset(df_SIM_1, by_AIC_corr == "N1")$ID))          # N1 is selected overall
 print(as.character(subset(df_SIM_1, null_hom_by_AIC_corr == "N2")$ID)) # N2 is the homogeneous model with the lowest AIC_corr
 print(as.character(subset(df_SIM_1, by_AIC_corr == "N2")$ID))          # N2 is selected overall
-print(as.character(subset(df_SIM_1, is.element(null_hom_by_AIC_corr, c("N1","N2")))$ID)) # N1 or N2 is the homogeneous model with the lowest AIC_corr
+print(as.character(subset(df_SIM_1, is.element(null_hom_by_AIC_corr, c("N0","N1","N2")))$ID)) # N1 or N2 is the homogeneous model with the lowest AIC_corr
 # Experiments where M>1 but no evidence of heterogeneity in mutation rates, i.e. N0 selected over HET0 and HET2
 print(as.character(subset(df_SIM_1, null_het_by_AIC_corr == "N0")$ID))
 
@@ -303,13 +320,10 @@ p_Delta_AIC_corr <- ggplot(data = df_SIM_1, aes(x=ID, y=Delta_AIC_corr, group=an
   ylab(TeX("Difference in $AIC_c$")) + xlab("Experiment ID") + scale_shape_manual(values = c(1,17,18,15,5,0,8,3,4), name = "Overall selected")
 p_Delta_AIC_corr
 
-# Exclude the experiments where there no evidence for an increase M>1 overall
-# either because the overall selected model is a null model
+# Also exclude the experiments where there the overall selected model is a null model? -> I decided no, to keep the x-axis consistent with the Delta AIC_corr plot
 print(as.character(subset(df_SIM_1, is.element(by_AIC_corr, c("N0", "N1", "N2")))$ID))
-df_SIM_1 <- subset(df_SIM_1, !is.element(by_AIC_corr, c("N0", "N1", "N2")))
-# or a homogeneous model is selected overall which estimates M<1
-print(as.character(subset(df_SIM_1, (is.element(by_AIC_corr, c("HOM0", "HOM1", "HOM2")) & M_AIC_corr.1 < 1) & !is.element(by_AIC_corr, c("HET0", "HET2")))$ID))
-df_SIM_1 <- subset(df_SIM_1, (is.element(by_AIC_corr, c("HOM0", "HOM1", "HOM2")) & M_AIC_corr.1 > 1) | is.element(by_AIC_corr, c("HET0", "HET2")))
+#df_SIM_1 <- subset(df_SIM_1, !is.element(by_AIC_corr, c("N0", "N1", "N2")))
+
 
 # Define 'stress-induced mutagenesis is detected' for homogeneous models only (from least to most strict)
 # 1. The homogeneous model with the lowest AIC estimates an increase in population-wide mutation rate M>1 (the MLE, not the bounds of the CI)
@@ -342,7 +356,7 @@ df_SIM_1$homhet[is.element(df_SIM_1$by_AIC_corr, c("N1", "N2", "HOM0", "HOM1", "
 df_SIM_1$homhet[is.element(df_SIM_1$by_AIC_corr, c("N0", "HET0", "HET2"))] <- "Heterogeneous"
 df_SIM_1$homhet_sel <- df_SIM_1$null_hom_by_AIC_corr == df_SIM_1$by_AIC_corr
 p_M_SIM <- ggplot(data = df_SIM_1, aes(x=ID, y=M_AIC_corr.1, group=antibiotic)) + 
-  geom_point(aes(color=antibiotic, shape = null_hom_by_AIC_corr), size=2) + scale_shape_manual(values = c(2,5,17,18,15), name = "Selected model") +
+  geom_point(aes(color=antibiotic, shape = null_hom_by_AIC_corr), size=2) + scale_shape_manual(values = c(2,5,0,17,18,15), name = "Selected model") +
   geom_errorbar(aes(ymin=M_AIC_corr.2, ymax=M_AIC_corr.3, color=antibiotic, linetype = homhet_sel)) + geom_hline(yintercept = 1) +
   scale_colour_manual(values = subset(antibiotic_classes, is.element(antibiotic_abbr, unique(df_SIM_1$antibiotic)))$color, name = "Antimicrobial (abbr)") +
   scale_linetype_manual(values = c("dashed", "solid"), name = "Overall selected") +
@@ -363,9 +377,9 @@ df_SIM_GoF_S$null_het_by_AIC_corr[df_SIM_GoF_S$p_value_S_het_AIC_corr < 0.05] <-
 
 # Estimates for which a homogeneous is selected over a heterogeneous response overall are shown in dashed lines
 p_S_SIM <- ggplot(data = df_SIM_1, aes(x=ID, y=S_AIC_corr.1, group=antibiotic)) + 
-  geom_point(aes(color=antibiotic, shape = null_het_by_AIC_corr), size=2) + scale_shape_manual(values = c(2,1,16,3,4), name = "Selected model") +
+  geom_point(aes(color=antibiotic, shape = null_het_by_AIC_corr), size=2) + scale_shape_manual(values = c(1,16,2,3,4), name = "Selected model") +
   geom_errorbar(aes(ymin=S_AIC_corr.2, ymax=S_AIC_corr.3, color=antibiotic, linetype = !homhet_sel)) +
-  scale_linetype_manual(values = c("dashed", "solid"), name = "Overall selected") + geom_hline(yintercept = 1, linetype = "dashed") +
+  scale_linetype_manual(values = c("dashed", "solid"), name = "Overall selected") +
   scale_colour_manual(values = subset(antibiotic_classes, is.element(antibiotic_abbr, unique(df_SIM_1$antibiotic)))$color, name = "Antimicrobial (abbr)") +
   scale_y_continuous(trans="log10") + theme(axis.text.x = element_text(angle = 90, vjust = 0.5), plot.margin = margin(3.5,0.5,0.5,0.5, "cm")) +
   ylab("Mutation-supply ratio") + xlab("Experiment ID") + 
@@ -385,6 +399,8 @@ print(length(subset(df, M_HOM0.1 > 1)$ID))
 df_Ecoli <- subset(df, species == "E. coli" & is.element(strain, c("MG1655", "TD2158")))
 df_Ecoli_strict <- subset(df_strict, species == "E. coli" & is.element(strain, c("MG1655", "TD2158")))
 
+# How many E. coli wt experimets are there?
+length(df_Ecoli$ID)
 # How many E. coli experiments use DNA/DNA gyrase-targeting antibiotics?
 length(subset(df_Ecoli, target_group == "DNA/DNA gyrase")$ID)
 # And how many use ribosome-targeting ones?
@@ -427,18 +443,7 @@ p_M_DNA <- ggplot(data = df_Ecoli, aes(x=target_group, y=M_HOM0.1)) + geom_boxpl
   stat_compare_means(method = "kruskal.test", label.y = 300) + theme(legend.position = "right")
 p_M_DNA
 print(chisq.test(df_Ecoli_strict$target_group, df_Ecoli_strict$SIM_AIC_corr))
-
-
-# What else does detection of SIM depend on? Target/experimental design?
-# For our linear mixed model, we again define SIM as 'homogeneous model with the lowest AIC_corr estimates M>1 and S/UT significantly different'
-# and restrict the analysis to experiments using E. coli wt strains
-df_glm <- df_Ecoli_strict
-#df_glm <- subset(df_Ecoli_strict, target_group != "Ribosome") # -> no difference between 'Other' and 'DNA/DNA gyrase-targeting
-df_glm$target_group <- relevel(factor(df_glm$target_group), ref = "Ribosome")
-# Fitting a linear mixed model with detection of SIM as a predicted variable
-# and the target group and the log-plated fraction as fixed effects
-glm <- glm(SIM_AIC_corr ~ target_group + log10(n_cultures) + log10(plated_fraction), data = df_glm)
-summary(glm)
+# Post hoc pairwise comparison with Holm p-value adjustment?
 
 
 # Overall model selection (criterion = lowest AIC_corr) for all E. coli wt experiments
@@ -508,16 +513,26 @@ p_M_DNA <- ggplot(data = df_p_value_UT_S, aes(x=condition, y=p_values)) +
   stat_compare_means(label.y = 1) + theme(legend.position = "right")
 p_M_DNA
 
+# What else does detection of SIM depend on? Target/experimental design?
+# For our linear mixed model, we again define SIM as 'homogeneous model with the lowest AIC_corr estimates M>1 and S/UT significantly different'
+# and restrict the analysis to experiments using E. coli wt strains
+df_glm <- df_Ecoli_strict
+#df_glm <- subset(df_Ecoli_strict, target_group != "Ribosome") # -> no difference between 'Other' and 'DNA/DNA gyrase-targeting
+df_glm$target_group <- relevel(factor(df_glm$target_group), ref = "Ribosome")
+# Fitting a linear mixed model with detection of SIM as a predicted variable
+# and the target group and the log-plated fraction as fixed effects
+glm <- glm(SIM_AIC_corr ~ target_group + log10(n_cultures) + log10(plated_fraction), data = df_glm, family = binomial)
+summary(glm)
+
 # Previously, I tried fitting a generalised linear mixed model with 
 # the antibiotic concentration in units of the MIC as another fixed effect
 # and the ID as a random effect (here, baseline_ID as a random effect does not account for any variance)
 # Problems: for the E. coli experiments with known MIC alone complete separate occurred because no SIM is detected for any ribosome-targeting antibiotic
 df_glmm <- df_Ecoli_strict
 df_glmm$target_group <- relevel(factor(df_glmm$target_group), ref = "Ribosome")
-df_glmm <- subset(df_glmm, !is.na(of_MIC))
-length(df_Ecoli_strict$ID) # All E. coli experiments
-length(df_glmm$ID)         # Experiments for which the MIC was measured
-glmm <- glmer(SIM_AIC_corr ~ of_MIC + target_group + log10(n_cultures) + log10(plated_fraction) + (1|ID), data = df_glmm, family = binomial)
+length(df_glmm$ID)                         # All E. coli experiments
+length(subset(df_glmm, !is.na(of_MIC))$ID) # Experiments for which the MIC was measured
+glmm <- glmer(SIM_AIC_corr ~ of_MIC + target_group + log10(n_cultures) + log10(plated_fraction) + (1|ID), data = subset(df_glmm, !is.na(of_MIC)), family = binomial)
 summary(glmm)
 
 # I also tried fitting a linear mixed model with the p-value of the S/UT GoF as a predicted variable 
@@ -532,10 +547,11 @@ summary(lm_p_wo_MIC)
 # Note that using the baseline_ID as a random effect should deal with difference between species and strains 
 df_glmm <- df_strict
 df_glmm$target_group <- relevel(factor(df_glmm$target_group), ref = "Ribosome")
-df_glmm <- subset(df_glmm, !is.na(of_MIC))
-glmm <- glmer(SIM_AIC_corr ~ of_MIC + target_group + log10(n_cultures) + log10(plated_fraction) + (1|baseline_ID), data = df_glmm, family = binomial)
+glmm <- glmer(SIM_AIC_corr ~ of_MIC + target_group + log10(n_cultures) + log10(plated_fraction) + (1|baseline_ID), data = subset(df_glmm, !is.na(of_MIC)), family = binomial)
 summary(glmm)
-
+# Without antibiotic concentration in units of MIC as a fixed effect
+glmm_noMIC <- glmer(SIM_AIC_corr ~ target_group + log10(n_cultures) + log10(plated_fraction) + (1|baseline_ID), data = df_glmm, family = binomial)
+summary(glmm_noMIC)
 
 # Dose-dependence
 df_Pribis <- read.delim("experimental_data/Pribis_Fig2D.txt", header = TRUE, sep = '\t', comment.char="#")

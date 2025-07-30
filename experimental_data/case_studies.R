@@ -18,6 +18,13 @@ mc_S <- read_counts(mc_data[2,])       # Mutant counts
 Nf_S <- mean(read_counts(mc_data[3,])) # Average final population size
 eff_S <- as.numeric(mc_data[4,1])      # Plating efficiency
 
+# Using the homogeneous model without differential mutant fitness, HOM0, as in the origional study by Frenoy et al.
+res <- estimu(mc_UT, Nf_UT, mc_S, Nf_S, plateff = c(eff_UT, eff_S), mod = "hom")
+paras_HOM0 <- res[[1]]
+print(paras_HOM0)
+msel_HOM0 <- res[[2]]
+print(msel_HOM0)
+
 # Estimation under model HOM2 (by setting fit_m = c(FALSE, FALSE) the mutant fitness is inferred in both UT and S conditions separately)
 res <- estimu(mc_UT, Nf_UT, mc_S, Nf_S, plateff = c(eff_UT, eff_S), fit_m = c(FALSE, FALSE), mod = "hom")
 # Data frame with the estimated parameters
