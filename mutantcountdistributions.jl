@@ -323,20 +323,23 @@ function mudi_threshold_het(p_threshold, m_off, m_on, inv_fit_m, ifit, eff) # Pl
     return tail_prob!(p)
 end
 
+# Random draws from the mutant count distribution: Inverse transform sampling technique
+# --> Using uniform random variables to sample from the cumulative mutant count distribution
+
 function r_mudi(K::Int, N, mu, fit_m, eff)
-    random_draws = Vector{Int}(undef, K)
+    random_draws = Vector{Int}(undef, K)    # K = number of random draws
     k = 1
-    uni_draws = sort(rand(K))
-    p_threshold = uni_draws[end]
-    if eff == 1.
+    uni_draws = sort(rand(K))               # Draw K uniform RV and sort them to obtain the largest value
+    p_threshold = uni_draws[end]            # -> This is the threshold of cumulative probability until which the mutant count distribution is calculated
+    if eff == 1.                            # Special cases for calculating the mutant count distribution depending on the plating efficiency and differential mutant fitness
         p_draws = (fit_m == 1.) ? mudi_threshold(p_threshold, N*mu) : mudi_threshold(p_threshold, N*mu, 1/fit_m)
     else
         p_draws = mudi_threshold(p_threshold, N*mu, 1/fit_m, eff)
     end
-    cumulative_p = p_draws[1]
-    for j in eachindex(uni_draws)
-        r = uni_draws[j]
-        while r > cumulative_p && k <= max_mc_cutoff 
+    cumulative_p = p_draws[1]                           
+    for j in eachindex(uni_draws)                       # To obtain the random draws, match the uniform RVs with the cumulative mutant count distribution
+        r = uni_draws[j]                                # --> Find where r falls within the cumulative distribution
+        while r > cumulative_p && k <= max_mc_cutoff    # The condition k <= max_mc_cutoff is necessary, because the mutant count distribution is calculated only until that cutoff
             k += 1
             cumulative_p += p_draws[k]
         end

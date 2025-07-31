@@ -516,6 +516,7 @@ p_M_DNA
 # What else does detection of SIM depend on? Target/experimental design?
 # For our linear mixed model, we again define SIM as 'homogeneous model with the lowest AIC_corr estimates M>1 and S/UT significantly different'
 # and restrict the analysis to experiments using E. coli wt strains
+# Problems: using only E. coli wt experiments, complete separate occurred because no SIM is detected for any ribosome-targeting antibiotic
 df_glm <- df_Ecoli_strict
 #df_glm <- subset(df_Ecoli_strict, target_group != "Ribosome") # -> no difference between 'Other' and 'DNA/DNA gyrase-targeting
 df_glm$target_group <- relevel(factor(df_glm$target_group), ref = "Ribosome")
@@ -525,9 +526,8 @@ glm <- glm(SIM_AIC_corr ~ target_group + log10(n_cultures) + log10(plated_fracti
 summary(glm)
 
 # Previously, I tried fitting a generalised linear mixed model with 
-# the antibiotic concentration in units of the MIC as another fixed effect
+# the antibiotic concentration in units of the MIC as another fixed effect, which reduced the sample size even further
 # and the ID as a random effect (here, baseline_ID as a random effect does not account for any variance)
-# Problems: for the E. coli experiments with known MIC alone complete separate occurred because no SIM is detected for any ribosome-targeting antibiotic
 df_glmm <- df_Ecoli_strict
 df_glmm$target_group <- relevel(factor(df_glmm$target_group), ref = "Ribosome")
 length(df_glmm$ID)                         # All E. coli experiments
@@ -535,23 +535,23 @@ length(subset(df_glmm, !is.na(of_MIC))$ID) # Experiments for which the MIC was m
 glmm <- glmer(SIM_AIC_corr ~ of_MIC + target_group + log10(n_cultures) + log10(plated_fraction) + (1|ID), data = subset(df_glmm, !is.na(of_MIC)), family = binomial)
 summary(glmm)
 
-# I also tried fitting a linear mixed model with the p-value of the S/UT GoF as a predicted variable 
-# and the antibiotic dose, the target group and the log-plated fraction as fixed effects
-# and the baseline ID as random effect -> doesn't account for any variance when restricting to E. coli wt experiments!
-lm_p <- lm(p_value_test_min ~ of_MIC + target_group + log10(plated_fraction) + log10(n_cultures), data = df_glmm)
-summary(lm_p)
-lm_p_wo_MIC <- lm(p_value_test_min ~ target_group + log10(plated_fraction) + log10(n_cultures), data = df_glmm)
-summary(lm_p_wo_MIC)
-
 # Problems with the glmm did not occur when using experiments with all species
 # Note that using the baseline_ID as a random effect should deal with difference between species and strains 
 df_glmm <- df_strict
 df_glmm$target_group <- relevel(factor(df_glmm$target_group), ref = "Ribosome")
 glmm <- glmer(SIM_AIC_corr ~ of_MIC + target_group + log10(n_cultures) + log10(plated_fraction) + (1|baseline_ID), data = subset(df_glmm, !is.na(of_MIC)), family = binomial)
 summary(glmm)
-# Without antibiotic concentration in units of MIC as a fixed effect
+# Without antibiotic concentration in units of MIC as a fixed effect, to increase sample size
 glmm_noMIC <- glmer(SIM_AIC_corr ~ target_group + log10(n_cultures) + log10(plated_fraction) + (1|baseline_ID), data = df_glmm, family = binomial)
 summary(glmm_noMIC)
+
+# I also tried fitting a linear mixed model with the p-value of the S/UT GoF as a predicted variable 
+# and the antibiotic dose, the target group and the log-plated fraction as fixed effects
+# and the baseline ID as random effect -> doesn't account for any variance when restricting to E. coli wt experiments!
+# Technically the p-value should be p < 10^-4 and not p = 0
+df_glmm$p_value_test_min[df_glmm$p_value_test_min == 0] <- 10^-4
+lm_p <- lm(p_value_test_min ~ of_MIC + target_group + log10(plated_fraction) + log10(n_cultures), data = df_glmm)
+summary(lm_p)
 
 # Dose-dependence
 df_Pribis <- read.delim("experimental_data/Pribis_Fig2D.txt", header = TRUE, sep = '\t', comment.char="#")
